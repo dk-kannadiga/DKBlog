@@ -1,0 +1,20 @@
+const DP=[
+  {id:1,title:"ಮಳೆಯ ಹಾಡು",lang:"ಕನ್ನಡ",lc:"kn",cat:"ಕವನ / Poem",cc:"poem",subcat:"ಭಾವಗೀತೆ (Lyric)",date:"15 May 2024",exc:"ಮಳೆಯ ಹನಿಗಳು ಮಣ್ಣಿನ ಮೇಲೆ ಬಿದ್ದಾಗ — ಮೌನದ ಮಡಿಲಲ್ಲಿ ಹೊಸ ಹಾಡು ಹುಟ್ಟಿತು...",body:"ಮಳೆಯ ಹನಿಗಳು ಮಣ್ಣಿನ ಮೇಲೆ ಬಿದ್ದಾಗ\nಮೌನದ ಮಡಿಲಲ್ಲಿ ಹೊಸ ಹಾಡು ಹುಟ್ಟಿತು\nಗಾಳಿಯ ತೆಕ್ಕೆಯಲ್ಲಿ ಸೋಲಿನ ದನಿಯು\nಮತ್ತೆ ಬದುಕಿನ ಬಾಗಿಲ ತೆರೆಯಿತು\n\nಮೋಡಗಳ ನಡುವೆ ಬೆಳಕಿನ ರೇಖೆ\nಹಸಿರು ಎಲೆಯ ಮೇಲೆ ಹೊಳೆಯುವ ಹನಿ\nಮನಸಿನ ಮೂಲೆಯಲ್ಲಿ ಮರೆತ ಕನಸು\nಮಳೆಯ ಜೊತೆಗೆ ಮತ್ತೆ ಬಂದಿತು ಹಿಂದಿರುಗಿ"},
+  {id:2,title:"ಯಂತ್ರ ಮತ್ತು ಮನಸ್ಸು",lang:"ಕನ್ನಡ",lc:"kn",cat:"ಲೇಖನ / Article",cc:"article",subcat:"ಚಿಂತನ (Reflection)",date:"20 Apr 2024",exc:"ಕೃತಕ ಬುದ್ಧಿಮತ್ತೆಯ ಯುಗದಲ್ಲಿ ಮಾನವ ಮನಸ್ಸಿನ ಸ್ಥಾನವೇನು?",body:"ಕೃತಕ ಬುದ್ಧಿಮತ್ತೆಯ ಯುಗದಲ್ಲಿ ಮಾನವ ಮನಸ್ಸಿನ ಸ್ಥಾನವೇನು? ಈ ಪ್ರಶ್ನೆ ಇಂದು ಪ್ರತಿಯೊಬ್ಬರ ಮನದಲ್ಲಿ ಮೂಡುತ್ತಿದೆ.\n\nಯಂತ್ರಗಳು ಬರೆಯಬಲ್ಲವು, ಚಿತ್ರ ಬಿಡಿಸಬಲ್ಲವು, ಸಂಗೀತ ರಚಿಸಬಲ್ಲವು. ಆದರೆ ಅವುಗಳಿಗೆ ಮಳೆ ಬಿದ್ದಾಗ ಆಗುವ ಆನಂದ ತಿಳಿಯುವುದೇ?\n\nತಂತ್ರಜ್ಞಾನ ಮಾನವನ ಸೇವಕ, ಸ್ವಾಮಿಯಲ್ಲ. ಕೃತಕ ಬುದ್ಧಿಮತ್ತೆ ನಮ್ಮ ಕೆಲಸವನ್ನು ಸುಲಭಗೊಳಿಸಬಹುದು, ಆದರೆ ಮಾನವ ಸಂಬಂಧ, ಭಾವನೆ, ಮತ್ತು ಸೃಜನಶೀಲತೆಯ ಆಳ — ಇವು ಯಂತ್ರಕ್ಕೆ ಎಂದೂ ನಿಲುಕದ ಸಂಪತ್ತು."},
+  {id:3,title:"The Last Page",lang:"English",lc:"en",cat:"ಕಥೆ / Story",cc:"story",subcat:"ಮಿನಿ ಕಥೆ (Flash Fiction)",date:"10 Mar 2024",exc:"She had read every book in the library. Every single one. Except the last.",body:'She had read every book in the library. Every single one. Except the last.\n\nIt sat on the highest shelf, spine turned inward so no title showed. The old librarian had never spoken of it. When she finally asked, he only said, "That one reads you."\n\nShe climbed the ladder on a Tuesday evening when rain drummed the windows. Her fingers touched the cover. It was warm.\n\nShe opened it to the first page. It was blank. The third, fourth, fifth — all empty. Her heart sank.\n\nThen she reached the middle of the book and found one sentence in a handwriting she recognized with a start.\n\nIt was her own.'},
+  {id:4,title:"ಹೊಸ ಬೆಳಕು / New Light",lang:"Mixed",lc:"mixed",cat:"ಕವನ / Poem",cc:"poem",subcat:"Free Verse",date:"01 Jan 2024",exc:"ಹಳೆಯದು ಮುಗಿದಿದೆ, ಹೊಸದು ಬರುತ್ತಿದೆ — the old fades like ink washed in rain...",body:"ಹಳೆಯದು ಮುಗಿದಿದೆ, ಹೊಸದು ಬರುತ್ತಿದೆ\nThe old fades like ink washed in rain,\nಮನಸ್ಸು ಹೇಳುತ್ತದೆ — let go, begin again.\n\nಭೂತ ಒಂದು ಪಾಠ, ಭವಿಷ್ಯ ಒಂದು ಬಾಗಿಲು\nThe present — just this breath, this moment, this light.\nಎದ್ದೇಳು, ನಡೆ, ಬರೆ —\nwrite what the night could not."}
+];
+const DC={
+  poem:{label:'ಕವನ / Poem',subs:['ಭಾವಗೀತೆ (Lyric)','ಷಟ್ಪದಿ (Shatpadi)','ಮುಕ್ತಕ (Muktaka)','ವಚನ (Vachana)','ಹಾಯ್ಕು (Haiku)','ಅಕ್ರೋಸ್ಟಿಕ್ (Acrostic)','Free Verse','Other']},
+  story:{label:'ಕಥೆ / Story',subs:['ಸಣ್ಣ ಕಥೆ (Short Story)','ಮಿನಿ ಕಥೆ (Flash Fiction)',"ಮಕ್ಕಳ ಕಥೆ (Children's)",'ಕಾದಂಬರಿ ಭಾಗ (Novel Excerpt)','Other']},
+  article:{label:'ಲೇಖನ / Article',subs:['ಚಿಂತನ (Reflection)','ವಿಮರ್ಶೆ (Critique)','ಅಭಿಪ್ರಾಯ (Opinion)','ತಂತ್ರಜ್ಞಾನ (Technology)','ಪ್ರವಾಸ (Travel)','Other']},
+  other:{label:'ಇತರೆ / Other',subs:['Essay','Memoir','Translation','Other']}
+};
+// ── QUIZ DEFAULT ARCHIVE ──────────────────────────────
+const DQA=[{id:100,title:"ಕನ್ನಡ ಸಾಹಿತ್ಯ ರಸಪ್ರಶ್ನೆ — ೧",date:"15 Mar 2024",type:"certificate",total:47,
+  questions:[
+    {q:"ಜ್ಞಾನಪೀಠ ಪ್ರಶಸ್ತಿ ಪಡೆದ ಮೊದಲ ಕನ್ನಡ ಸಾಹಿತಿ ಯಾರು?",opts:["ಕುವೆಂಪು","ವಿ.ಕೃ.ಗೋಕಾಕ್","ದ.ರಾ.ಬೇಂದ್ರೆ","ಯು.ಆರ್.ಅನಂತಮೂರ್ತಿ"],ans:2,exp:"ದ.ರಾ.ಬೇಂದ್ರೆ ಅವರು 1973ರಲ್ಲಿ 'ನಾಕು ತಂತಿ' ಕವನ ಸಂಗ್ರಹಕ್ಕಾಗಿ ಜ್ಞಾನಪೀಠ ಪ್ರಶಸ್ತಿ ಪಡೆದ ಮೊದಲ ಕನ್ನಡಿಗರು.",stats:{c:29,w:18}},
+    {q:"ಕುವೆಂಪು ಅವರ ಮೊದಲ ಕಾದಂಬರಿ ಯಾವುದು?",opts:["ಕಾನೂರು ಹೆಗ್ಗಡತಿ","ಮಲೆಗಳಲ್ಲಿ ಮದುಮಗಳು","ಬೆರಳ್ಗೆ ಕೊರಳ್","ಮರಣ ಮಂಚ"],ans:0,exp:"ಕಾನೂರು ಹೆಗ್ಗಡತಿ (1936) ಕುವೆಂಪು ಅವರ ಮೊದಲ ಕಾದಂಬರಿ, ಮಲೆನಾಡಿನ ಜೀವನವನ್ನು ಚಿತ್ರಿಸುತ್ತದೆ.",stats:{c:31,w:16}},
+    {q:"Which S.L. Bhyrappa novel is a realistic retelling of the Mahabharata?",opts:["Vamshavruksha","Parva","Gruhabhanga","Daatu"],ans:1,exp:"Parva (1979) is Bhyrappa's acclaimed retelling presenting the Mahabharata as a deeply human epic, stripped of the miraculous.",stats:{c:38,w:9}}
+  ]}
+];

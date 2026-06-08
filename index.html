@@ -1,0 +1,154 @@
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Kannada:wght@400;500;700&family=Lora:ital,wght@0,400;0,600;1,400&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+
+<header>
+<link rel="stylesheet" href="css/main.css">
+  <div class="hi">
+    <div class="bt" onclick="go('home')">DK's Writings <span>ಬರಹಗಳ ಜಗತ್ತು</span></div>
+    <nav>
+      <a href="#" id="nh" onclick="go('home');return false">Home</a>
+      <a href="#" id="ni" onclick="go('index');return false">Index</a>
+      <a href="#" id="na" onclick="go('about');return false">About Me</a>
+      <a href="#" id="nq" class="quiz-link" onclick="go('quiz');return false">🏆 Quiz</a>
+    </nav>
+  </div>
+</header>
+
+<!-- HOME -->
+<div id="ph" class="page">
+  <div class="hero">
+    <div class="hero-inner">
+      <div class="hero-orn">✦ ✦ ✦</div>
+      <div class="hero-name">[Your Name]</div>
+      <div class="hero-kn">ಬರಹಗಾರ · ಚಿಂತಕ · ಕನ್ನಡ ಪ್ರೇಮಿ</div>
+      <div class="hero-en">Writer · Thinker · Lover of Kannada</div>
+      <div class="hero-langs">
+        <span class="hlang">ಕನ್ನಡ</span><span class="hlang">English</span><span class="hlang">Mixed</span>
+        <span class="hlang">ಕವನ</span><span class="hlang">ಕಥೆ</span><span class="hlang">ಲೇಖನ</span>
+      </div>
+      <p class="hero-q">"ಕೆಲವು ಭಾವಗಳು ಕನ್ನಡದಲ್ಲಿ ಮಾತ್ರ ಹೇಳಬಹುದು."<br>
+      <span style="font-size:.8rem;opacity:.8">Some feelings can only be said in Kannada.</span></p>
+    </div>
+  </div>
+  <div class="pc">
+    <div class="searchbar">
+      <input type="text" id="sinp" placeholder="Search by title, keyword, or category..." oninput="hSearch(this.value)">
+      <button class="sclear" id="sclr" style="display:none" onclick="clearSearch()">×</button>
+    </div>
+    <div class="sres" id="sres"></div>
+    <div id="filters" class="filters"></div>
+    <div class="grid" id="grid"></div>
+  </div>
+</div>
+
+<!-- POST VIEW -->
+<div id="pp" class="page"><div class="pc">
+  <button class="back" onclick="go('home')">← Back to all writings</button>
+  <div id="pvc"></div>
+</div></div>
+
+<!-- INDEX -->
+<div id="pidx" class="page"><div class="pc">
+  <h1 class="stitle">Index</h1>
+  <p class="ssub">All writings, organised by category</p>
+  <div id="idxc"></div>
+</div></div>
+
+<!-- ABOUT -->
+<div id="pab" class="page"><div class="pc">
+  <h1 class="stitle">About Me</h1>
+  <p class="ssub">The writer behind the words</p>
+  <div class="aw">
+    <div class="av">✍️</div>
+    <p class="abio">[Your name here] — a writer, thinker, and lover of language. I write in Kannada, English, and sometimes a mix of both, because some feelings belong to more than one tongue.</p>
+    <p class="abio">This space holds what I have felt, imagined, questioned, and wondered about — poems born from quiet mornings, stories from half-remembered dreams, and articles from long walks with an argument I couldn't let go of.</p>
+    <p class="abio">[Add your own bio, background, and inspirations here.]</p>
+    <div class="div">✦ ✦ ✦</div>
+    <div class="aint"><h4>Interests &amp; Influences</h4>
+      <div class="itags">
+        <span class="itag">Kannada Literature</span><span class="itag">ಕುವೆಂಪು</span>
+        <span class="itag">SL Bhyrappa</span><span class="itag">GP Rajaratnam</span>
+        <span class="itag">Classical Poetry</span><span class="itag">Philosophy</span>
+        <span class="itag">Technology &amp; Society</span><span class="itag">Devotional Traditions</span>
+      </div>
+    </div>
+    <div class="div" style="margin-top:32px">✦</div>
+    <div class="pnav"><button class="back" onclick="go('home')">← All Writings</button><button class="back" onclick="go('index')">☰ Index</button></div>
+  </div>
+</div></div>
+
+<!-- QUIZ MAIN -->
+<div id="pq" class="page"><div class="pc">
+  <h1 class="stitle">🏆 Quiz Corner</h1>
+  <p class="ssub">Test your knowledge · Win certificates &amp; prizes</p>
+  <div class="qsubnav">
+    <button class="qsn on" id="qsn-c" onclick="qTab('c')">Current Quiz</button>
+    <button class="qsn" id="qsn-a" onclick="qTab('a')">Archive</button>
+  </div>
+  <div id="qcur"></div>
+  <div id="qarc" style="display:none"></div>
+</div></div>
+
+<!-- CERTIFICATE PAGE -->
+<div id="pcert" class="page"><div class="pc" style="max-width:780px">
+  <div id="cert-inner" style="margin-bottom:24px"></div>
+  <div class="no-print" style="text-align:center;display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+    <button class="certbtn" onclick="window.print()">🖨 Print / Save as PDF</button>
+    <button class="back" style="margin-bottom:0" onclick="go('quiz')">← Back to Quiz</button>
+  </div>
+</div></div>
+
+<!-- QUIZ ARCHIVE DETAIL -->
+<div id="pqd" class="page"><div class="pc">
+  <button class="back" onclick="go('quiz')">← Back to Quiz</button>
+  <div id="qdc"></div>
+</div></div>
+
+<!-- ADMIN LOGIN -->
+<div id="pal" class="page"><div class="pc">
+  <div class="alog">
+    <h2>Admin Access</h2>
+    <p>Enter password to manage your platform</p>
+    <input type="password" id="apw" placeholder="Password" onkeydown="if(event.key==='Enter')aLogin()">
+    <div class="aerr" id="aerr"></div>
+    <button class="alogbtn" onclick="aLogin()">Enter Admin</button>
+    <p class="afp">Default: <code>dk@writes</code> — change under Settings.</p>
+  </div>
+</div></div>
+
+<!-- ADMIN PANEL -->
+<div id="pad" class="page"><div class="pc">
+  <div class="adh"><h2>Admin Panel</h2><button class="logoutbtn" onclick="aLogout()">← Exit Admin</button></div>
+  <div class="adtabs">
+    <div class="adtab on" onclick="aTab(this,'posts')">Posts</div>
+    <div class="adtab" onclick="aTab(this,'cats')">Categories</div>
+    <div class="adtab" onclick="aTab(this,'quiz')">Quiz</div>
+    <div class="adtab" onclick="aTab(this,'settings')">Settings</div>
+  </div>
+  <div id="atab-posts" class="adtabc on">
+    <button class="addbtn" onclick="startAdd()">＋ New Post</button>
+    <div id="afw"></div><div id="apl"></div>
+  </div>
+  <div id="atab-cats" class="adtabc">
+    <div id="cw"></div>
+    <div class="newcat"><h4>Add a new main category</h4>
+      <div class="newcatrow">
+        <input type="text" id="nci" placeholder="e.g. ಅನುವಾದ / Translation">
+        <button class="newcatbtn" onclick="addMainCat()">+ Add</button>
+      </div>
+    </div>
+  </div>
+  <div id="atab-quiz" class="adtabc"></div>
+  <div id="atab-settings" class="adtabc">
+    <div class="sbox"><h4>Change Admin Password</h4>
+      <input type="password" id="pw1" placeholder="New password">
+      <input type="password" id="pw2" placeholder="Confirm new password">
+      <button class="savebtn" onclick="changePw()">Update Password</button>
+      <div class="smsg" id="pwmsg"></div>
+    </div>
+  </div>
+</div></div>
+
+<footer>✦ &nbsp; DK's Writings &nbsp;·&nbsp; ಬರಹಗಳ ಜಗತ್ತು &nbsp; ✦ <a href="#" onclick="go('adminlogin');return false" title="Admin">⚙</a></footer>
+
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
