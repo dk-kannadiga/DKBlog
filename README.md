@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # DK-Writings
 
 A personal literary platform featuring:
@@ -12,3 +13,7 @@ A personal literary platform featuring:
 - Multilingual support (Kannada, English, Mixed)
 
 Created by DK.
+=======
+# DKBlog
+Personal literary platform with quizzes and multilingual writing support.
+>>>>>>> bcfb6d5fde61779ac0f6a3bba5788a3c7ba1b02e
