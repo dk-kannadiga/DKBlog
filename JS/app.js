@@ -21,7 +21,32 @@ function clearSearch(){
 }
 
 async function loadAll(){
-  try{const r=await window.storage.get('dk_posts');POSTS=r?JSON.parse(r.value):[...DP]}catch(e){POSTS=[...DP]}
+  try{
+
+ console.log("FUNCTION:", window.getFirestorePosts);
+
+if(window.getFirestorePosts){
+
+    console.log("LOADING FIRESTORE");
+
+    POSTS = await window.getFirestorePosts();
+
+    console.log("FIRESTORE RESULT", POSTS);
+
+}else{
+
+    console.log("USING DP");
+
+    POSTS = [...DP];
+
+}
+
+}catch(e){
+
+  console.error("Firestore failed:",e);
+  POSTS = [...DP];
+
+}
   try{const r=await window.storage.get('dk_cats');CATS=r?JSON.parse(r.value):JSON.parse(JSON.stringify(DC))}catch(e){CATS=JSON.parse(JSON.stringify(DC))}
   try{const r=await window.storage.get('dk_likes');if(r)likes=JSON.parse(r.value)}catch(e){}
   try{const r=await window.storage.get('dk_liked');if(r)likedMe=new Set(JSON.parse(r.value))}catch(e){}
@@ -626,4 +651,8 @@ async function changePw(){
   setTimeout(()=>{msg.textContent='';msg.className='smsg'},3000)
 }
 
-(async()=>{await loadAll();go('home')})();
+setTimeout(async()=>{
+    await loadAll();
+    console.log("AFTER DELAY", window.getFirestorePosts);
+    go('home');
+}, 2000);

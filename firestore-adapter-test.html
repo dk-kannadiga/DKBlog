@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Firestore Adapter Test</title>
+</head>
+<body>
+
+<h1>Posts Loaded</h1>
+
+<div id="result">Loading...</div>
+
+<script type="module">
+
+import { getPosts } from "./js/firestore-data.js";
+
+async function run(){
+
+    try{
+
+        const posts = await getPosts();
+
+        document.getElementById("result").innerHTML =
+            "<pre>"+JSON.stringify(posts,null,2)+"</pre>";
+
+    }catch(err){
+
+        document.getElementById("result").innerHTML =
+            err.message;
+
+        console.error(err);
+
+    }
+
+}
+
+run();
+
+</script>
+
+</body>
+</html>

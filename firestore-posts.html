@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>All Firestore Posts</title>
+</head>
+<body>
+
+<h1>All Posts From Firestore</h1>
+
+<div id="posts">
+    Loading...
+</div>
+
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
+
+import {
+    getFirestore,
+    collection,
+    getDocs,
+    query,
+    orderBy
+} from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCHuyfBo7zAKlYc6Gq9uOPQavv_bwxh4x4",
+  authDomain: "dkblog-6c5e5.firebaseapp.com",
+  projectId: "dkblog-6c5e5",
+  storageBucket: "dkblog-6c5e5.firebasestorage.app",
+  messagingSenderId: "37742053196",
+  appId: "1:37742053196:web:3ef84ac8457d7b6274b1e9",
+  measurementId: "G-ELQWHJP20S"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+async function loadPosts() {
+
+    const postsDiv = document.getElementById("posts");
+
+    try {
+
+        const q = query(
+            collection(db, "posts"),
+            orderBy("createdAt", "desc")
+        );
+
+        const snapshot = await getDocs(q);
+
+        let html = "";
+
+        snapshot.forEach(doc => {
+
+            const p = doc.data();
+
+            html += `
+                <div style="border:1px solid #ccc;padding:15px;margin:15px;">
+                    <h2>${p.title}</h2>
+                    <p><b>Date:</b> ${p.date}</p>
+                    <p><b>Language:</b> ${p.lang}</p>
+                    <p>${p.excerpt}</p>
+                </div>
+            `;
+
+        });
+
+        postsDiv.innerHTML = html;
+
+    } catch (err) {
+
+        console.error(err);
+
+        postsDiv.innerHTML =
+            "<h3>Error:</h3><pre>" + err.message + "</pre>";
+
+    }
+
+}
+
+loadPosts();
+
+</script>
+
+</body>
+</html>
