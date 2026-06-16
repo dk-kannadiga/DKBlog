@@ -3,6 +3,8 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebas
 import {
     getFirestore,
     collection,
+    doc,
+    setDoc,
     getDocs,
     addDoc,
     updateDoc,
@@ -83,6 +85,15 @@ window.saveFirestoreLikes = async function(postId,count){
     const snapshot = await getDocs(q);
 
     if(snapshot.empty){
+
+        await addDoc(
+            collection(db,"likes"),
+            {
+                postId: postId,
+                count: count
+            }
+        );
+
         return;
     }
 
