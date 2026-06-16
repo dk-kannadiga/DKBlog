@@ -5,6 +5,7 @@ import {
     collection,
     getDocs,
     addDoc,
+    updateDoc,
     query,
     where,
     orderBy
@@ -24,7 +25,7 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 window.getFirestorePosts = async function(){
-
+    
     const q = query(
         collection(db, "posts"),
         orderBy("createdAt", "desc")
@@ -34,11 +35,11 @@ window.getFirestorePosts = async function(){
 
     return snapshot.docs.map(doc => doc.data());
 };
-window.getFirestoreComments = async function(postid){
+window.getFirestoreComments = async function(postId){
 
     const q = query(
         collection(db, "comments"),
-        where("postId", "==", postid)
+        where("postId", "==", postId)
     );
 
     const snapshot = await getDocs(q);
@@ -46,13 +47,49 @@ window.getFirestoreComments = async function(postid){
     return snapshot.docs.map(doc => doc.data());
 };
 
-window.saveFirestoreComment = async function(postid, comment){
+window.saveFirestoreComment = async function(postId, comment){
 
     await addDoc(collection(db, "comments"), {
-        postId: postid,
+        postId: postId,
         name: comment.name,
         txt: comment.txt,
         date: comment.date
     });
 
+};
+window.getFirestoreLikes = async function(postId){
+
+    const q = query(
+        collection(db, "likes"),
+        where("postId", "==", postId)
+    );
+
+    const snapshot = await getDocs(q);
+
+    if(snapshot.empty){
+        return 0;
+    }
+
+    return snapshot.docs[0].data().count || 0;
+};
+
+window.saveFirestoreLikes = async function(postId,count){
+
+    const q = query(
+        collection(db, "likes"),
+        where("postId", "==", postId)
+    );
+
+    const snapshot = await getDocs(q);
+
+    if(snapshot.empty){
+        return;
+    }
+
+    await updateDoc(
+        snapshot.docs[0].ref,
+        {
+            count: count
+        }
+    );
 };

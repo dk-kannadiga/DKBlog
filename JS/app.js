@@ -48,7 +48,25 @@ if(window.getFirestorePosts){
 
 }
   try{const r=await window.storage.get('dk_cats');CATS=r?JSON.parse(r.value):JSON.parse(JSON.stringify(DC))}catch(e){CATS=JSON.parse(JSON.stringify(DC))}
-  try{const r=await window.storage.get('dk_likes');if(r)likes=JSON.parse(r.value)}catch(e){}
+  try{
+
+  likes = {};
+
+  if(window.getFirestoreLikes){
+
+    for(const p of POSTS){
+
+      likes[p.id] = await window.getFirestoreLikes(p.id);
+
+    }
+
+  }
+
+}catch(e){
+
+  console.error("Likes load failed:",e);
+
+}
   try{const r=await window.storage.get('dk_liked');if(r)likedMe=new Set(JSON.parse(r.value))}catch(e){}
   try{const r=await window.storage.get('dk_q');if(r)Q=JSON.parse(r.value)}catch(e){}
   try{const r=await window.storage.get('dk_qa');if(r)QA=JSON.parse(r.value);else QA=[...DQA]}catch(e){QA=[...DQA]}
@@ -185,11 +203,29 @@ async function renderPost(id){
     </div>`
 }
 async function tlike(id){
-  if(likedMe.has(id)){likedMe.delete(id);likes[id]=Math.max(0,(likes[id]||0)-1)}
-  else{likedMe.add(id);likes[id]=(likes[id]||0)+1}
+
+  if(likedMe.has(id)){
+    likedMe.delete(id);
+    likes[id]=Math.max(0,(likes[id]||0)-1);
+  }else{
+    likedMe.add(id);
+    likes[id]=(likes[id]||0)+1;
+  }
+
+  if(window.saveFirestoreLikes){
+    await window.saveFirestoreLikes(id, likes[id]);
+  }
+
   await svL();
-  const il=likedMe.has(id),lc=likes[id]||0,btn=document.getElementById('lb'+id);
-  if(btn){btn.className='lbtn'+(il?' liked':'');btn.innerHTML=`${il?'♥':'♡'} <span id="lc${id}">${lc}</span> ${lc===1?'like':'likes'}`}
+
+  const il=likedMe.has(id),
+        lc=likes[id]||0,
+        btn=document.getElementById('lb'+id);
+
+  if(btn){
+    btn.className='lbtn'+(il?' liked':'');
+    btn.innerHTML=`${il?'♥':'♡'} <span id="lc${id}">${lc}</span> ${lc===1?'like':'likes'}`;
+  }
 }
 function shr(id){
   const p=POSTS.find(x=>x.id===id),t=document.getElementById('st'+id);
