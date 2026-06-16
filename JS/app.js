@@ -60,8 +60,41 @@ const svQ=()=>window.storage.set('dk_q',JSON.stringify(Q)).catch(()=>{});
 const svQA=()=>window.storage.set('dk_qa',JSON.stringify(QA)).catch(()=>{});
 const svQS=()=>window.storage.set('dk_qs',JSON.stringify(QS)).catch(()=>{});
 async function svL(){try{await window.storage.set('dk_likes',JSON.stringify(likes));await window.storage.set('dk_liked',JSON.stringify([...likedMe]))}catch(e){}}
-async function ldCmt(id){try{const r=await window.storage.get('dk_c_'+id);return r?JSON.parse(r.value):[]}catch(e){return[]}}
-async function svCmt(id,c){const a=await ldCmt(id);a.push(c);try{await window.storage.set('dk_c_'+id,JSON.stringify(a))}catch(e){}return a}
+async function ldCmt(id){
+
+  try{
+
+    if(window.getFirestoreComments){
+      return await window.getFirestoreComments(id);
+    }
+
+    return [];
+
+  }catch(e){
+
+    console.error("Comment load failed",e);
+    return [];
+
+  }
+
+}
+async function svCmt(id,c){
+
+  try{
+
+    await window.saveFirestoreComment(id,c);
+
+    return await ldCmt(id);
+
+  }catch(e){
+
+    console.error("Comment save failed",e);
+
+    return await ldCmt(id);
+
+  }
+
+}
 async function getPass(){try{const r=await window.storage.get('dk_pass');return r?r.value:'dk@writes'}catch(e){return'dk@writes'}}
 async function setPass(p){try{await window.storage.set('dk_pass',p)}catch(e){}}
 
@@ -651,8 +684,13 @@ async function changePw(){
   setTimeout(()=>{msg.textContent='';msg.className='smsg'},3000)
 }
 
-setTimeout(async()=>{
+(async()=>{
+
+    while(!window.firebaseReady){
+        await new Promise(r=>setTimeout(r,100));
+    }
+
     await loadAll();
-    console.log("AFTER DELAY", window.getFirestorePosts);
     go('home');
-}, 2000);
+
+})();

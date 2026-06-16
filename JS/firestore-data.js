@@ -4,7 +4,9 @@ import {
     getFirestore,
     collection,
     getDocs,
+    addDoc,
     query,
+    where,
     orderBy
 } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
 
@@ -31,4 +33,26 @@ window.getFirestorePosts = async function(){
     const snapshot = await getDocs(q);
 
     return snapshot.docs.map(doc => doc.data());
+};
+window.getFirestoreComments = async function(postid){
+
+    const q = query(
+        collection(db, "comments"),
+        where("postId", "==", postid)
+    );
+
+    const snapshot = await getDocs(q);
+
+    return snapshot.docs.map(doc => doc.data());
+};
+
+window.saveFirestoreComment = async function(postid, comment){
+
+    await addDoc(collection(db, "comments"), {
+        postId: postid,
+        name: comment.name,
+        txt: comment.txt,
+        date: comment.date
+    });
+
 };
