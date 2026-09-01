@@ -3,8 +3,10 @@
 const ICONS={poem:'🌸',story:'📖',article:'✒️',other:'✦'};
 const LC={'ಕನ್ನಡ':'kn','English':'en','Mixed':'mixed'};
 
-let POSTS=[],CATS={},likes={},likedMe=new Set();
-let Q=null,QA=[],QS=[],qDraft=[],editQId=false,qSubmitted=false;
+// Render the bundled content immediately on a refresh. Firebase replaces it
+// in the background, so a slow connection never leaves the page blank.
+let POSTS=[...DP],CATS=JSON.parse(JSON.stringify(DC)),likes={},likedMe=new Set();
+let Q=null,QA=[...DQA],QS=[],qDraft=[],editQId=false,qSubmitted=false;
 let adminAuth=false,editId=null,catF='all',langF='all',searchQ='';
 
 function hSearch(v){
@@ -21,18 +23,33 @@ function clearSearch(){
 }
 
 async function loadAll(){
-  try{POSTS=window.getFirestorePosts?await window.getFirestorePosts():[...DP]}catch(e){console.error('Posts load failed:',e);POSTS=[...DP]}
-  try{CATS=(window.getFirestoreCategories?await window.getFirestoreCategories():null)||JSON.parse(JSON.stringify(DC))}catch(e){console.error('Categories load failed:',e);CATS=JSON.parse(JSON.stringify(DC))}
+  const [posts,categories,activeQuiz,archive] = await Promise.allSettled([
+    window.getFirestorePosts?window.getFirestorePosts():Promise.resolve([...DP]),
+    window.getFirestoreCategories?window.getFirestoreCategories():Promise.resolve(JSON.parse(JSON.stringify(DC))),
+    window.getFirestoreActiveQuiz?window.getFirestoreActiveQuiz():Promise.resolve(null),
+    window.getFirestoreQuizzes?window.getFirestoreQuizzes():Promise.resolve([...DQA])
+  ]);
+
+  if(posts.status==='fulfilled')POSTS=posts.value;
+  else console.error('Posts load failed:',posts.reason);
+  if(categories.status==='fulfilled'&&categories.value)CATS=categories.value;
+  else if(categories.status==='rejected')console.error('Categories load failed:',categories.reason);
+  if(activeQuiz.status==='fulfilled')Q=activeQuiz.value||null;
+  else console.error('Active quiz load failed:',activeQuiz.reason);
+  if(archive.status==='fulfilled')QA=archive.value.filter(q=>q.state==='archived'&&Array.isArray(q.questions));
+  else console.error('Quiz archive load failed:',archive.reason);
+
+  // Show the Firestore content as soon as it arrives. Likes are deliberately
+  // loaded afterward because they require the anonymous visitor session.
+  renderHome();
   try{
     likes={};likedMe=new Set();
     await Promise.all(POSTS.map(async p=>{
       likes[p.id]=await window.getFirestoreLikes(p.id);
       if(await window.getMyFirestoreLike(p.id))likedMe.add(p.id);
     }));
+    renderHome();
   }catch(e){console.error('Reactions load failed:',e)}
-  Q=null;
-  try{Q=window.getFirestoreActiveQuiz?await window.getFirestoreActiveQuiz():null}catch(e){console.error('Active quiz load failed:',e)}
-  try{QA=window.getFirestoreQuizzes?await window.getFirestoreQuizzes():[...DQA];QA=QA.filter(q=>q.state==='archived'&&Array.isArray(q.questions))}catch(e){console.error('Quiz archive load failed:',e);QA=[...DQA]}
 }
 const svP=(post)=>window.saveFirestorePost(post);
 const svC=()=>window.saveFirestoreCategories(CATS);
@@ -678,9 +695,12 @@ async function saveQForm(){
 }
 
 (async()=>{
+  // Do not make visitors wait for Firebase before they can read the site.
+  go('home');
+  try{
     await window.firebaseReady;
-    await window.firebaseAuthReady;
     await loadAll();
-    go('home');
-
+  }catch(e){
+    console.error('Firebase refresh failed:',e);
+  }
 })();
