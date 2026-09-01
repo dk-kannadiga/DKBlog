@@ -24,6 +24,7 @@ nav a.quiz-link.on,nav a.quiz-link:hover{background:var(--ac);color:#fff;border-
 .tags{display:flex;gap:7px;margin-bottom:9px;flex-wrap:wrap}
 .tcat{background:var(--ac);color:#fff;font-size:.7rem;padding:2px 10px;border-radius:12px;font-family:'Lora','Noto Sans Kannada',serif}
 .tsub{background:var(--pd);color:var(--il);border:1px solid var(--gd);font-size:.7rem;padding:2px 10px;border-radius:12px;font-family:'Lora','Noto Sans Kannada',serif}
+.tlabel{background:transparent;color:var(--il);border:1px solid var(--gl);font-size:.7rem;padding:2px 10px;border-radius:12px;font-family:'Lora','Noto Sans Kannada',serif}
 .tlang{background:var(--gl);color:var(--il);border:1px solid var(--gd);font-size:.7rem;padding:2px 10px;border-radius:12px;font-family:'Lora','Noto Sans Kannada',serif}
 .card h2{font-family:'Playfair Display','Noto Sans Kannada',serif;font-size:1.2rem;color:var(--ink);margin-bottom:7px;line-height:1.4}
 .exc{color:var(--il);font-size:.9rem;line-height:1.6;margin-bottom:12px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
@@ -33,6 +34,13 @@ nav a.quiz-link.on,nav a.quiz-link:hover{background:var(--ac);color:#fff;border-
 .pmeta{color:var(--il);font-size:.82rem;font-style:italic}
 .pbody{font-size:1rem;line-height:1.95;color:var(--ink);margin-bottom:36px;white-space:pre-wrap;font-family:'Lora','Noto Sans Kannada',serif}
 .pbody.poem{font-style:italic;line-height:2.1;padding:22px 30px;background:var(--cb);border-left:3px solid var(--gd);border-radius:4px}
+.pbody.richbody{white-space:normal}
+.richbody p,.richbody div{margin:0 0 1.2em}
+.richbody ul,.richbody ol{margin:0 0 1.2em;padding-left:1.5em}
+.richbody li{margin:.35em 0}
+.richbody blockquote{margin:1.25em 0;padding:14px 18px;border-left:3px solid var(--gd);background:var(--cb);color:var(--il)}
+.richbody img{display:block;max-width:100%;height:auto;margin:1.4em auto;border:1px solid var(--gl);border-radius:5px}
+.richbody a{color:var(--ac);text-decoration-thickness:1px;text-underline-offset:2px}
 .pactions{display:flex;gap:10px;align-items:center;margin-bottom:36px;padding:14px 0;border-top:1px solid var(--gl);border-bottom:1px solid var(--gl);flex-wrap:wrap}
 .lbtn{display:flex;align-items:center;gap:7px;padding:7px 18px;background:var(--cb);border:1px solid var(--ac);border-radius:24px;cursor:pointer;font-family:'Lora',serif;font-size:.88rem;color:var(--ac);transition:all .2s}
 .lbtn:hover,.lbtn.liked{background:var(--ac);color:#fff}

@@ -80,6 +80,39 @@ async function svCmt(id,c){
 }
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
 function autoExc(b){if(!b)return'';if(b.length<=160)return b;const t=b.substring(0,160);const i=Math.max(t.lastIndexOf(' '),t.lastIndexOf('\n'));return t.substring(0,i>80?i:140)+'...'}
+function postTags(p){
+  const labels=Array.isArray(p.labels)?[...new Set(p.labels.map(x=>String(x).trim()).filter(Boolean))]:[];
+  const extraLabels=labels.filter(label=>label!==p.subcat);
+  return `<div class="tags"><span class="tcat">${esc(p.cat)}</span>${p.subcat?`<span class="tsub">${esc(p.subcat)}</span>`:''}${extraLabels.map(label=>`<span class="tlabel">${esc(label)}</span>`).join('')}<span class="tlang">${esc(p.lang)}</span></div>`
+}
+function safeContentUrl(value){
+  try{
+    const url=new URL(value,location.href);
+    return ['https:','http:'].includes(url.protocol)?url.href:'';
+  }catch(e){return ''}
+}
+function safePostHtml(html){
+  const template=document.createElement('template');
+  template.innerHTML=String(html||'');
+  const allowed=new Set(['a','b','blockquote','br','div','em','i','img','li','ol','p','span','strong','u','ul']);
+  const blocked=new Set(['base','embed','form','iframe','link','meta','object','script','style','svg']);
+  for(const el of Array.from(template.content.querySelectorAll('*')).reverse()){
+    const tag=el.tagName.toLowerCase();
+    if(blocked.has(tag)){el.remove();continue}
+    if(!allowed.has(tag)){el.replaceWith(...Array.from(el.childNodes));continue}
+    const href=tag==='a'?safeContentUrl(el.getAttribute('href')):'';
+    const src=tag==='img'?safeContentUrl(el.getAttribute('src')):'';
+    const alt=tag==='img'?(el.getAttribute('alt')||''):'';
+    for(const attr of Array.from(el.attributes))el.removeAttribute(attr.name);
+    if(tag==='a'&&href){el.setAttribute('href',href);el.setAttribute('target','_blank');el.setAttribute('rel','noopener noreferrer')}
+    if(tag==='img'){
+      if(!src){el.remove();continue}
+      el.setAttribute('src',src);if(alt)el.setAttribute('alt',alt)
+    }
+  }
+  return template.innerHTML;
+}
+function postContent(p){return p.html?safePostHtml(p.html):esc(p.body)}
 function todayStr(){return new Date().toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})}
 
 // ── NAVIGATION ────────────────────────────────────────
@@ -122,6 +155,7 @@ function renderHome(){
       p.body.toLowerCase().includes(searchQ)||
       p.cat.toLowerCase().includes(searchQ)||
       (p.subcat&&p.subcat.toLowerCase().includes(searchQ))||
+      (Array.isArray(p.labels)&&p.labels.some(label=>String(label).toLowerCase().includes(searchQ)))||
       p.lang.toLowerCase().includes(searchQ)
     );
     if(sr)sr.textContent=fp.length
@@ -130,7 +164,7 @@ function renderHome(){
   }else{if(sr)sr.textContent=''}
   if(!fp.length){g.innerHTML='<div class="empty">No writings match.</div>';return}
   g.innerHTML=fp.map(p=>`<div class="card" onclick="go('post',${p.id})">
-    <div class="tags"><span class="tcat">${esc(p.cat)}</span>${p.subcat?`<span class="tsub">${esc(p.subcat)}</span>`:''}<span class="tlang">${esc(p.lang)}</span></div>
+    ${postTags(p)}
     <h2>${esc(p.title)}</h2><p class="exc">${esc(p.exc||autoExc(p.body))}</p>
     <div class="cf"><span>${p.date}</span><span>♥ ${likes[p.id]||0}</span></div>
   </div>`).join('')
@@ -140,9 +174,9 @@ async function renderPost(id){
   const lc=likes[p.id]||0,il=likedMe.has(p.id),cmts=await ldCmt(p.id);
   const ch=cmts.length?cmts.map(c=>`<div class="ci"><div class="chdr"><span class="cauth">${esc(c.name||'Anonymous')}</span><span class="cdate">${c.date}</span></div><p class="ctxt">${esc(c.txt)}</p></div>`).join(''):'<div class="noc">Be the first to leave a thought...</div>';
   document.getElementById('pvc').innerHTML=`<div class="pvh">
-    <div class="tags"><span class="tcat">${esc(p.cat)}</span>${p.subcat?`<span class="tsub">${esc(p.subcat)}</span>`:''}<span class="tlang">${esc(p.lang)}</span></div>
+    ${postTags(p)}
     <h1>${esc(p.title)}</h1><p class="pmeta">Written on ${p.date}</p></div>
-    <div class="${p.cc==='poem'?'pbody poem':'pbody'}">${esc(p.body)}</div>
+    <div class="pbody${p.cc==='poem'?' poem':''}${p.html?' richbody':''}">${postContent(p)}</div>
     <div class="div">✦</div>
     <div class="pactions">
       <button class="lbtn${il?' liked':''}" id="lb${p.id}" onclick="tlike(${p.id})">${il?'♥':'♡'} <span id="lc${p.id}">${lc}</span> ${lc===1?'like':'likes'}</button>
