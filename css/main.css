@@ -67,6 +67,7 @@ nav a.quiz-link.on,nav a.quiz-link:hover{background:var(--ac);color:#fff;border-
 .abio{font-size:.97rem;line-height:1.9;color:var(--ink);margin-bottom:16px}
 .aint{background:var(--cb);border:1px solid var(--gl);border-left:4px solid var(--ac);border-radius:0 6px 6px 0;padding:18px 22px;margin-top:22px}
 .aint h4{font-family:'Playfair Display',serif;color:var(--ac);margin-bottom:10px}
+.biofacts{margin:0}.biofacts>div{padding:12px 0;border-top:1px solid var(--gl)}.biofacts>div:first-child{border-top:none;padding-top:0}.biofacts dt{font-family:'Lora','Noto Sans Kannada',serif;font-weight:700;color:var(--ac);margin-bottom:4px}.biofacts dd{margin:0;color:var(--ink);font-size:.92rem;line-height:1.8}
 .itags{display:flex;flex-wrap:wrap;gap:7px}
 .itag{padding:3px 13px;background:var(--p);border:1px solid var(--gd);border-radius:16px;font-size:.82rem;color:var(--il);font-family:'Lora','Noto Sans Kannada',serif}
 .back{display:inline-flex;align-items:center;gap:5px;color:var(--il);font-size:.82rem;cursor:pointer;margin-bottom:26px;padding:5px 0;border:none;background:none;font-family:'Lora',serif;transition:color .2s}
