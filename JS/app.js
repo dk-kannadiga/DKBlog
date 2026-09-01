@@ -678,11 +678,7 @@ async function saveQForm(){
 }
 
 (async()=>{
-
-    while(!window.firebaseReady){
-        await new Promise(r=>setTimeout(r,100));
-    }
-
+    await window.firebaseReady;
     await window.firebaseAuthReady;
     await loadAll();
     go('home');

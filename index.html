@@ -142,5 +142,10 @@
 <footer>✦ &nbsp; DK's Writings &nbsp;·&nbsp; ಬರಹಗಳ ಜಗತ್ತು &nbsp; ✦ <a href="#" onclick="go('adminlogin');return false" title="Admin">⚙</a></footer>
 
 <script src="js/data.js"></script>
+<script>
+  window.firebaseReady = new Promise((resolve) => {
+    window.resolveFirebaseReady = resolve;
+  });
+</script>
 <script type="module" src="js/firestore-loader.js"></script>
 <script src="js/app.js"></script>
