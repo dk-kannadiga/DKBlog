@@ -112,7 +112,11 @@ function safePostHtml(html){
   }
   return template.innerHTML;
 }
-function postContent(p){return p.html?safePostHtml(p.html):esc(p.body)}
+function postContent(p){
+  const cover=safeContentUrl(p.coverImage);
+  const coverHtml=cover?`<img class="post-cover" src="${cover}" alt="${esc(p.title)} cover">`:'';
+  return p.html?coverHtml+safePostHtml(p.html):esc(p.body)
+}
 function todayStr(){return new Date().toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})}
 
 // ── NAVIGATION ────────────────────────────────────────
