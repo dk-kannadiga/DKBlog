@@ -117,6 +117,9 @@ function postContent(p){
   const coverHtml=cover?`<img class="post-cover" src="${cover}" alt="${esc(p.title)} cover">`:'';
   return p.html?coverHtml+safePostHtml(p.html):esc(p.body)
 }
+function bodyToRichHtml(body){
+  return String(body).split(/\n{2,}/).filter(Boolean).map(paragraph=>`<p>${esc(paragraph).replace(/\n/g,'<br>')}</p>`).join('')
+}
 function todayStr(){return new Date().toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})}
 
 // ── NAVIGATION ────────────────────────────────────────
@@ -494,6 +497,7 @@ function buildFormHtml(){
       <div class="frow"><label>Sub-category</label><select id="f-sc">${subsHtml(p?.cc||'',p?.subcat||'')}</select></div>
     </div>
     <div class="frow"><label>Excerpt <span style="font-weight:400;color:var(--gd)">(optional)</span></label><textarea id="f-e" rows="2" placeholder="Auto-generated if blank"></textarea></div>
+    ${p?.html?'<p class="import-note">Imported formatting is preserved until you change the body. Saving body edits updates the reader version from the text below.</p>':''}
     <div class="frow"><label>Body</label><textarea id="f-b" rows="13" placeholder="Your writing..."></textarea></div>
     <div class="fbts"><button class="savebtn" onclick="savePost()">💾 Save</button><button class="cancelbtn" onclick="cancelForm()">Cancel</button></div>
   </div>`
@@ -513,7 +517,9 @@ async function savePost(){
   const date=document.getElementById('f-d').value.trim(),exc=document.getElementById('f-e').value.trim();
   const body=document.getElementById('f-b').value.trim();
   if(!title||!catKey||!body){alert('Title, Category, and Body are required.');return}
-  const post={id:editId||Date.now(),title,lang:langV,lc:LC[langV]||'kn',cat:CATS[catKey].label,cc:catKey,subcat:subcat||'',date:date||todayStr(),exc:exc||autoExc(body),body};
+  const previous=editId?POSTS.find(x=>x.id===editId):null;
+  const post={...(previous||{}),id:editId||Date.now(),title,lang:langV,lc:LC[langV]||'kn',cat:CATS[catKey].label,cc:catKey,subcat:subcat||'',date:date||todayStr(),exc:exc||autoExc(body),body};
+  if(previous?.html&&body!==previous.body)post.html=bodyToRichHtml(body);
   try{
     await svP(post);
     if(editId){const i=POSTS.findIndex(x=>x.id===editId);if(i>=0)POSTS[i]=post}else POSTS.unshift(post);

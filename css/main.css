@@ -122,6 +122,7 @@ footer a:hover{opacity:.9}
 .frow input,.frow select,.frow textarea{width:100%;padding:9px 13px;border:1px solid var(--gl);border-radius:6px;font-family:'Lora','Noto Sans Kannada',serif;font-size:.88rem;background:var(--p);color:var(--ink);transition:border-color .2s;resize:vertical}
 .frow input:focus,.frow select:focus,.frow textarea:focus{outline:none;border-color:var(--ac)}
 .frow select{cursor:pointer}
+.import-note{margin:-2px 0 12px;padding:8px 11px;border-left:3px solid var(--gd);background:var(--pd);color:var(--il);font-size:.78rem;line-height:1.55}
 .frow2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
 .frow2 .frow{margin-bottom:0}
 .fbts{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap}
