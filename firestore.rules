@@ -1,0 +1,70 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+        && get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.enabled == true;
+    }
+
+    match /admins/{userId} {
+      allow get: if signedIn() && request.auth.uid == userId;
+      allow list, create, update, delete: if false;
+    }
+
+    match /posts/{postId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /siteSettings/{setting} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /quizzes/{quizId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /comments/{commentId} {
+      allow read: if true;
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['postId', 'name', 'txt', 'date', 'userId', 'createdAt'])
+        && request.resource.data.postId is int
+        && request.resource.data.name is string
+        && request.resource.data.name.size() >= 2
+        && request.resource.data.name.size() <= 60
+        && request.resource.data.txt is string
+        && request.resource.data.txt.size() >= 1
+        && request.resource.data.txt.size() <= 2000
+        && request.resource.data.date is string
+        && request.resource.data.date.size() <= 32
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.createdAt == request.time;
+      allow update: if false;
+      allow delete: if isAdmin();
+    }
+
+    match /likes/{likeId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /reactions/{reactionId} {
+      allow read: if true;
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['postId', 'userId', 'createdAt'])
+        && request.resource.data.postId is int
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.createdAt == request.time;
+      allow update: if false;
+      allow delete: if signedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+    }
+  }
+}

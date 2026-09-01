@@ -21,63 +21,24 @@ function clearSearch(){
 }
 
 async function loadAll(){
+  try{POSTS=window.getFirestorePosts?await window.getFirestorePosts():[...DP]}catch(e){console.error('Posts load failed:',e);POSTS=[...DP]}
+  try{CATS=(window.getFirestoreCategories?await window.getFirestoreCategories():null)||JSON.parse(JSON.stringify(DC))}catch(e){console.error('Categories load failed:',e);CATS=JSON.parse(JSON.stringify(DC))}
   try{
-
- console.log("FUNCTION:", window.getFirestorePosts);
-
-if(window.getFirestorePosts){
-
-    console.log("LOADING FIRESTORE");
-
-    POSTS = await window.getFirestorePosts();
-
-    console.log("FIRESTORE RESULT", POSTS);
-
-}else{
-
-    console.log("USING DP");
-
-    POSTS = [...DP];
-
+    likes={};likedMe=new Set();
+    await Promise.all(POSTS.map(async p=>{
+      likes[p.id]=await window.getFirestoreLikes(p.id);
+      if(await window.getMyFirestoreLike(p.id))likedMe.add(p.id);
+    }));
+  }catch(e){console.error('Reactions load failed:',e)}
+  Q=null;
+  try{Q=window.getFirestoreActiveQuiz?await window.getFirestoreActiveQuiz():null}catch(e){console.error('Active quiz load failed:',e)}
+  try{QA=window.getFirestoreQuizzes?await window.getFirestoreQuizzes():[...DQA];QA=QA.filter(q=>q.state==='archived'&&Array.isArray(q.questions))}catch(e){console.error('Quiz archive load failed:',e);QA=[...DQA]}
 }
-
-}catch(e){
-
-  console.error("Firestore failed:",e);
-  POSTS = [...DP];
-
-}
-  try{const r=await window.storage.get('dk_cats');CATS=r?JSON.parse(r.value):JSON.parse(JSON.stringify(DC))}catch(e){CATS=JSON.parse(JSON.stringify(DC))}
-  try{
-
-  likes = {};
-
-  if(window.getFirestoreLikes){
-
-    for(const p of POSTS){
-
-      likes[p.id] = await window.getFirestoreLikes(p.id);
-
-    }
-
-  }
-
-}catch(e){
-
-  console.error("Likes load failed:",e);
-
-}
-  try{const r=await window.storage.get('dk_liked');if(r)likedMe=new Set(JSON.parse(r.value))}catch(e){}
-  try{const r=await window.storage.get('dk_q');if(r)Q=JSON.parse(r.value)}catch(e){}
-  try{const r=await window.storage.get('dk_qa');if(r)QA=JSON.parse(r.value);else QA=[...DQA]}catch(e){QA=[...DQA]}
-  try{const r=await window.storage.get('dk_qs');if(r)QS=JSON.parse(r.value)}catch(e){}
-}
-const svP=()=>window.storage.set('dk_posts',JSON.stringify(POSTS)).catch(()=>{});
-const svC=()=>window.storage.set('dk_cats',JSON.stringify(CATS)).catch(()=>{});
-const svQ=()=>window.storage.set('dk_q',JSON.stringify(Q)).catch(()=>{});
-const svQA=()=>window.storage.set('dk_qa',JSON.stringify(QA)).catch(()=>{});
-const svQS=()=>window.storage.set('dk_qs',JSON.stringify(QS)).catch(()=>{});
-async function svL(){try{await window.storage.set('dk_likes',JSON.stringify(likes));await window.storage.set('dk_liked',JSON.stringify([...likedMe]))}catch(e){}}
+const svP=(post)=>window.saveFirestorePost(post);
+const svC=()=>window.saveFirestoreCategories(CATS);
+const svQ=()=>window.saveFirestoreActiveQuiz(Q);
+const svQA=()=>Promise.resolve();
+const svQS=()=>Promise.resolve();
 async function ldCmt(id){
 
   try{
@@ -97,25 +58,9 @@ async function ldCmt(id){
 
 }
 async function svCmt(id,c){
-
-  try{
-
-    await window.saveFirestoreComment(id,c);
-
-    return await ldCmt(id);
-
-  }catch(e){
-
-    console.error("Comment save failed",e);
-
-    return await ldCmt(id);
-
-  }
-
+  await window.saveFirestoreComment(id,c);
+  return await ldCmt(id);
 }
-async function getPass(){try{const r=await window.storage.get('dk_pass');return r?r.value:'dk@writes'}catch(e){return'dk@writes'}}
-async function setPass(p){try{await window.storage.set('dk_pass',p)}catch(e){}}
-
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
 function autoExc(b){if(!b)return'';if(b.length<=160)return b;const t=b.substring(0,160);const i=Math.max(t.lastIndexOf(' '),t.lastIndexOf('\n'));return t.substring(0,i>80?i:140)+'...'}
 function todayStr(){return new Date().toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})}
@@ -203,20 +148,10 @@ async function renderPost(id){
     </div>`
 }
 async function tlike(id){
-
-  if(likedMe.has(id)){
-    likedMe.delete(id);
-    likes[id]=Math.max(0,(likes[id]||0)-1);
-  }else{
-    likedMe.add(id);
-    likes[id]=(likes[id]||0)+1;
-  }
-
-  if(window.saveFirestoreLikes){
-    await window.saveFirestoreLikes(id, likes[id]);
-  }
-
-  await svL();
+  const next=!likedMe.has(id);
+  try{await window.toggleFirestoreLike(id,next)}catch(e){console.error('Reaction failed:',e);alert('Your reaction could not be saved. Please try again.');return}
+  if(next){likedMe.add(id);likes[id]=(likes[id]||0)+1}
+  else{likedMe.delete(id);likes[id]=Math.max(0,(likes[id]||0)-1)}
 
   const il=likedMe.has(id),
         lc=likes[id]||0,
@@ -235,8 +170,11 @@ function shr(id){
 async function addCmt(id){
   const n=document.getElementById('cn'+id),t=document.getElementById('ct'+id);
   if(!t?.value.trim())return;
-  const c={name:n.value.trim(),txt:t.value.trim(),date:todayStr()};
-  const arr=await svCmt(id,c);n.value='';t.value='';
+  if(t.value.trim().length>2000){alert('Please keep comments under 2,000 characters.');return}
+  const c={name:n.value.trim()||'Anonymous',txt:t.value.trim(),date:todayStr()};
+  let arr;
+  try{arr=await svCmt(id,c)}catch(e){console.error('Comment save failed:',e);alert('Your comment could not be posted. Please try again.');return}
+  n.value='';t.value='';
   const cl=document.getElementById('cl'+id);
   if(cl)cl.innerHTML=arr.map(x=>`<div class="ci"><div class="chdr"><span class="cauth">${esc(x.name||'Anonymous')}</span><span class="cdate">${x.date}</span></div><p class="ctxt">${esc(x.txt)}</p></div>`).join('')
 }
@@ -339,7 +277,7 @@ async function submitQuiz(){
     if(!Q.stats.qs[i])Q.stats.qs[i]={c:0,w:0};
     if(answers[i]===q.ans)Q.stats.qs[i].c++;else Q.stats.qs[i].w++
   });
-  svQ();qSubmitted=true;
+  qSubmitted=true;
   showResults(Q,answers,name,score)
 }
 function showResults(q,answers,name,score){
@@ -398,7 +336,7 @@ function renderQArcList(){
   el.innerHTML='<h3 style="font-family:\'Playfair Display\',serif;color:var(--ac);margin-bottom:16px">Past Quizzes</h3>'+
   QA.map(q=>`<div class="aqcard" onclick="go('qdetail',${q.id})">
     <div><div class="aqcard-title">${esc(q.title)}</div>
-    <div class="aqcard-meta">${q.date} · ${q.total} participants · ${q.questions.length} questions</div></div>
+    <div class="aqcard-meta">${q.date} · ${q.total} participants · ${(q.questions||[]).length} questions</div></div>
     <span class="tsub" style="font-size:.74rem">${q.type==='prize'?'🎁 Prize':'📜 Certificate'}</span>
   </div>`).join('')
 }
@@ -428,11 +366,20 @@ function renderQDetail(id){
 
 // ── ADMIN ─────────────────────────────────────────────
 async function aLogin(){
-  const pw=document.getElementById('apw').value;
-  if(pw===await getPass()){adminAuth=true;document.getElementById('apw').value='';document.getElementById('aerr').textContent='';go('admin')}
-  else document.getElementById('aerr').textContent='Incorrect password.'
+  const error=document.getElementById('aerr');
+  error.textContent='Opening secure sign-in…';
+  try{
+    await window.signInAdmin();
+    adminAuth=window.isFirebaseOwner();
+    if(!adminAuth)throw new Error('This account is not authorized to administer the site.');
+    error.textContent='';go('admin');
+  }catch(e){
+    console.error('Admin sign-in failed:',e);
+    adminAuth=false;
+    error.textContent=e.message||'Sign-in was not completed. Please try again.';
+  }
 }
-function aLogout(){adminAuth=false;go('home')}
+async function aLogout(){adminAuth=false;await window.signOutAdmin();go('home')}
 function aTab(btn,tab){
   document.querySelectorAll('.adtab').forEach(b=>b.classList.remove('on'));
   document.querySelectorAll('.adtabc').forEach(c=>c.classList.remove('on'));
@@ -465,7 +412,10 @@ function askDel(id){
     <button class="delbtn hot" onclick="delPost(${id})">Yes</button>
     <button class="cancelbtn" style="padding:5px 10px;font-size:.8rem" onclick="renderAdPosts()">No</button>`
 }
-async function delPost(id){POSTS=POSTS.filter(x=>x.id!==id);await svP();renderAdPosts()}
+async function delPost(id){
+  try{await window.deleteFirestorePost(id);POSTS=POSTS.filter(x=>x.id!==id);renderAdPosts()}
+  catch(e){console.error('Post deletion failed:',e);alert('The post could not be deleted. Please try again.')}
+}
 function subsHtml(catKey,selSub){
   if(!catKey||!CATS[catKey])return'<option value="">— choose a main category first —</option>';
   return'<option value="">— Select sub-category —</option>'+CATS[catKey].subs.map(s=>`<option value="${esc(s)}"${s===selSub?' selected':''}>${esc(s)}</option>`).join('')
@@ -509,8 +459,11 @@ async function savePost(){
   const body=document.getElementById('f-b').value.trim();
   if(!title||!catKey||!body){alert('Title, Category, and Body are required.');return}
   const post={id:editId||Date.now(),title,lang:langV,lc:LC[langV]||'kn',cat:CATS[catKey].label,cc:catKey,subcat:subcat||'',date:date||todayStr(),exc:exc||autoExc(body),body};
-  if(editId){const i=POSTS.findIndex(x=>x.id===editId);if(i>=0)POSTS[i]=post}else POSTS.unshift(post);
-  await svP();cancelForm();renderAdPosts()
+  try{
+    await svP(post);
+    if(editId){const i=POSTS.findIndex(x=>x.id===editId);if(i>=0)POSTS[i]=post}else POSTS.unshift(post);
+    cancelForm();renderAdPosts();renderHome();
+  }catch(e){console.error('Post save failed:',e);alert('The post could not be saved. Please try again.')}
 }
 
 // ── ADMIN: CATEGORIES ─────────────────────────────────
@@ -534,18 +487,20 @@ function startRename(k){
 async function saveRename(k){
   const v=document.getElementById('rn-'+k)?.value.trim();if(!v)return;
   CATS[k].label=v;POSTS.forEach(p=>{if(p.cc===k)p.cat=v});
-  await svC();await svP();renderAdCats()
+  try{await svC();await Promise.all(POSTS.filter(p=>p.cc===k).map(svP));renderAdCats();renderHome()}
+  catch(e){console.error('Category rename failed:',e);alert('The category could not be saved. Please try again.')}
 }
 async function addSub(k){
   const inp=document.getElementById('ns-'+k),v=inp.value.trim();
   if(!v||CATS[k].subs.includes(v))return;
-  CATS[k].subs.push(v);await svC();inp.value='';renderAdCats()
+  CATS[k].subs.push(v);try{await svC();inp.value='';renderAdCats();renderHome()}catch(e){CATS[k].subs.pop();console.error('Category save failed:',e);alert('The category could not be saved. Please try again.')}
 }
-async function delSub(k,i){CATS[k].subs.splice(i,1);await svC();renderAdCats()}
+async function delSub(k,i){const removed=CATS[k].subs.splice(i,1);try{await svC();renderAdCats();renderHome()}catch(e){CATS[k].subs.splice(i,0,...removed);console.error('Category save failed:',e);alert('The category could not be saved. Please try again.')}
+}
 async function addMainCat(){
   const inp=document.getElementById('nci'),v=inp.value.trim();if(!v)return;
   const key=v.toLowerCase().replace(/[^\w]/g,'_').replace(/_+/g,'_').substring(0,24)||'cat_'+Date.now();
-  if(CATS[key])return;CATS[key]={label:v,subs:['Other']};await svC();inp.value='';renderAdCats()
+  if(CATS[key])return;CATS[key]={label:v,subs:['Other']};try{await svC();inp.value='';renderAdCats();renderHome()}catch(e){delete CATS[key];console.error('Category save failed:',e);alert('The category could not be saved. Please try again.')}
 }
 
 // ── ADMIN: QUIZ ───────────────────────────────────────
@@ -570,12 +525,19 @@ function renderAdQuiz(){
     </div>`).join(''):'<div class="empty" style="padding:14px">No archived quizzes yet.</div>'}
     </div>`
 }
-async function setQState(s){if(!Q)return;Q.state=s;await svQ();renderAdQuiz()}
+async function setQState(s){
+  if(!Q)return;
+  const old=Q.state;Q.state=s;
+  try{await svQ();renderAdQuiz()}catch(e){Q.state=old;console.error('Quiz save failed:',e);alert('The quiz state could not be saved. Please try again.')}
+}
 async function doArchive(){
   if(!Q||Q.state!=='closed')return;
-  QA.unshift({id:Q.id,title:Q.title,date:Q.date,type:Q.type,total:Q.stats?.total||0,
-    questions:Q.questions.map((qu,i)=>({...qu,stats:Q.stats?.qs?.[i]||{c:0,w:0}}))});
-  Q=null;QS=[];await svQ();await svQA();await svQS();renderAdQuiz()
+  const archive={id:Q.id,title:Q.title,date:Q.date,type:Q.type,total:Q.stats?.total||0,state:'archived',
+    questions:Q.questions.map((qu,i)=>({...qu,stats:Q.stats?.qs?.[i]||{c:0,w:0}}))};
+  try{
+    await window.saveFirestoreQuizArchive(archive);
+    Q=null;QS=[];await svQ();QA.unshift(archive);renderAdQuiz();
+  }catch(e){console.error('Quiz archive failed:',e);alert('The quiz could not be archived. Please try again.')}
 }
 function askDelQ(){
   const sv=document.getElementById('qsv');
@@ -587,7 +549,10 @@ function askDelQ(){
     </div>
   </div>`
 }
-async function delQ(){Q=null;QS=[];await svQ();await svQS();renderAdQuiz()}
+async function delQ(){
+  const current=Q;Q=null;QS=[];
+  try{await svQ();renderAdQuiz()}catch(e){Q=current;console.error('Quiz deletion failed:',e);alert('The quiz could not be deleted. Please try again.')}
+}
 function viewSubs(){
   const el=document.getElementById('qsubs');
   if(!QS.length){el.innerHTML='<p style="color:var(--gd);font-style:italic;padding:12px 0;font-size:.88rem">No submissions yet.</p>';return}
@@ -600,7 +565,10 @@ function viewSubs(){
   </div>`).join('')}</div>`
 }
 async function clearSubs(){QS=[];await svQS();viewSubs()}
-async function delArcQ(id){QA=QA.filter(q=>q.id!==id);await svQA();renderAdQuiz()}
+async function delArcQ(id){
+  try{await window.deleteFirestoreQuizArchive(id);QA=QA.filter(q=>q.id!==id);renderAdQuiz()}
+  catch(e){console.error('Quiz archive deletion failed:',e);alert('The archived quiz could not be deleted. Please try again.')}
+}
 
 // ── QUIZ FORM (Admin) ─────────────────────────────────
 function renderQBuilder(){
@@ -706,18 +674,7 @@ async function saveQForm(){
     prize:document.getElementById('qf-pr')?.value.trim()||'',
     questions:qDraft,stats:editQId&&Q?Q.stats:{total:0,qs:{}}
   };
-  await svQ();cancelQF();renderAdQuiz()
-}
-
-// ── SETTINGS ─────────────────────────────────────────
-async function changePw(){
-  const p1=document.getElementById('pw1').value,p2=document.getElementById('pw2').value;
-  const msg=document.getElementById('pwmsg');
-  if(!p1){msg.textContent='Enter a new password.';msg.className='smsg err';return}
-  if(p1!==p2){msg.textContent="Passwords don't match.";msg.className='smsg err';return}
-  await setPass(p1);document.getElementById('pw1').value='';document.getElementById('pw2').value='';
-  msg.textContent='Password updated!';msg.className='smsg ok';
-  setTimeout(()=>{msg.textContent='';msg.className='smsg'},3000)
+  try{await svQ();cancelQF();renderAdQuiz()}catch(e){console.error('Quiz save failed:',e);alert('The quiz could not be saved. Please try again.')}
 }
 
 (async()=>{
@@ -726,6 +683,7 @@ async function changePw(){
         await new Promise(r=>setTimeout(r,100));
     }
 
+    await window.firebaseAuthReady;
     await loadAll();
     go('home');
 

@@ -1,4 +1,16 @@
 {
+  "firestore": {
+    "rules": "firestore.rules"
+  },
+  "auth": {
+    "providers": {
+      "anonymous": true,
+      "googleSignIn": {
+        "oAuthBrandDisplayName": "DK's Writings",
+        "supportEmail": "support@dkblog-6c5e5.firebaseapp.com"
+      }
+    }
+  },
   "hosting": {
     "public": ".",
     "ignore": [

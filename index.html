@@ -108,11 +108,10 @@
 <div id="pal" class="page"><div class="pc">
   <div class="alog">
     <h2>Admin Access</h2>
-    <p>Enter password to manage your platform</p>
-    <input type="password" id="apw" placeholder="Password" onkeydown="if(event.key==='Enter')aLogin()">
+    <p>Sign in securely with the Google account authorized for this site.</p>
     <div class="aerr" id="aerr"></div>
-    <button class="alogbtn" onclick="aLogin()">Enter Admin</button>
-    <p class="afp">Default: <code>dk@writes</code> — change under Settings.</p>
+    <button class="alogbtn" onclick="aLogin()">Continue with Google</button>
+    <p class="afp">Only the site owner's authorized account can open the admin panel.</p>
   </div>
 </div></div>
 
@@ -123,7 +122,6 @@
     <div class="adtab on" onclick="aTab(this,'posts')">Posts</div>
     <div class="adtab" onclick="aTab(this,'cats')">Categories</div>
     <div class="adtab" onclick="aTab(this,'quiz')">Quiz</div>
-    <div class="adtab" onclick="aTab(this,'settings')">Settings</div>
   </div>
   <div id="atab-posts" class="adtabc on">
     <button class="addbtn" onclick="startAdd()">＋ New Post</button>
@@ -139,14 +137,6 @@
     </div>
   </div>
   <div id="atab-quiz" class="adtabc"></div>
-  <div id="atab-settings" class="adtabc">
-    <div class="sbox"><h4>Change Admin Password</h4>
-      <input type="password" id="pw1" placeholder="New password">
-      <input type="password" id="pw2" placeholder="Confirm new password">
-      <button class="savebtn" onclick="changePw()">Update Password</button>
-      <div class="smsg" id="pwmsg"></div>
-    </div>
-  </div>
 </div></div>
 
 <footer>✦ &nbsp; DK's Writings &nbsp;·&nbsp; ಬರಹಗಳ ಜಗತ್ತು &nbsp; ✦ <a href="#" onclick="go('adminlogin');return false" title="Admin">⚙</a></footer>
