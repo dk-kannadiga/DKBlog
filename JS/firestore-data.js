@@ -119,18 +119,19 @@ window.signOutAdmin = async function () {
 window.getFirestorePosts = async function () {
   const snapshot = await getDocs(collection(db, "posts"));
   return snapshot.docs
-    .map((post) => post.data())
+    .map((post) => ({ ...post.data(), firestoreId: post.id }))
     .sort((a, b) => Number(b.id || 0) - Number(a.id || 0));
 };
 window.saveFirestorePost = async function (post) {
+  const { firestoreId, ...postData } = post;
   await setDoc(
-    doc(db, "posts", String(post.id)),
-    { ...post, updatedAt: serverTimestamp() },
+    doc(db, "posts", firestoreId || String(postData.id)),
+    { ...postData, updatedAt: serverTimestamp() },
     { merge: true },
   );
 };
-window.deleteFirestorePost = async function (postId) {
-  await deleteDoc(doc(db, "posts", String(postId)));
+window.deleteFirestorePost = async function (post) {
+  await deleteDoc(doc(db, "posts", post.firestoreId || String(post.id)));
 };
 
 window.getFirestoreCategories = async function () {

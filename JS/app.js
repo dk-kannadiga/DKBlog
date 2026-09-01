@@ -471,7 +471,8 @@ function askDel(id){
     <button class="cancelbtn" style="padding:5px 10px;font-size:.8rem" onclick="renderAdPosts()">No</button>`
 }
 async function delPost(id){
-  try{await window.deleteFirestorePost(id);POSTS=POSTS.filter(x=>x.id!==id);renderAdPosts()}
+  const post=POSTS.find(x=>x.id===id);if(!post)return;
+  try{await window.deleteFirestorePost(post);POSTS=POSTS.filter(x=>x.id!==id);renderAdPosts()}
   catch(e){console.error('Post deletion failed:',e);alert('The post could not be deleted. Please try again.')}
 }
 function subsHtml(catKey,selSub){
