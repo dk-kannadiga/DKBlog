@@ -224,7 +224,7 @@ footer a:hover{opacity:.9}
 .hero{background:linear-gradient(150deg,#1e0c02 0%,#3d1a08 45%,#5c2810 100%);padding:54px 24px 46px;text-align:center}
 .hero-inner{max-width:640px;margin:0 auto}
 .hero-orn{color:var(--gd);font-size:1rem;letter-spacing:8px;margin-bottom:20px;opacity:.7}
-.hero-name{font-family:'Playfair Display',serif;font-size:2.8rem;color:var(--gd);margin-bottom:8px;letter-spacing:1px}
+.hero-name{font-family:'Anek Kannada','Noto Sans Kannada',serif;font-size:2.8rem;font-weight:700;color:var(--gd);margin-bottom:8px;letter-spacing:1px}
 .hero-kn{font-family:'Noto Sans Kannada',serif;color:var(--gl);font-size:.95rem;margin-bottom:2px;opacity:.85}
 .hero-en{color:var(--gl);font-size:.78rem;letter-spacing:1.8px;opacity:.6;margin-bottom:22px;text-transform:uppercase}
 .hero-langs{display:flex;gap:7px;justify-content:center;flex-wrap:wrap;margin-bottom:22px}
