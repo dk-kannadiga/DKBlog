@@ -1,6 +1,7 @@
 :root{--p:#f7f2e7;--pd:#ede5d0;--ink:#2c1a0e;--il:#5a3e2b;--ac:#7a3b1e;--gd:#c8a87a;--gl:#e8d5b0;--cb:#fffdf5}
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Lora','Noto Sans Kannada',Georgia,serif;background:var(--p);color:var(--ink);min-height:100vh;line-height:1.75}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+body{font-family:'Lora','Noto Sans Kannada',Georgia,serif;background:var(--p);color:var(--ink);min-height:100vh;line-height:1.75;overflow-x:hidden}
 header{background:linear-gradient(135deg,#3d1f0a,#5a2e12);position:sticky;top:0;z-index:100;box-shadow:0 2px 10px rgba(0,0,0,.3)}
 .hi{max-width:920px;margin:0 auto;padding:14px 24px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px}
 .bt{font-family:'Playfair Display',serif;color:var(--gd);font-size:1.4rem;cursor:pointer}
@@ -248,10 +249,24 @@ footer a:hover{opacity:.9}
 .sclear:hover{color:var(--ac)}
 .sres{font-size:.8rem;color:var(--gd);font-style:italic;margin-bottom:8px;min-height:20px}
 @media print{header,footer,.no-print{display:none!important}.page{display:none!important}#pcert{display:block!important}body{background:#fff!important}}
+@media(max-width:800px){
+  .hi{padding:12px 20px}
+  .pc{padding:28px 20px 70px}
+  .hero{padding:46px 20px 40px}
+  .card{padding:20px 22px}
+  .pbody.poem{padding:20px 24px}
+  .qposter{padding:30px 24px}
+  .aform{padding:20px}
+}
 @media(max-width:580px){
-  .hi{padding:11px 14px}.bt{font-size:1.1rem}
-  nav a{font-size:.72rem;padding:4px 8px}
+  .hi{padding:11px 14px;justify-content:center;text-align:center}.bt{font-size:1.1rem}
+  nav{justify-content:center;width:100%}nav a{font-size:.72rem;padding:5px 9px}
   .pc{padding:20px 14px 60px}
+  .hero{padding:38px 14px 34px}.hero-name{font-size:clamp(2rem,10vw,2.5rem);letter-spacing:0}.hero-kn{font-size:.88rem}.hero-en{font-size:.68rem;letter-spacing:1.2px}.hero-q{font-size:.84rem}
   .pvh h1{font-size:1.5rem}.stitle{font-size:1.5rem}
+  .card{padding:18px 16px}.cf{gap:6px;flex-wrap:wrap}.pbody{font-size:.96rem;line-height:1.85}.pbody.poem{padding:18px 16px}
+  .aint{padding:16px}.biofacts dd{font-size:.9rem}.cform,.qnamebox,.qcard,.qscore-box{padding:16px}.qposter{padding:26px 16px}.qposter h3{font-size:1.45rem}
+  .qsubnav{gap:8px}.qsn{padding:7px 14px}.pactions{align-items:stretch}.lbtn,.sbtn{justify-content:center;flex:1}.alog{margin-top:30px;padding:28px 20px}
+  .aform{padding:16px}.adtab{padding:8px 13px}.apost{padding:14px}.apost-acts{width:100%}.editbtn,.delbtn{flex:1}.addsubrow,.newcatrow{flex-wrap:wrap}.addsubrow input,.newcatrow input{min-width:100%}.addsubbtn,.newcatbtn{width:100%}
   .frow2{grid-template-columns:1fr}.qog{grid-template-columns:1fr}
 }
