@@ -3,9 +3,19 @@
 const ICONS={poem:'🌸',story:'📖',article:'✒️',other:'✦'};
 const LC={'ಕನ್ನಡ':'kn','English':'en','Mixed':'mixed'};
 
-// Render the bundled content immediately on a refresh. Firebase replaces it
-// in the background, so a slow connection never leaves the page blank.
-let POSTS=[...DP],CATS=JSON.parse(JSON.stringify(DC)),likes={},likedMe=new Set();
+const POSTS_CACHE_KEY='dk-writings-posts-v1';
+function readCachedPosts(){
+  try{
+    const cached=JSON.parse(localStorage.getItem(POSTS_CACHE_KEY));
+    return Array.isArray(cached)?cached:[];
+  }catch(e){return []}
+}
+function cachePosts(){
+  try{localStorage.setItem(POSTS_CACHE_KEY,JSON.stringify(POSTS))}catch(e){}
+}
+// Keep the last confirmed Firestore result for an instant, accurate refresh.
+// The bundled sample posts are only used if Firestore is unavailable.
+let POSTS=readCachedPosts(),postsLoading=POSTS.length===0,CATS=JSON.parse(JSON.stringify(DC)),likes={},likedMe=new Set();
 let Q=null,QA=[...DQA],QS=[],qDraft=[],editQId=false,qSubmitted=false;
 let adminAuth=false,editId=null,catF='all',langF='all',searchQ='';
 
@@ -30,8 +40,9 @@ async function loadAll(){
     window.getFirestoreQuizzes?window.getFirestoreQuizzes():Promise.resolve([...DQA])
   ]);
 
-  if(posts.status==='fulfilled')POSTS=posts.value;
-  else console.error('Posts load failed:',posts.reason);
+  if(posts.status==='fulfilled'){POSTS=posts.value;cachePosts()}
+  else{console.error('Posts load failed:',posts.reason);if(!POSTS.length)POSTS=[...DP]}
+  postsLoading=false;
   if(categories.status==='fulfilled'&&categories.value)CATS=categories.value;
   else if(categories.status==='rejected')console.error('Categories load failed:',categories.reason);
   if(activeQuiz.status==='fulfilled')Q=activeQuiz.value||null;
@@ -155,6 +166,7 @@ function renderCatFilters(){
 function renderHome(){
   renderCatFilters();
   const g=document.getElementById('grid'),sr=document.getElementById('sres');
+  if(postsLoading){g.innerHTML='<div class="empty">Loading writings...</div>';if(sr)sr.textContent='';return}
   let fp=POSTS.filter(p=>(catF==='all'||p.cc===catF)&&(langF==='all'||p.lc===langF));
   if(searchQ){
     fp=fp.filter(p=>
@@ -472,7 +484,7 @@ function askDel(id){
 }
 async function delPost(id){
   const post=POSTS.find(x=>x.id===id);if(!post)return;
-  try{await window.deleteFirestorePost(post);POSTS=POSTS.filter(x=>x.id!==id);renderAdPosts()}
+  try{await window.deleteFirestorePost(post);POSTS=POSTS.filter(x=>x.id!==id);cachePosts();renderAdPosts()}
   catch(e){console.error('Post deletion failed:',e);alert('The post could not be deleted. Please try again.')}
 }
 function subsHtml(catKey,selSub){
@@ -524,6 +536,7 @@ async function savePost(){
   try{
     await svP(post);
     if(editId){const i=POSTS.findIndex(x=>x.id===editId);if(i>=0)POSTS[i]=post}else POSTS.unshift(post);
+    cachePosts();
     cancelForm();renderAdPosts();renderHome();
   }catch(e){console.error('Post save failed:',e);alert('The post could not be saved. Please try again.')}
 }
@@ -549,7 +562,7 @@ function startRename(k){
 async function saveRename(k){
   const v=document.getElementById('rn-'+k)?.value.trim();if(!v)return;
   CATS[k].label=v;POSTS.forEach(p=>{if(p.cc===k)p.cat=v});
-  try{await svC();await Promise.all(POSTS.filter(p=>p.cc===k).map(svP));renderAdCats();renderHome()}
+  try{await svC();await Promise.all(POSTS.filter(p=>p.cc===k).map(svP));cachePosts();renderAdCats();renderHome()}
   catch(e){console.error('Category rename failed:',e);alert('The category could not be saved. Please try again.')}
 }
 async function addSub(k){
