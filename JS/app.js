@@ -15,7 +15,7 @@ function cachePosts(){
 }
 // Keep the last confirmed Firestore result for an instant, accurate refresh.
 // The bundled sample posts are only used if Firestore is unavailable.
-let POSTS=readCachedPosts(),postsLoading=POSTS.length===0,CATS=JSON.parse(JSON.stringify(DC)),likes={},likedMe=new Set();
+let POSTS=readCachedPosts(),postsLoading=POSTS.length===0,contentLoading=true,CATS=JSON.parse(JSON.stringify(DC)),likes={},likedMe=new Set();
 let Q=null,QA=[...DQA],QS=[],qDraft=[],editQId=false,qSubmitted=false;
 let adminAuth=false,editId=null,catF='all',langF='all',searchQ='';
 
@@ -43,6 +43,7 @@ async function loadAll(){
   if(posts.status==='fulfilled'){POSTS=posts.value;cachePosts()}
   else{console.error('Posts load failed:',posts.reason);if(!POSTS.length)POSTS=[...DP]}
   postsLoading=false;
+  contentLoading=false;
   if(categories.status==='fulfilled'&&categories.value)CATS=categories.value;
   else if(categories.status==='rejected')console.error('Categories load failed:',categories.reason);
   if(activeQuiz.status==='fulfilled')Q=activeQuiz.value||null;
@@ -52,7 +53,7 @@ async function loadAll(){
 
   // Show the Firestore content as soon as it arrives. Likes are deliberately
   // loaded afterward because they require the anonymous visitor session.
-  renderHome();
+  openCurrentRoute();
   try{
     likes={};likedMe=new Set();
     await Promise.all(POSTS.map(async p=>{
@@ -134,7 +135,41 @@ function bodyToRichHtml(body){
 function todayStr(){return new Date().toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})}
 
 // ── NAVIGATION ────────────────────────────────────────
-function go(page,id){
+function routePath(page,id){
+  if(page==='post'&&id!==undefined&&id!==null)return `/post/${encodeURIComponent(String(id))}`;
+  if(page==='qdetail'&&id!==undefined&&id!==null)return `/quiz/${encodeURIComponent(String(id))}`;
+  if(page==='index')return '/index';
+  if(page==='about')return '/about';
+  if(page==='quiz'||page==='cert')return '/quiz';
+  if(page==='admin'||page==='adminlogin')return '/admin';
+  return '/';
+}
+function routeFromLocation(){
+  const legacy=location.hash.match(/^#(post|quiz)-(.+)$/);
+  if(legacy)return {page:legacy[1]==='post'?'post':'qdetail',id:decodeURIComponent(legacy[2])};
+  const parts=location.pathname.split('/').filter(Boolean).map(part=>decodeURIComponent(part));
+  if(parts[0]==='post'&&parts[1])return {page:'post',id:parts[1]};
+  if(parts[0]==='quiz'&&parts[1])return {page:'qdetail',id:parts[1]};
+  if(parts[0]==='quiz')return {page:'quiz'};
+  if(parts[0]==='index')return {page:'index'};
+  if(parts[0]==='about')return {page:'about'};
+  if(parts[0]==='admin')return {page:'adminlogin'};
+  return {page:'home'};
+}
+function syncRoute(page,id,replace=false){
+  const path=routePath(page,id);
+  if(location.pathname===path&&!location.hash)return;
+  history[replace?'replaceState':'pushState']({},'',path);
+}
+function openCurrentRoute(){
+  const {page,id}=routeFromLocation();
+  go(page,id,{sync:false});
+}
+function findPost(id){return POSTS.find(post=>String(post.id)===String(id))}
+function findQuiz(id){return QA.find(quiz=>String(quiz.id)===String(id))}
+function go(page,id,{sync=true,replace=false}={}){
+  if(page==='admin'&&!adminAuth){go('adminlogin',null,{sync,replace});return}
+  if(sync)syncRoute(page,id,replace);
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
   document.querySelectorAll('nav a').forEach(a=>a.classList.remove('on'));
   const map={home:'ph',post:'pp',index:'pidx',about:'pab',adminlogin:'pal',admin:'pad',quiz:'pq',qdetail:'pqd',cert:'pcert'};
@@ -148,6 +183,8 @@ function go(page,id){
   else if(page==='qdetail'&&id)renderQDetail(id);
   window.scrollTo(0,0)
 }
+window.addEventListener('popstate',openCurrentRoute);
+window.addEventListener('hashchange',openCurrentRoute);
 
 // ── BLOG FILTERS ──────────────────────────────────────
 function cf(btn,v){catF=v;document.querySelectorAll('.fb.cat').forEach(b=>b.classList.remove('on'));btn.classList.add('on');renderHome()}
@@ -189,10 +226,16 @@ function renderHome(){
   </div>`).join('')
 }
 async function renderPost(id){
-  const p=POSTS.find(x=>x.id===id);if(!p)return;
+  const p=findPost(id),el=document.getElementById('pvc');
+  if(!p){
+    el.innerHTML=contentLoading
+      ?'<div class="empty">Loading writing...</div>'
+      :'<div class="empty">This writing could not be found.</div>';
+    return;
+  }
   const lc=likes[p.id]||0,il=likedMe.has(p.id),cmts=await ldCmt(p.id);
   const ch=cmts.length?cmts.map(c=>`<div class="ci"><div class="chdr"><span class="cauth">${esc(c.name||'Anonymous')}</span><span class="cdate">${c.date}</span></div><p class="ctxt">${esc(c.txt)}</p></div>`).join(''):'<div class="noc">Be the first to leave a thought...</div>';
-  document.getElementById('pvc').innerHTML=`<div class="pvh">
+  el.innerHTML=`<div class="pvh">
     ${postTags(p)}
     <h1>${esc(p.title)}</h1><p class="pmeta">Written on ${p.date}</p></div>
     <div class="pbody${p.cc==='poem'?' poem':''}${p.html?' richbody':''}">${postContent(p)}</div>
@@ -233,9 +276,9 @@ async function tlike(id){
   }
 }
 function shr(id){
-  const p=POSTS.find(x=>x.id===id),t=document.getElementById('st'+id);
-  if(navigator.share)navigator.share({title:p?.title||'',text:"A writing by DK"}).catch(()=>{});
-  else{try{navigator.clipboard.writeText(location.href+'#post-'+id)}catch(e){}if(t){t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500)}}
+  const p=findPost(id),t=document.getElementById('st'+id),url=new URL(routePath('post',id),location.origin).href;
+  if(navigator.share)navigator.share({title:p?.title||'',text:'A writing by DK',url}).catch(()=>{});
+  else{try{navigator.clipboard.writeText(url)}catch(e){}if(t){t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500)}}
 }
 async function addCmt(id){
   const n=document.getElementById('cn'+id),t=document.getElementById('ct'+id);
@@ -411,10 +454,16 @@ function renderQArcList(){
   </div>`).join('')
 }
 function renderQDetail(id){
-  const q=QA.find(x=>x.id===id);if(!q)return;
+  const q=findQuiz(id),el=document.getElementById('qdc');
+  if(!q){
+    el.innerHTML=contentLoading
+      ?'<div class="empty">Loading quiz...</div>'
+      :'<div class="empty">This quiz could not be found.</div>';
+    return;
+  }
   const tot=q.questions.reduce((s,qu)=>{const t=(qu.stats?.c||0)+(qu.stats?.w||0);return s+t},0);
   const cor=q.questions.reduce((s,qu)=>s+(qu.stats?.c||0),0);
-  document.getElementById('qdc').innerHTML=`
+  el.innerHTML=`
     <h1 class="stitle">${esc(q.title)}</h1>
     <p class="ssub">${q.date} · ${q.type==='certificate'?'Certificate Quiz':'Prize Quiz'}</p>
     <div class="aqstats">
@@ -431,7 +480,12 @@ function renderQDetail(id){
         ${t?`<div class="sbar"><div class="sbar-f" style="width:${p}%"></div></div><div class="spct">${p}% correct (${c} of ${t})</div>`:''}
       </div>`}).join('')}
     <div class="div" style="margin-top:32px">✦</div>
-    <div class="pnav"><button class="back" onclick="go('quiz')">← Back to Quiz</button></div>`
+    <div class="pnav"><button class="back" onclick="go('quiz')">← Back to Quiz</button><button class="sbtn" onclick="shrQ(${q.id})">↗ Share Quiz</button><span class="stoast" id="qst${q.id}">Link copied!</span></div>`
+}
+function shrQ(id){
+  const q=findQuiz(id),t=document.getElementById('qst'+id),url=new URL(routePath('qdetail',id),location.origin).href;
+  if(navigator.share)navigator.share({title:q?.title||'',text:'A quiz by DK',url}).catch(()=>{});
+  else{try{navigator.clipboard.writeText(url)}catch(e){}if(t){t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500)}}
 }
 
 // ── ADMIN ─────────────────────────────────────────────
@@ -754,11 +808,13 @@ async function saveQForm(){
 
 (async()=>{
   // Do not make visitors wait for Firebase before they can read the site.
-  go('home');
+  openCurrentRoute();
   try{
     await window.firebaseReady;
     await loadAll();
   }catch(e){
     console.error('Firebase refresh failed:',e);
+    contentLoading=false;
+    openCurrentRoute();
   }
 })();
