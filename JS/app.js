@@ -16,7 +16,7 @@ function cachePosts(){
 // Keep the last confirmed Firestore result for an instant, accurate refresh.
 // The bundled sample posts are only used if Firestore is unavailable.
 let POSTS=readCachedPosts(),postsLoading=POSTS.length===0,contentLoading=true,CATS=JSON.parse(JSON.stringify(DC)),likes={},likedMe=new Set();
-let Q=null,QA=[...DQA],QS=[],qDraft=[],editQId=false,qSubmitted=false,qSubmissionQuizId=null,qSubmissionCheckInFlight=false,qSubmitting=false;
+let Q=null,QA=[...DQA],qDraft=[],editQId=false,qSubmitted=false,qSubmissionQuizId=null,qSubmissionCheckInFlight=false,qSubmitting=false;
 let adminAuth=false,editId=null,catF='all',langF='all',searchQ='';
 
 function hSearch(v){
@@ -67,7 +67,6 @@ const svP=(post)=>window.saveFirestorePost(post);
 const svC=()=>window.saveFirestoreCategories(CATS);
 const svQ=()=>window.saveFirestoreActiveQuiz(Q);
 const svQA=()=>Promise.resolve();
-const svQS=()=>Promise.resolve();
 async function ldCmt(id){
 
   try{
@@ -363,7 +362,7 @@ function renderLiveQuiz(el){
     <div class="qnamebox">
       <h3>Your Details</h3>
       <input type="text" id="q-name" placeholder="Your name (appears on certificate)" maxlength="80">
-      ${Q.type==='prize'?`<input type="text" id="q-con" placeholder="Email or WhatsApp (for prize contact only — not stored permanently)" maxlength="100">`:''}
+      ${Q.type==='prize'?`<input type="text" id="q-con" placeholder="Email or WhatsApp (saved securely for prize contact only)" maxlength="100">`:''}
     </div>
     ${Q.questions.map((qu,i)=>`<div class="qcard" id="qc-${i}">
       <div class="qnum">Question ${i+1} of ${Q.questions.length}</div>
@@ -395,6 +394,8 @@ async function submitQuiz(){
   if(ua>0&&!confirm(`${ua} question(s) unanswered. Submit anyway?`))return;
   let score=0;
   Q.questions.forEach((q,i)=>{if(answers[i]===q.ans)score++});
+  const con=Q.type==='prize'?document.getElementById('q-con')?.value.trim()||'':'';
+  if(Q.type==='prize'&&con.length<3){alert('Please enter an email address or WhatsApp number for prize contact.');return}
   if(!window.saveFirestoreQuizSubmission){
     alert('The quiz submission service is not ready. Please try again in a moment.');
     return;
@@ -403,18 +404,13 @@ async function submitQuiz(){
   const submitButton=document.querySelector('.qsubmit');
   if(submitButton){submitButton.disabled=true;submitButton.textContent='Saving Answers…'}
   try{
-    await window.saveFirestoreQuizSubmission(Q.id,answers);
+    await window.saveFirestoreQuizSubmission(Q.id,answers,Q.type==='prize'?{name,contact:con}:null);
   }catch(error){
     console.error('Quiz submission save failed:',error);
     alert('Your answers could not be saved. They may already have been submitted from this browser. Please refresh the page to check.');
     if(submitButton){submitButton.disabled=false;submitButton.textContent='Submit Answers ✓'}
     qSubmitting=false;
     return;
-  }
-  if(Q.type==='prize'){
-    const con=document.getElementById('q-con')?.value.trim()||'';
-    QS.push({name,con,score,total:Q.questions.length,time:todayStr(),answers});
-    svQS()
   }
   if(!Q.stats)Q.stats={total:0,qs:{}};
   Q.stats.total=(Q.stats.total||0)+1;
@@ -675,7 +671,8 @@ function renderAdQuiz(){
       <button class="editbtn" onclick="startEditQuiz()">Edit</button>
       ${Q.state==='upcoming'?`<button class="qa qa-go" onclick="setQState('live')">▶ Go Live</button>`:''}
       ${Q.state==='live'?`<button class="qa qa-cl" onclick="setQState('closed')">■ Close Quiz</button>`:''}
-      ${Q.state==='closed'?`<button class="qa qa-arc" onclick="doArchive()">Archive Quiz</button><button class="qa qa-sub" onclick="viewSubs()">📋 Submissions (${QS.length})</button>`:''}
+      ${Q.state==='closed'?`<button class="qa qa-arc" onclick="doArchive()">Archive Quiz</button>`:''}
+      ${Q.type==='prize'?`<button class="qa qa-sub" onclick="viewPrizeEntries(${Q.id})">📋 Prize Entries</button>`:''}
       <button class="delbtn" onclick="askDelQ()">Delete</button>
     </div>`:`<button class="addbtn" style="margin-bottom:0;margin-top:10px" onclick="startCreateQuiz()">+ Create Quiz</button>`}
   </div>`;
@@ -683,7 +680,7 @@ function renderAdQuiz(){
     `<div style="margin-top:28px"><h4 style="font-family:'Playfair Display',serif;color:var(--ac);margin-bottom:14px;font-size:1rem">Archive (${QA.length})</h4>
     ${QA.length?QA.map(q=>`<div class="apost">
       <div class="apost-info"><div class="apost-title">${esc(q.title)}</div><div class="apost-meta">${q.date} · ${q.total} participants</div></div>
-      <div class="apost-acts"><button class="delbtn" onclick="delArcQ(${q.id})">Delete</button></div>
+      <div class="apost-acts">${q.type==='prize'?`<button class="editbtn" onclick="viewPrizeEntries(${q.id})">Entries</button>`:''}<button class="delbtn" onclick="delArcQ(${q.id})">Delete</button></div>
     </div>`).join(''):'<div class="empty" style="padding:14px">No archived quizzes yet.</div>'}
     </div>`
 }
@@ -713,7 +710,7 @@ async function doArchive(){
     questions:Q.questions.map((qu,i)=>({...qu,stats:stats.qs[i]||{c:0,w:0}}))};
   try{
     await window.saveFirestoreQuizArchive(archive);
-    Q=null;QS=[];await svQ();QA.unshift(archive);renderAdQuiz();
+    Q=null;await svQ();QA.unshift(archive);renderAdQuiz();
   }catch(e){console.error('Quiz archive failed:',e);alert('The quiz could not be archived. Please try again.')}
 }
 function askDelQ(){
@@ -727,21 +724,37 @@ function askDelQ(){
   </div>`
 }
 async function delQ(){
-  const current=Q;Q=null;QS=[];
+  const current=Q;Q=null;
   try{await svQ();renderAdQuiz()}catch(e){Q=current;console.error('Quiz deletion failed:',e);alert('The quiz could not be deleted. Please try again.')}
 }
-function viewSubs(){
+async function viewPrizeEntries(quizId){
   const el=document.getElementById('qsubs');
-  if(!QS.length){el.innerHTML='<p style="color:var(--gd);font-style:italic;padding:12px 0;font-size:.88rem">No submissions yet.</p>';return}
-  el.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin:16px 0 8px">
-    <h4 style="font-family:'Playfair Display',serif;color:var(--ac);font-size:1rem">Submissions (${QS.length})</h4>
-    <button class="delbtn" onclick="clearSubs()">Clear All</button>
-  </div>
-  <div class="subslist">${QS.map(s=>`<div class="subrow">
-    <strong>${esc(s.name||'—')}</strong>${s.con?' · '+esc(s.con):''} · Score: <strong>${s.score}/${s.total}</strong> · ${s.time}
-  </div>`).join('')}</div>`
+  const quiz=Q&&String(Q.id)===String(quizId)?Q:QA.find(item=>String(item.id)===String(quizId));
+  if(!quiz||!window.getFirestorePrizeQuizEntries||!window.getFirestoreQuizSubmissions){
+    el.innerHTML='<p style="color:var(--gd);font-style:italic;padding:12px 0;font-size:.88rem">Prize entries are not available.</p>';
+    return;
+  }
+  el.innerHTML='<p style="color:var(--gd);font-style:italic;padding:12px 0;font-size:.88rem">Loading prize entries…</p>';
+  try{
+    const [entries,submissions]=await Promise.all([
+      window.getFirestorePrizeQuizEntries(quizId),
+      window.getFirestoreQuizSubmissions(quizId),
+    ]);
+    const answersByUser=new Map(submissions.map(submission=>[submission.userId,submission.answers]));
+    entries.sort((a,b)=>(b.submittedAt?.seconds||0)-(a.submittedAt?.seconds||0));
+    el.innerHTML=entries.length?`<div style="display:flex;justify-content:space-between;align-items:center;margin:16px 0 8px">
+      <h4 style="font-family:'Playfair Display',serif;color:var(--ac);font-size:1rem">Prize Entries (${entries.length})</h4>
+    </div><div class="subslist">${entries.map(entry=>{
+      const answers=Array.isArray(answersByUser.get(entry.userId))?answersByUser.get(entry.userId):[];
+      const score=quiz.questions.reduce((total,question,index)=>total+(answers[index]===question.ans?1:0),0);
+      const when=entry.submittedAt?.toDate?entry.submittedAt.toDate().toLocaleString():'—';
+      return`<div class="subrow"><strong>${esc(entry.name||'—')}</strong> · ${esc(entry.contact||'—')} · Score: <strong>${score}/${quiz.questions.length}</strong> · ${esc(when)}</div>`
+    }).join('')}</div>`:'<p style="color:var(--gd);font-style:italic;padding:12px 0;font-size:.88rem">No prize entries yet.</p>';
+  }catch(error){
+    console.error('Prize entries load failed:',error);
+    el.innerHTML='<p style="color:#b23b35;padding:12px 0;font-size:.88rem">Prize entries could not be loaded. Please try again.</p>';
+  }
 }
-async function clearSubs(){QS=[];await svQS();viewSubs()}
 async function delArcQ(id){
   try{await window.deleteFirestoreQuizArchive(id);QA=QA.filter(q=>q.id!==id);renderAdQuiz()}
   catch(e){console.error('Quiz archive deletion failed:',e);alert('The archived quiz could not be deleted. Please try again.')}

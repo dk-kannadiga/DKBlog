@@ -10,6 +10,7 @@ import {
   query,
   serverTimestamp,
   setDoc,
+  writeBatch,
   where,
 } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
 import {
@@ -196,21 +197,39 @@ window.hasFirestoreQuizSubmission = async function (quizId) {
   const user = await requireUser();
   return (await getDoc(doc(db, "quizSubmissions", quizSubmissionId(quizId, user.uid)))).exists();
 };
-window.saveFirestoreQuizSubmission = async function (quizId, answers) {
+window.saveFirestoreQuizSubmission = async function (quizId, answers, prizeEntry = null) {
   const user = await requireUser();
   const cleanAnswers = answers.map((answer) => Number.isInteger(answer) ? answer : -1);
-  await setDoc(doc(db, "quizSubmissions", quizSubmissionId(quizId, user.uid)), {
+  const id = quizSubmissionId(quizId, user.uid);
+  const batch = writeBatch(db);
+  batch.set(doc(db, "quizSubmissions", id), {
     quizId: String(quizId),
     userId: user.uid,
     answers: cleanAnswers,
     submittedAt: serverTimestamp(),
   });
+  if (prizeEntry) {
+    batch.set(doc(db, "prizeQuizEntries", id), {
+      quizId: String(quizId),
+      userId: user.uid,
+      name: prizeEntry.name.trim(),
+      contact: prizeEntry.contact.trim(),
+      submittedAt: serverTimestamp(),
+    });
+  }
+  await batch.commit();
 };
 window.getFirestoreQuizSubmissions = async function (quizId) {
   const snapshot = await getDocs(
     query(collection(db, "quizSubmissions"), where("quizId", "==", String(quizId))),
   );
   return snapshot.docs.map((submission) => submission.data());
+};
+window.getFirestorePrizeQuizEntries = async function (quizId) {
+  const snapshot = await getDocs(
+    query(collection(db, "prizeQuizEntries"), where("quizId", "==", String(quizId))),
+  );
+  return snapshot.docs.map((entry) => entry.data());
 };
 window.getFirestoreQuizzes = async function () {
   const snapshot = await getDocs(collection(db, "quizzes"));
