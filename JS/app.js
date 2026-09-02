@@ -16,7 +16,7 @@ function cachePosts(){
 // Keep the last confirmed Firestore result for an instant, accurate refresh.
 // The bundled sample posts are only used if Firestore is unavailable.
 let POSTS=readCachedPosts(),postsLoading=POSTS.length===0,contentLoading=true,CATS=JSON.parse(JSON.stringify(DC)),likes={},likedMe=new Set();
-let Q=null,QA=[...DQA],QS=[],qDraft=[],editQId=false,qSubmitted=false;
+let Q=null,QA=[...DQA],QS=[],qDraft=[],editQId=false,qSubmitted=false,qSubmissionQuizId=null,qSubmissionCheckInFlight=false,qSubmitting=false;
 let adminAuth=false,editId=null,catF='all',langF='all',searchQ='';
 
 function hSearch(v){
@@ -179,7 +179,7 @@ function go(page,id,{sync=true,replace=false}={}){
   else if(page==='index'){document.getElementById('ni').classList.add('on');renderIdx()}
   else if(page==='about')document.getElementById('na').classList.add('on');
   else if(page==='admin'){if(!adminAuth){go('adminlogin');return}renderAdmin()}
-  else if(page==='quiz'){document.getElementById('nq').classList.add('on');qSubmitted=false;renderQuiz()}
+  else if(page==='quiz'){document.getElementById('nq').classList.add('on');renderQuiz()}
   else if(page==='qdetail'&&id)renderQDetail(id);
   window.scrollTo(0,0)
 }
@@ -329,6 +329,21 @@ function renderQuiz(){
       ${Q.deadline?`<div class="qpos-dl">⏰ Deadline: ${esc(Q.deadline)}</div>`:''}
     </div>`;
   } else if(Q.state==='live'){
+    const quizId=String(Q.id);
+    if(qSubmissionQuizId!==quizId){
+      qSubmissionQuizId=quizId;
+      qSubmitted=false;
+      if(window.hasFirestoreQuizSubmission){
+        qSubmissionCheckInFlight=true;
+        window.hasFirestoreQuizSubmission(Q.id)
+          .then(submitted=>{if(Q&&String(Q.id)===quizId)qSubmitted=submitted})
+          .catch(error=>console.error('Quiz submission check failed:',error))
+          .finally(()=>{if(Q&&String(Q.id)===quizId){qSubmissionCheckInFlight=false;renderQuiz()}});
+      }
+    }
+    if(qSubmissionCheckInFlight){
+      cur.innerHTML='<div class="empty">Checking your quiz submission…</div>';
+    } else
     if(qSubmitted){
       cur.innerHTML=`<div style="text-align:center;padding:40px"><p style="color:var(--il);font-style:italic">You have already submitted this quiz. Thank you for participating! 🙏</p></div>`;
     } else {
@@ -369,6 +384,7 @@ function selOpt(qi,oi){
   if(r)r.checked=true
 }
 async function submitQuiz(){
+  if(qSubmitting)return;
   const name=document.getElementById('q-name')?.value.trim();
   if(!name){alert('Please enter your name before submitting.');return}
   if(!Q)return;
@@ -379,6 +395,22 @@ async function submitQuiz(){
   if(ua>0&&!confirm(`${ua} question(s) unanswered. Submit anyway?`))return;
   let score=0;
   Q.questions.forEach((q,i)=>{if(answers[i]===q.ans)score++});
+  if(!window.saveFirestoreQuizSubmission){
+    alert('The quiz submission service is not ready. Please try again in a moment.');
+    return;
+  }
+  qSubmitting=true;
+  const submitButton=document.querySelector('.qsubmit');
+  if(submitButton){submitButton.disabled=true;submitButton.textContent='Saving Answers…'}
+  try{
+    await window.saveFirestoreQuizSubmission(Q.id,answers);
+  }catch(error){
+    console.error('Quiz submission save failed:',error);
+    alert('Your answers could not be saved. They may already have been submitted from this browser. Please refresh the page to check.');
+    if(submitButton){submitButton.disabled=false;submitButton.textContent='Submit Answers ✓'}
+    qSubmitting=false;
+    return;
+  }
   if(Q.type==='prize'){
     const con=document.getElementById('q-con')?.value.trim()||'';
     QS.push({name,con,score,total:Q.questions.length,time:todayStr(),answers});
@@ -391,6 +423,7 @@ async function submitQuiz(){
     if(answers[i]===q.ans)Q.stats.qs[i].c++;else Q.stats.qs[i].w++
   });
   qSubmitted=true;
+  qSubmitting=false;
   showResults(Q,answers,name,score)
 }
 function showResults(q,answers,name,score){
@@ -661,8 +694,23 @@ async function setQState(s){
 }
 async function doArchive(){
   if(!Q||Q.state!=='closed')return;
-  const archive={id:Q.id,title:Q.title,date:Q.date,type:Q.type,total:Q.stats?.total||0,state:'archived',
-    questions:Q.questions.map((qu,i)=>({...qu,stats:Q.stats?.qs?.[i]||{c:0,w:0}}))};
+  if(!window.getFirestoreQuizSubmissions){
+    alert('Quiz response data is not ready. Please refresh and try again.');
+    return;
+  }
+  let submissions;
+  try{submissions=await window.getFirestoreQuizSubmissions(Q.id)}
+  catch(error){console.error('Quiz response load failed:',error);alert('Quiz response data could not be loaded. Please try again.');return}
+  const stats={total:submissions.length,qs:{}};
+  submissions.forEach(submission=>{
+    const answers=Array.isArray(submission.answers)?submission.answers:[];
+    Q.questions.forEach((qu,i)=>{
+      if(!stats.qs[i])stats.qs[i]={c:0,w:0};
+      if(answers[i]===qu.ans)stats.qs[i].c++;else stats.qs[i].w++;
+    });
+  });
+  const archive={id:Q.id,title:Q.title,date:Q.date,type:Q.type,total:stats.total,state:'archived',
+    questions:Q.questions.map((qu,i)=>({...qu,stats:stats.qs[i]||{c:0,w:0}}))};
   try{
     await window.saveFirestoreQuizArchive(archive);
     Q=null;QS=[];await svQ();QA.unshift(archive);renderAdQuiz();

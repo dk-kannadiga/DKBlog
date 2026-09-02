@@ -189,6 +189,29 @@ window.getFirestoreActiveQuiz = async function () {
 window.saveFirestoreActiveQuiz = async function (quiz) {
   await setDoc(doc(db, "siteSettings", "activeQuiz"), { quiz: quiz || null, updatedAt: serverTimestamp() });
 };
+function quizSubmissionId(quizId, userId) {
+  return `${String(quizId)}_${userId}`;
+}
+window.hasFirestoreQuizSubmission = async function (quizId) {
+  const user = await requireUser();
+  return (await getDoc(doc(db, "quizSubmissions", quizSubmissionId(quizId, user.uid)))).exists();
+};
+window.saveFirestoreQuizSubmission = async function (quizId, answers) {
+  const user = await requireUser();
+  const cleanAnswers = answers.map((answer) => Number.isInteger(answer) ? answer : -1);
+  await setDoc(doc(db, "quizSubmissions", quizSubmissionId(quizId, user.uid)), {
+    quizId: String(quizId),
+    userId: user.uid,
+    answers: cleanAnswers,
+    submittedAt: serverTimestamp(),
+  });
+};
+window.getFirestoreQuizSubmissions = async function (quizId) {
+  const snapshot = await getDocs(
+    query(collection(db, "quizSubmissions"), where("quizId", "==", String(quizId))),
+  );
+  return snapshot.docs.map((submission) => submission.data());
+};
 window.getFirestoreQuizzes = async function () {
   const snapshot = await getDocs(collection(db, "quizzes"));
   return snapshot.docs.map((quiz) => quiz.data()).sort((a, b) => Number(b.id || 0) - Number(a.id || 0));
