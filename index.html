@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#3d1f0a">
   <link rel="icon" type="image/svg+xml" href="/assets/dk-favicon.svg">
   <link href="https://fonts.googleapis.com/css2?family=Anek+Kannada:wght@400;500;700&family=Noto+Sans+Kannada:wght@400;500;700&family=Lora:ital,wght@0,400;0,600;1,400&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/main.css?v=20260902-2">
+  <link rel="stylesheet" href="/css/main.css?v=20260902-3">
   <title>DK's Writings · ಬರಹಗಳ ಜಗತ್ತು</title>
 </head>
 <body>
@@ -16,6 +16,7 @@
     <nav>
       <a href="#" id="nh" onclick="go('home');return false">Home</a>
       <a href="#" id="ni" onclick="go('index');return false">Index</a>
+      <a href="#" id="nc" onclick="go('collections');return false">Collections</a>
       <a href="#" id="na" onclick="go('about');return false">About Me</a>
       <a href="#" id="nq" class="quiz-link" onclick="go('quiz');return false">🏆 Quiz</a>
     </nav>
@@ -60,6 +61,19 @@
   <h1 class="stitle">Index</h1>
   <p class="ssub">All writings, organised by category</p>
   <div id="idxc"></div>
+</div></div>
+
+<!-- COLLECTIONS -->
+<div id="pcols" class="page"><div class="pc">
+  <h1 class="stitle">Collections</h1>
+  <p class="ssub">Curated groups of poems, stories, and writings</p>
+  <div id="colc"></div>
+</div></div>
+
+<!-- COLLECTION DETAIL -->
+<div id="pcol" class="page"><div class="pc">
+  <button class="back" onclick="go('collections')">← All Collections</button>
+  <div id="colvc"></div>
 </div></div>
 
 <!-- ABOUT -->
@@ -128,12 +142,17 @@
   <div class="adh"><h2>Admin Panel</h2><button class="logoutbtn" onclick="aLogout()">← Exit Admin</button></div>
   <div class="adtabs">
     <div class="adtab on" onclick="aTab(this,'posts')">Posts</div>
+    <div class="adtab" onclick="aTab(this,'collections')">Collections</div>
     <div class="adtab" onclick="aTab(this,'cats')">Categories</div>
     <div class="adtab" onclick="aTab(this,'quiz')">Quiz</div>
   </div>
   <div id="atab-posts" class="adtabc on">
     <button class="addbtn" onclick="startAdd()">＋ New Post</button>
     <div id="afw"></div><div id="apl"></div>
+  </div>
+  <div id="atab-collections" class="adtabc">
+    <button class="addbtn" onclick="startAddCollection()">＋ New Collection</button>
+    <div id="cfw"></div><div id="cpl"></div>
   </div>
   <div id="atab-cats" class="adtabc">
     <div id="cw"></div>
@@ -155,7 +174,7 @@
     window.resolveFirebaseReady = resolve;
   });
 </script>
-<script type="module" src="/js/firestore-loader.js?v=20260902-2"></script>
-<script src="/js/app.js?v=20260902-4"></script>
+<script type="module" src="/js/firestore-loader.js?v=20260902-3"></script>
+<script src="/js/app.js?v=20260902-5"></script>
 </body>
 </html>

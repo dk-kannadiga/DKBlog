@@ -135,6 +135,24 @@ window.deleteFirestorePost = async function (post) {
   await deleteDoc(doc(db, "posts", post.firestoreId || String(post.id)));
 };
 
+window.getFirestoreCollections = async function () {
+  const snapshot = await getDocs(collection(db, "collections"));
+  return snapshot.docs
+    .map((item) => ({ ...item.data(), firestoreId: item.id }))
+    .sort((a, b) => String(a.title || "").localeCompare(String(b.title || ""), "kn"));
+};
+window.saveFirestoreCollection = async function (item) {
+  const { firestoreId, ...collectionData } = item;
+  await setDoc(
+    doc(db, "collections", firestoreId || String(collectionData.id)),
+    { ...collectionData, updatedAt: serverTimestamp() },
+    { merge: true },
+  );
+};
+window.deleteFirestoreCollection = async function (item) {
+  await deleteDoc(doc(db, "collections", item.firestoreId || String(item.id)));
+};
+
 window.getFirestoreCategories = async function () {
   const categories = await getDoc(doc(db, "siteSettings", "categories"));
   return categories.exists() ? categories.data().items : null;

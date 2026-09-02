@@ -4,20 +4,30 @@ const ICONS={poem:'🌸',story:'📖',article:'✒️',other:'✦'};
 const LC={'ಕನ್ನಡ':'kn','English':'en','Mixed':'mixed'};
 
 const POSTS_CACHE_KEY='dk-writings-posts-v1';
+const COLLECTIONS_CACHE_KEY='dk-writings-collections-v1';
 function readCachedPosts(){
   try{
     const cached=JSON.parse(localStorage.getItem(POSTS_CACHE_KEY));
     return Array.isArray(cached)?cached:[];
   }catch(e){return []}
 }
+function readCachedCollections(){
+  try{
+    const cached=JSON.parse(localStorage.getItem(COLLECTIONS_CACHE_KEY));
+    return Array.isArray(cached)?cached:[];
+  }catch(e){return []}
+}
 function cachePosts(){
   try{localStorage.setItem(POSTS_CACHE_KEY,JSON.stringify(POSTS))}catch(e){}
 }
+function cacheCollections(){
+  try{localStorage.setItem(COLLECTIONS_CACHE_KEY,JSON.stringify(COLLECTIONS))}catch(e){}
+}
 // Keep the last confirmed Firestore result for an instant, accurate refresh.
 // The bundled sample posts are only used if Firestore is unavailable.
-let POSTS=readCachedPosts(),postsLoading=POSTS.length===0,contentLoading=true,CATS=JSON.parse(JSON.stringify(DC)),likes={},likedMe=new Set();
+let POSTS=readCachedPosts(),COLLECTIONS=readCachedCollections(),postsLoading=POSTS.length===0,collectionsLoading=COLLECTIONS.length===0,contentLoading=true,CATS=JSON.parse(JSON.stringify(DC)),likes={},likedMe=new Set();
 let Q=null,QA=[...DQA],qDraft=[],editQId=false,certDraft=null,qSubmitted=false,qSubmissionQuizId=null,qSubmissionCheckInFlight=false,qSubmitting=false;
-let adminAuth=false,editId=null,catF='all',langF='all',searchQ='';
+let adminAuth=false,editId=null,collectionEditId=null,catF='all',langF='all',searchQ='';
 
 function hSearch(v){
   searchQ=v.toLowerCase().trim();
@@ -33,11 +43,12 @@ function clearSearch(){
 }
 
 async function loadAll(){
-  const [posts,categories,activeQuiz,archive] = await Promise.allSettled([
+  const [posts,categories,activeQuiz,archive,collections] = await Promise.allSettled([
     window.getFirestorePosts?window.getFirestorePosts():Promise.resolve([...DP]),
     window.getFirestoreCategories?window.getFirestoreCategories():Promise.resolve(JSON.parse(JSON.stringify(DC))),
     window.getFirestoreActiveQuiz?window.getFirestoreActiveQuiz():Promise.resolve(null),
-    window.getFirestoreQuizzes?window.getFirestoreQuizzes():Promise.resolve([...DQA])
+    window.getFirestoreQuizzes?window.getFirestoreQuizzes():Promise.resolve([...DQA]),
+    window.getFirestoreCollections?window.getFirestoreCollections():Promise.resolve([])
   ]);
 
   if(posts.status==='fulfilled'){POSTS=posts.value;cachePosts()}
@@ -50,6 +61,9 @@ async function loadAll(){
   else console.error('Active quiz load failed:',activeQuiz.reason);
   if(archive.status==='fulfilled')QA=archive.value.filter(q=>q.state==='archived'&&Array.isArray(q.questions));
   else console.error('Quiz archive load failed:',archive.reason);
+  if(collections.status==='fulfilled'){COLLECTIONS=collections.value;cacheCollections()}
+  else console.error('Collections load failed:',collections.reason);
+  collectionsLoading=false;
 
   // Show the Firestore content as soon as it arrives. Likes are deliberately
   // loaded afterward because they require the anonymous visitor session.
@@ -65,6 +79,7 @@ async function loadAll(){
 }
 const svP=(post)=>window.saveFirestorePost(post);
 const svC=()=>window.saveFirestoreCategories(CATS);
+const svCol=(collection)=>window.saveFirestoreCollection(collection);
 const svQ=()=>window.saveFirestoreActiveQuiz(Q);
 const svQA=()=>Promise.resolve();
 async function ldCmt(id){
@@ -94,7 +109,8 @@ function autoExc(b){if(!b)return'';if(b.length<=160)return b;const t=b.substring
 function postTags(p){
   const labels=Array.isArray(p.labels)?[...new Set(p.labels.map(x=>String(x).trim()).filter(Boolean))]:[];
   const extraLabels=labels.filter(label=>label!==p.subcat);
-  return `<div class="tags"><span class="tcat">${esc(p.cat)}</span>${p.subcat?`<span class="tsub">${esc(p.subcat)}</span>`:''}${extraLabels.map(label=>`<span class="tlabel">${esc(label)}</span>`).join('')}<span class="tlang">${esc(p.lang)}</span></div>`
+  const collection=findCollection(p.collectionId);
+  return `<div class="tags"><span class="tcat">${esc(p.cat)}</span>${p.subcat?`<span class="tsub">${esc(p.subcat)}</span>`:''}${extraLabels.map(label=>`<span class="tlabel">${esc(label)}</span>`).join('')}${collection?`<span class="tcollection">${esc(collection.icon||'✦')} ${esc(collection.title)}</span>`:''}<span class="tlang">${esc(p.lang)}</span></div>`
 }
 function safeContentUrl(value){
   try{
@@ -137,6 +153,8 @@ function todayStr(){return new Date().toLocaleDateString('en-IN',{day:'numeric',
 function routePath(page,id){
   if(page==='post'&&id!==undefined&&id!==null)return `/post/${encodeURIComponent(String(id))}`;
   if(page==='qdetail'&&id!==undefined&&id!==null)return `/quiz/${encodeURIComponent(String(id))}`;
+  if(page==='collection'&&id!==undefined&&id!==null)return `/collection/${encodeURIComponent(String(id))}`;
+  if(page==='collections')return '/collections';
   if(page==='index')return '/index';
   if(page==='about')return '/about';
   if(page==='quiz'||page==='cert')return '/quiz';
@@ -149,7 +167,9 @@ function routeFromLocation(){
   const parts=location.pathname.split('/').filter(Boolean).map(part=>decodeURIComponent(part));
   if(parts[0]==='post'&&parts[1])return {page:'post',id:parts[1]};
   if(parts[0]==='quiz'&&parts[1])return {page:'qdetail',id:parts[1]};
+  if(parts[0]==='collection'&&parts[1])return {page:'collection',id:parts[1]};
   if(parts[0]==='quiz')return {page:'quiz'};
+  if(parts[0]==='collections')return {page:'collections'};
   if(parts[0]==='index')return {page:'index'};
   if(parts[0]==='about')return {page:'about'};
   if(parts[0]==='admin')return {page:'adminlogin'};
@@ -166,16 +186,23 @@ function openCurrentRoute(){
 }
 function findPost(id){return POSTS.find(post=>String(post.id)===String(id))}
 function findQuiz(id){return QA.find(quiz=>String(quiz.id)===String(id))}
+function findCollection(id){return COLLECTIONS.find(collection=>String(collection.id)===String(id))}
+function collectionPosts(id){
+  const position=post=>Number(post.collectionOrder)>0?Number(post.collectionOrder):Number(post.id)||0;
+  return POSTS.filter(post=>String(post.collectionId||'')===String(id)).sort((a,b)=>position(a)-position(b)||Number(a.id)-Number(b.id));
+}
 function go(page,id,{sync=true,replace=false}={}){
   if(page==='admin'&&!adminAuth){go('adminlogin',null,{sync,replace});return}
   if(sync)syncRoute(page,id,replace);
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
   document.querySelectorAll('nav a').forEach(a=>a.classList.remove('on'));
-  const map={home:'ph',post:'pp',index:'pidx',about:'pab',adminlogin:'pal',admin:'pad',quiz:'pq',qdetail:'pqd',cert:'pcert'};
+  const map={home:'ph',post:'pp',index:'pidx',collections:'pcols',collection:'pcol',about:'pab',adminlogin:'pal',admin:'pad',quiz:'pq',qdetail:'pqd',cert:'pcert'};
   document.getElementById(map[page])?.classList.add('on');
   if(page==='home'){document.getElementById('nh').classList.add('on');renderHome()}
   else if(page==='post'&&id)renderPost(id);
   else if(page==='index'){document.getElementById('ni').classList.add('on');renderIdx()}
+  else if(page==='collections'){document.getElementById('nc').classList.add('on');renderCollections()}
+  else if(page==='collection'&&id){document.getElementById('nc').classList.add('on');renderCollection(id)}
   else if(page==='about')document.getElementById('na').classList.add('on');
   else if(page==='admin'){if(!adminAuth){go('adminlogin');return}renderAdmin()}
   else if(page==='quiz'){document.getElementById('nq').classList.add('on');renderQuiz()}
@@ -232,7 +259,7 @@ async function renderPost(id){
       :'<div class="empty">This writing could not be found.</div>';
     return;
   }
-  const lc=likes[p.id]||0,il=likedMe.has(p.id),cmts=await ldCmt(p.id);
+  const lc=likes[p.id]||0,il=likedMe.has(p.id),cmts=await ldCmt(p.id),collectionNavigation=collectionReadingNav(p);
   const ch=cmts.length?cmts.map(c=>`<div class="ci"><div class="chdr"><span class="cauth">${esc(c.name||'Anonymous')}</span><span class="cdate">${c.date}</span></div><p class="ctxt">${esc(c.txt)}</p></div>`).join(''):'<div class="noc">Be the first to leave a thought...</div>';
   el.innerHTML=`<div class="pvh">
     ${postTags(p)}
@@ -253,6 +280,7 @@ async function renderPost(id){
       <div class="clist" id="cl${p.id}">${ch}</div>
     </div>
     <div class="div" style="margin-top:36px">✦ ✦ ✦</div>
+    ${collectionNavigation}
     <div class="pnav">
       <button class="back" onclick="go('home')">← All Writings</button>
       <button class="back" onclick="go('index')">☰ Index</button>
@@ -300,6 +328,50 @@ function renderIdx(){
         <span class="tlang" style="font-size:.7rem">${esc(p.lang)}</span>
         <span class="iimeta">${p.date}</span>
       </div>`).join('')}</div></div>`}).join('')
+}
+
+function collectionReadingNav(post){
+  const collection=findCollection(post.collectionId);
+  if(!collection)return'';
+  const posts=collectionPosts(collection.id),index=posts.findIndex(item=>String(item.id)===String(post.id)),previous=index>0?posts[index-1]:null,next=index>=0&&index<posts.length-1?posts[index+1]:null;
+  return`<nav class="collection-reading" aria-label="Collection navigation">
+    <span class="collection-reading__label">${esc(collection.icon||'✦')} ${esc(collection.title)}</span>
+    <div class="collection-reading__actions">
+      ${previous?`<button class="back" onclick="go('post',${previous.id})">← Previous</button>`:'<span></span>'}
+      <button class="back" onclick="go('collection',${collection.id})">View Collection</button>
+      ${next?`<button class="back" onclick="go('post',${next.id})">Next →</button>`:'<span></span>'}
+    </div>
+  </nav>`;
+}
+function renderCollections(){
+  const el=document.getElementById('colc');
+  if(collectionsLoading){el.innerHTML='<div class="empty">Loading collections...</div>';return}
+  if(!COLLECTIONS.length){el.innerHTML='<div class="empty">No collections are published yet.</div>';return}
+  el.innerHTML=`<div class="collection-grid">${COLLECTIONS.map(collection=>{
+    const posts=collectionPosts(collection.id);
+    return`<article class="collection-card" onclick="go('collection',${collection.id})">
+      <div class="collection-card__icon">${esc(collection.icon||'✦')}</div>
+      <div><h2>${esc(collection.title)}</h2><p>${esc(collection.description||'A collection of writings by DK.')}</p><span>${posts.length} ${posts.length===1?'writing':'writings'} →</span></div>
+    </article>`
+  }).join('')}</div>`;
+}
+function renderCollection(id){
+  const collection=findCollection(id),el=document.getElementById('colvc');
+  if(!collection){
+    el.innerHTML=collectionsLoading?'<div class="empty">Loading collection...</div>':'<div class="empty">This collection could not be found.</div>';
+    return;
+  }
+  const posts=collectionPosts(collection.id);
+  el.innerHTML=`<section class="collection-view">
+    <div class="collection-view__head"><div class="collection-card__icon">${esc(collection.icon||'✦')}</div><div><h1>${esc(collection.title)}</h1><p>${esc(collection.description||'A collection of writings by DK.')}</p></div></div>
+    <div class="pactions"><button class="sbtn" onclick="shrCollection(${collection.id})">↗ Share Collection</button><span class="stoast" id="cst${collection.id}">Link copied!</span></div>
+    ${posts.length?`<div class="collection-post-list">${posts.map((post,index)=>`<article class="collection-post" onclick="go('post',${post.id})"><span class="collection-post__number">${index+1}</span><div><h2>${esc(post.title)}</h2><p>${esc(post.exc||autoExc(post.body))}</p><small>${esc(post.date)} · ${esc(post.cat)}</small></div><span aria-hidden="true">→</span></article>`).join('')}</div>`:'<div class="empty">No writings have been added to this collection yet.</div>'}
+  </section>`;
+}
+function shrCollection(id){
+  const collection=findCollection(id),toast=document.getElementById('cst'+id),url=new URL(routePath('collection',id),location.origin).href;
+  if(navigator.share)navigator.share({title:collection?.title||'',text:'A collection by DK',url}).catch(()=>{});
+  else{try{navigator.clipboard.writeText(url)}catch(e){}if(toast){toast.classList.add('show');setTimeout(()=>toast.classList.remove('show'),2500)}}
 }
 
 // ── QUIZ PUBLIC ───────────────────────────────────────
@@ -562,13 +634,14 @@ function aTab(btn,tab){
   document.querySelectorAll('.adtab').forEach(b=>b.classList.remove('on'));
   document.querySelectorAll('.adtabc').forEach(c=>c.classList.remove('on'));
   btn.classList.add('on');document.getElementById('atab-'+tab).classList.add('on');
-  if(tab==='cats')renderAdCats();
+  if(tab==='collections')renderAdCollections();
+  else if(tab==='cats')renderAdCats();
   else if(tab==='quiz')renderAdQuiz()
 }
 function renderAdmin(){
   document.querySelectorAll('.adtab').forEach((b,i)=>b.classList.toggle('on',i===0));
   document.querySelectorAll('.adtabc').forEach((c,i)=>c.classList.toggle('on',i===0));
-  document.getElementById('afw').innerHTML='';editId=null;renderAdPosts()
+  document.getElementById('afw').innerHTML='';document.getElementById('cfw').innerHTML='';editId=null;collectionEditId=null;renderAdPosts()
 }
 
 // ── ADMIN: POSTS ──────────────────────────────────────
@@ -577,7 +650,7 @@ function renderAdPosts(){
   if(!POSTS.length){el.innerHTML='<div class="empty">No posts yet.</div>';return}
   el.innerHTML=[...POSTS].reverse().map(p=>`<div class="apost">
     <div class="apost-info"><div class="apost-title">${esc(p.title)}</div>
-    <div class="apost-meta">${esc(p.cat)}${p.subcat?' · '+esc(p.subcat):''} · ${esc(p.lang)} · ${p.date}</div></div>
+    <div class="apost-meta">${esc(p.cat)}${p.subcat?' · '+esc(p.subcat):''}${findCollection(p.collectionId)?' · '+esc(findCollection(p.collectionId).title):''} · ${esc(p.lang)} · ${p.date}</div></div>
     <div class="apost-acts" id="da${p.id}">
       <button class="editbtn" onclick="startEdit(${p.id})">Edit</button>
       <button class="delbtn" onclick="askDel(${p.id})">Delete</button>
@@ -600,6 +673,9 @@ function subsHtml(catKey,selSub){
   return'<option value="">— Select sub-category —</option>'+CATS[catKey].subs.map(s=>`<option value="${esc(s)}"${s===selSub?' selected':''}>${esc(s)}</option>`).join('')
 }
 function updateSubs(catKey){const el=document.getElementById('f-sc');if(el)el.innerHTML=subsHtml(catKey,'')}
+function collectionOpts(selectedId){
+  return`<option value="">— No collection —</option>${COLLECTIONS.map(collection=>`<option value="${collection.id}"${String(collection.id)===String(selectedId||'')?' selected':''}>${esc(collection.icon||'✦')} ${esc(collection.title)}</option>`).join('')}`
+}
 function buildFormHtml(){
   const p=editId?POSTS.find(x=>x.id===editId):null;
   const catOpts=Object.keys(CATS).map(k=>`<option value="${k}"${p&&p.cc===k?' selected':''}>${esc(CATS[k].label)}</option>`).join('');
@@ -617,6 +693,10 @@ function buildFormHtml(){
       <div class="frow"><label>Main Category</label><select id="f-c" onchange="updateSubs(this.value)"><option value="">— Select —</option>${catOpts}</select></div>
       <div class="frow"><label>Sub-category</label><select id="f-sc">${subsHtml(p?.cc||'',p?.subcat||'')}</select></div>
     </div>
+    <div class="frow2">
+      <div class="frow"><label>Collection <span style="font-weight:400;color:var(--gd)">(optional)</span></label><select id="f-col">${collectionOpts(p?.collectionId)}</select></div>
+      <div class="frow"><label>Collection order <span style="font-weight:400;color:var(--gd)">(optional)</span></label><input type="number" id="f-co" min="1" step="1" placeholder="e.g. 1"></div>
+    </div>
     <div class="frow"><label>Excerpt <span style="font-weight:400;color:var(--gd)">(optional)</span></label><textarea id="f-e" rows="2" placeholder="Auto-generated if blank"></textarea></div>
     ${p?.html?'<p class="import-note">Imported formatting is preserved until you change the body. Saving body edits updates the reader version from the text below.</p>':''}
     <div class="frow"><label>Body</label><textarea id="f-b" rows="13" placeholder="Your writing..."></textarea></div>
@@ -628,7 +708,7 @@ function startEdit(id){
   editId=id;const p=POSTS.find(x=>x.id===id);if(!p)return;
   document.getElementById('afw').innerHTML=buildFormHtml();
   document.getElementById('f-t').value=p.title;document.getElementById('f-d').value=p.date;
-  document.getElementById('f-e').value=p.exc||'';document.getElementById('f-b').value=p.body;
+  document.getElementById('f-e').value=p.exc||'';document.getElementById('f-b').value=p.body;document.getElementById('f-co').value=Number(p.collectionOrder)>0?p.collectionOrder:'';
   document.getElementById('afw').scrollIntoView({behavior:'smooth',block:'start'})
 }
 function cancelForm(){document.getElementById('afw').innerHTML='';editId=null}
@@ -636,10 +716,10 @@ async function savePost(){
   const title=document.getElementById('f-t').value.trim(),langV=document.getElementById('f-l').value;
   const catKey=document.getElementById('f-c').value,subcat=document.getElementById('f-sc').value;
   const date=document.getElementById('f-d').value.trim(),exc=document.getElementById('f-e').value.trim();
-  const body=document.getElementById('f-b').value.trim();
+  const body=document.getElementById('f-b').value.trim(),collectionId=document.getElementById('f-col').value,collectionOrder=Number.parseInt(document.getElementById('f-co').value,10);
   if(!title||!catKey||!body){alert('Title, Category, and Body are required.');return}
   const previous=editId?POSTS.find(x=>x.id===editId):null;
-  const post={...(previous||{}),id:editId||Date.now(),title,lang:langV,lc:LC[langV]||'kn',cat:CATS[catKey].label,cc:catKey,subcat:subcat||'',date:date||todayStr(),exc:exc||autoExc(body),body};
+  const post={...(previous||{}),id:editId||Date.now(),title,lang:langV,lc:LC[langV]||'kn',cat:CATS[catKey].label,cc:catKey,subcat:subcat||'',collectionId,collectionOrder:collectionId&&Number.isInteger(collectionOrder)&&collectionOrder>0?collectionOrder:null,date:date||todayStr(),exc:exc||autoExc(body),body};
   if(previous?.html&&body!==previous.body)post.html=bodyToRichHtml(body);
   try{
     await svP(post);
@@ -647,6 +727,64 @@ async function savePost(){
     cachePosts();
     cancelForm();renderAdPosts();renderHome();
   }catch(e){console.error('Post save failed:',e);alert('The post could not be saved. Please try again.')}
+}
+
+// ── ADMIN: COLLECTIONS ─────────────────────────────────
+function sortCollections(){COLLECTIONS.sort((a,b)=>String(a.title||'').localeCompare(String(b.title||''),'kn'))}
+function renderAdCollections(){
+  const el=document.getElementById('cpl');
+  if(!COLLECTIONS.length){el.innerHTML='<div class="empty">No collections yet. Create one, then assign writings to it from the post editor.</div>';return}
+  el.innerHTML=COLLECTIONS.map(collection=>{
+    const count=collectionPosts(collection.id).length;
+    return`<div class="apost">
+      <div class="apost-info"><div class="apost-title">${esc(collection.icon||'✦')} ${esc(collection.title)}</div><div class="apost-meta">${count} ${count===1?'writing':'writings'}${collection.description?' · '+esc(collection.description):''}</div></div>
+      <div class="apost-acts" id="cda${collection.id}"><button class="editbtn" onclick="startEditCollection(${collection.id})">Edit</button><button class="delbtn" onclick="askDelCollection(${collection.id})">Delete</button></div>
+    </div>`
+  }).join('');
+}
+function collectionFormHtml(){
+  const collection=collectionEditId?findCollection(collectionEditId):null;
+  return`<div class="aform"><h3>${collection?'Edit Collection':'New Collection'}</h3>
+    <div class="frow2"><div class="frow"><label>Collection name</label><input type="text" id="cf-t" maxlength="100" placeholder="e.g. ನನ್ನ ಕವನಗಳು"></div><div class="frow"><label>Icon</label><input type="text" id="cf-i" maxlength="12" placeholder="e.g. 🌸"></div></div>
+    <div class="frow"><label>Description <span style="font-weight:400;color:var(--gd)">(optional)</span></label><textarea id="cf-d" rows="3" maxlength="400" placeholder="A short introduction to this collection..."></textarea></div>
+    <p class="import-note">Assign writings and their reading order from each post’s editor. The first item leads to the next automatically.</p>
+    <div class="fbts"><button class="savebtn" onclick="saveCollection()">💾 Save Collection</button><button class="cancelbtn" onclick="cancelCollectionForm()">Cancel</button></div>
+  </div>`
+}
+function startAddCollection(){
+  collectionEditId=null;document.getElementById('cfw').innerHTML=collectionFormHtml();document.getElementById('cf-i').value='✦';document.getElementById('cfw').scrollIntoView({behavior:'smooth',block:'start'});
+}
+function startEditCollection(id){
+  const collection=findCollection(id);if(!collection)return;
+  collectionEditId=id;document.getElementById('cfw').innerHTML=collectionFormHtml();document.getElementById('cf-t').value=collection.title||'';document.getElementById('cf-i').value=collection.icon||'✦';document.getElementById('cf-d').value=collection.description||'';document.getElementById('cfw').scrollIntoView({behavior:'smooth',block:'start'});
+}
+function cancelCollectionForm(){document.getElementById('cfw').innerHTML='';collectionEditId=null}
+async function saveCollection(){
+  const title=document.getElementById('cf-t')?.value.trim(),icon=document.getElementById('cf-i')?.value.trim(),description=document.getElementById('cf-d')?.value.trim()||'';
+  if(!title){alert('Please enter a collection name.');return}
+  const existing=collectionEditId?findCollection(collectionEditId):null;
+  const collection={...(existing||{}),id:existing?.id||Date.now(),title,icon:(icon||'✦').slice(0,12),description};
+  try{
+    await svCol(collection);
+    if(existing){const index=COLLECTIONS.findIndex(item=>String(item.id)===String(existing.id));if(index>=0)COLLECTIONS[index]=collection}else COLLECTIONS.push(collection);
+    sortCollections();cacheCollections();cancelCollectionForm();renderAdCollections();renderHome();
+  }catch(error){console.error('Collection save failed:',error);alert('The collection could not be saved. Please try again.')}
+}
+function askDelCollection(id){
+  const el=document.getElementById('cda'+id);if(!el)return;
+  el.innerHTML=`<span style="font-size:.78rem;color:var(--il)">Writings stay published but become ungrouped.</span><button class="delbtn hot" onclick="delCollection(${id})">Delete</button><button class="cancelbtn" style="padding:5px 10px;font-size:.8rem" onclick="renderAdCollections()">Cancel</button>`;
+}
+async function delCollection(id){
+  const collection=findCollection(id);if(!collection)return;
+  const affected=POSTS.filter(post=>String(post.collectionId||'')===String(id)),postSnapshots=affected.map(post=>({...post})),collectionsSnapshot=[...COLLECTIONS];
+  affected.forEach(post=>{post.collectionId='';post.collectionOrder=null});COLLECTIONS=COLLECTIONS.filter(item=>String(item.id)!==String(id));
+  try{
+    await Promise.all([...affected.map(svP),window.deleteFirestoreCollection(collection)]);
+    cachePosts();cacheCollections();cancelCollectionForm();renderAdCollections();renderAdPosts();renderHome();
+  }catch(error){
+    postSnapshots.forEach(snapshot=>{const index=POSTS.findIndex(post=>String(post.id)===String(snapshot.id));if(index>=0)POSTS[index]=snapshot});
+    COLLECTIONS=collectionsSnapshot;console.error('Collection deletion failed:',error);alert('The collection could not be deleted. Please try again.');renderAdCollections();
+  }
 }
 
 // ── ADMIN: CATEGORIES ─────────────────────────────────
