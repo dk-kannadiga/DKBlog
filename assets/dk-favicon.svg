@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title">
+  <title>DK's Writings</title>
+  <rect width="64" height="64" rx="14" fill="#3d1a08"/>
+  <rect x="5" y="5" width="54" height="54" rx="10" fill="none" stroke="#c8a87a" stroke-width="2"/>
+  <path d="M14 14h36" stroke="#e8d5b0" stroke-width="1.5" stroke-linecap="round" opacity=".8"/>
+  <text x="32" y="42" text-anchor="middle" fill="#f7ead5" font-family="Georgia,serif" font-size="25" font-weight="700" letter-spacing="-1">DK</text>
+  <circle cx="32" cy="50" r="1.8" fill="#c8a87a"/>
+</svg>
