@@ -16,7 +16,7 @@ function cachePosts(){
 // Keep the last confirmed Firestore result for an instant, accurate refresh.
 // The bundled sample posts are only used if Firestore is unavailable.
 let POSTS=readCachedPosts(),postsLoading=POSTS.length===0,contentLoading=true,CATS=JSON.parse(JSON.stringify(DC)),likes={},likedMe=new Set();
-let Q=null,QA=[...DQA],qDraft=[],editQId=false,qSubmitted=false,qSubmissionQuizId=null,qSubmissionCheckInFlight=false,qSubmitting=false;
+let Q=null,QA=[...DQA],qDraft=[],editQId=false,certDraft=null,qSubmitted=false,qSubmissionQuizId=null,qSubmissionCheckInFlight=false,qSubmitting=false;
 let adminAuth=false,editId=null,catF='all',langF='all',searchQ='';
 
 function hSearch(v){
@@ -89,7 +89,7 @@ async function svCmt(id,c){
   await window.saveFirestoreComment(id,c);
   return await ldCmt(id);
 }
-function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
 function autoExc(b){if(!b)return'';if(b.length<=160)return b;const t=b.substring(0,160);const i=Math.max(t.lastIndexOf(' '),t.lastIndexOf('\n'));return t.substring(0,i>80?i:140)+'...'}
 function postTags(p){
   const labels=Array.isArray(p.labels)?[...new Set(p.labels.map(x=>String(x).trim()).filter(Boolean))]:[];
@@ -425,7 +425,7 @@ async function submitQuiz(){
 function showResults(q,answers,name,score){
   const total=q.questions.length,pct=Math.round(score/total*100);
   const cur=document.getElementById('qcur');
-  certData={name,title:q.title,score,total,date:todayStr()};
+  certData={name,title:q.title,score,total,date:todayStr(),template:q.certificateTemplate};
   let h=`<div class="qscore-box">
     <div style="font-size:1.8rem;margin-bottom:8px">${score===total?'🏆':score>=total*.7?'🎉':score>=total*.5?'👍':'📚'}</div>
     <div class="qscore">${score} / ${total}</div>
@@ -448,28 +448,53 @@ function showResults(q,answers,name,score){
   });
   h+='</div>';cur.innerHTML=h
 }
+const CERT_FONT_STACKS={
+  'Playfair Display':`'Playfair Display','Noto Sans Kannada',serif`,
+  'Lora':`'Lora','Noto Sans Kannada',serif`,
+  'Anek Kannada':`'Anek Kannada','Noto Sans Kannada',sans-serif`,
+  'Noto Sans Kannada':`'Noto Sans Kannada',sans-serif`,
+};
+function defaultCertificateTemplate(){
+  return{
+    emblem:'✦ ✦ ✦',heading:'Certificate of Participation',intro:'This is to certify that',
+    body:'has successfully participated in {quizTitle}',scoreText:'Score: {score} / {total} ({percent}%)',
+    issuer:`DK's Writings`,issuerRole:'ಬರಹಗಾರ / Author',background:'#fffdf5',accent:'#7a3b1e',border:'#c8a87a',
+    font:'Lora',titleFont:'Playfair Display',align:'center',borderStyle:'double',titleSize:26,nameSize:38,
+  };
+}
+function safeCertificateColor(value,fallback){return typeof value==='string'&&/^#[0-9a-f]{6}$/i.test(value)?value:fallback}
+function certificateTemplate(template){
+  const fallback=defaultCertificateTemplate(),source=template&&typeof template==='object'?template:{};
+  const text=(key,max=240)=>typeof source[key]==='string'?source[key].slice(0,max):fallback[key];
+  return{...fallback,emblem:text('emblem',80),heading:text('heading',160),intro:text('intro',240),body:text('body',360),scoreText:text('scoreText',240),issuer:text('issuer',120),issuerRole:text('issuerRole',120),
+    background:safeCertificateColor(source.background,fallback.background),accent:safeCertificateColor(source.accent,fallback.accent),border:safeCertificateColor(source.border,fallback.border),
+    font:CERT_FONT_STACKS[source.font]?source.font:fallback.font,titleFont:CERT_FONT_STACKS[source.titleFont]?source.titleFont:fallback.titleFont,
+    align:['left','center','right'].includes(source.align)?source.align:fallback.align,borderStyle:['solid','double'].includes(source.borderStyle)?source.borderStyle:fallback.borderStyle,
+    titleSize:Math.max(16,Math.min(44,Number(source.titleSize)||fallback.titleSize)),nameSize:Math.max(24,Math.min(64,Number(source.nameSize)||fallback.nameSize))};
+}
+function certificateValues(data){
+  const total=Number(data.total)||0,score=Number(data.score)||0;
+  return{name:data.name||'',quizTitle:data.title||'',score,total,percent:total?Math.round(score/total*100):0,date:data.date||''};
+}
+function certificateText(text,values){return esc(String(text||'').replace(/\{(name|quizTitle|score|total|percent|date)\}/g,(_,key)=>String(values[key]??''))).replace(/\n/g,'<br>')}
+function renderCertificateMarkup(data,template){
+  const t=certificateTemplate(template),values=certificateValues(data),titleFont=CERT_FONT_STACKS[t.titleFont],bodyFont=CERT_FONT_STACKS[t.font];
+  return`<div class="certificate-sheet" style="--cert-bg:${t.background};--cert-accent:${t.accent};--cert-border:${t.border};--cert-align:${t.align};--cert-title-size:${t.titleSize}px;--cert-name-size:${t.nameSize}px;--cert-title-font:${titleFont};--cert-body-font:${bodyFont};--cert-border-style:${t.borderStyle}">
+    <div class="certificate-sheet__inner">
+      <div class="certificate-emblem">${certificateText(t.emblem,values)}</div>
+      <div class="certificate-heading">${certificateText(t.heading,values)}</div>
+      <p class="certificate-intro">${certificateText(t.intro,values)}</p>
+      <div class="certificate-name">${certificateText('{name}',values)}</div>
+      <p class="certificate-body">${certificateText(t.body,values)}</p>
+      <div class="certificate-score">${certificateText(t.scoreText,values)}</div>
+      <div class="certificate-footer"><div class="certificate-issuer"><div>${certificateText(t.issuer,values)}</div><small>${certificateText(t.issuerRole,values)}</small></div><div class="certificate-date">${certificateText('{date}',values)}</div></div>
+    </div>
+  </div>`;
+}
 let certData=null;
 function genCert(){
   if(!certData)return;
-  const {name,title,score,total,date}=certData;
-  document.getElementById('cert-inner').innerHTML=`
-    <div style="position:relative;background:#fffdf5;border:1px solid #c8a87a;border-radius:4px;padding:48px 56px;text-align:center;box-shadow:0 4px 24px rgba(44,26,14,.12)">
-      <div style="position:absolute;inset:12px;border:1px solid #e8d5b0;border-radius:2px;pointer-events:none"></div>
-      <div style="color:#c8a87a;font-size:1.3rem;letter-spacing:8px;margin-bottom:18px">✦ ✦ ✦</div>
-      <div style="font-family:'Playfair Display',serif;color:#7a3b1e;font-size:.8rem;letter-spacing:3px;text-transform:uppercase;margin-bottom:26px">Certificate of Participation</div>
-      <p style="color:#5a3e2b;font-size:.95rem;font-style:italic;margin-bottom:8px">This is to certify that</p>
-      <div style="font-family:'Playfair Display',serif;color:#2c1a0e;font-size:2.2rem;margin:10px 0;border-bottom:1px solid #c8a87a;padding-bottom:10px">${esc(name)}</div>
-      <p style="color:#5a3e2b;font-size:.9rem;font-style:italic;margin-bottom:6px">has successfully participated in</p>
-      <div style="font-family:'Playfair Display',serif;color:#7a3b1e;font-size:1.2rem;margin-bottom:14px">${esc(title)}</div>
-      <div style="display:inline-block;padding:5px 20px;border:1px solid #c8a87a;border-radius:20px;color:#7a3b1e;font-size:.85rem;margin-bottom:24px">Score: ${score} / ${total}</div>
-      <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:24px;padding-top:18px;border-top:1px solid #e8d5b0">
-        <div style="text-align:center;flex:1">
-          <div style="font-family:'Playfair Display',serif;color:#2c1a0e;font-size:1rem;border-top:1px solid #c8a87a;padding-top:7px;display:inline-block;min-width:150px">DK</div>
-          <div style="font-size:.74rem;color:#c8a87a;font-style:italic;margin-top:3px">ಬರಹಗಾರ / Author</div>
-        </div>
-        <div style="font-size:.76rem;color:#c8a87a;font-style:italic">${esc(date)}</div>
-      </div>
-    </div>`;
+  document.getElementById('cert-inner').innerHTML=renderCertificateMarkup(certData,certData.template);
   go('cert')
 }
 function renderQArcList(){
@@ -706,7 +731,7 @@ async function doArchive(){
       if(answers[i]===qu.ans)stats.qs[i].c++;else stats.qs[i].w++;
     });
   });
-  const archive={id:Q.id,title:Q.title,date:Q.date,type:Q.type,total:stats.total,state:'archived',
+  const archive={id:Q.id,title:Q.title,date:Q.date,type:Q.type,total:stats.total,state:'archived',certificateTemplate:Q.certificateTemplate||null,
     questions:Q.questions.map((qu,i)=>({...qu,stats:stats.qs[i]||{c:0,w:0}}))};
   try{
     await window.saveFirestoreQuizArchive(archive);
@@ -793,6 +818,54 @@ function syncQD(){
 }
 function addQ(){syncQD();qDraft.push({q:'',opts:['','','',''],ans:0,exp:''});renderQBuilder();document.querySelectorAll('.qqbuilder').at(-1)?.scrollIntoView({behavior:'smooth',block:'start'})}
 function removeQ(i){syncQD();qDraft.splice(i,1);renderQBuilder()}
+function certificateDesignerMarkup(){
+  const t=certificateTemplate(certDraft),fontOptions=Object.keys(CERT_FONT_STACKS).map(font=>`<option value="${font}"${t.font===font?' selected':''}>${font}</option>`).join(''),
+    titleFontOptions=Object.keys(CERT_FONT_STACKS).map(font=>`<option value="${font}"${t.titleFont===font?' selected':''}>${font}</option>`).join('');
+  return`<section id="certificate-designer" class="certificate-designer">
+    <div class="certificate-designer__head">
+      <div><h4>Certificate design</h4><p>Use a ready-made style or make it your own. The preview uses sample participant details.</p></div>
+      <span class="certificate-kind">📜 Certificate quiz</span>
+    </div>
+    <p class="certificate-placeholders">Placeholders: <code>{name}</code>, <code>{quizTitle}</code>, <code>{score}</code>, <code>{total}</code>, <code>{percent}</code>, <code>{date}</code></p>
+    <div class="certificate-designer-grid">
+      <div class="frow"><label>Top symbol or text</label><input type="text" id="cd-emblem" maxlength="80" value="${esc(t.emblem)}" oninput="certPreview()"></div>
+      <div class="frow"><label>Heading</label><input type="text" id="cd-heading" maxlength="160" value="${esc(t.heading)}" oninput="certPreview()"></div>
+      <div class="frow"><label>Introduction</label><textarea id="cd-intro" rows="2" maxlength="240" oninput="certPreview()">${esc(t.intro)}</textarea></div>
+      <div class="frow"><label>Participant line</label><textarea id="cd-body" rows="2" maxlength="360" oninput="certPreview()">${esc(t.body)}</textarea></div>
+      <div class="frow"><label>Score line</label><input type="text" id="cd-score" maxlength="240" value="${esc(t.scoreText)}" oninput="certPreview()"></div>
+      <div class="frow"><label>Issuer</label><input type="text" id="cd-issuer" maxlength="120" value="${esc(t.issuer)}" oninput="certPreview()"></div>
+      <div class="frow"><label>Issuer role</label><input type="text" id="cd-role" maxlength="120" value="${esc(t.issuerRole)}" oninput="certPreview()"></div>
+      <div class="frow"><label>Text alignment</label><select id="cd-align" onchange="certPreview()"><option value="left"${t.align==='left'?' selected':''}>Left</option><option value="center"${t.align==='center'?' selected':''}>Center</option><option value="right"${t.align==='right'?' selected':''}>Right</option></select></div>
+      <div class="frow"><label>Body font</label><select id="cd-font" onchange="certPreview()">${fontOptions}</select></div>
+      <div class="frow"><label>Heading font</label><select id="cd-title-font" onchange="certPreview()">${titleFontOptions}</select></div>
+      <div class="frow"><label>Heading size</label><input type="range" id="cd-title-size" min="16" max="44" value="${t.titleSize}" oninput="certPreview()"></div>
+      <div class="frow"><label>Name size</label><input type="range" id="cd-name-size" min="24" max="64" value="${t.nameSize}" oninput="certPreview()"></div>
+      <div class="frow"><label>Border style</label><select id="cd-border-style" onchange="certPreview()"><option value="double"${t.borderStyle==='double'?' selected':''}>Double</option><option value="solid"${t.borderStyle==='solid'?' selected':''}>Solid</option></select></div>
+      <div class="frow certificate-colors"><label>Certificate colours</label><div><input type="color" id="cd-background" value="${t.background}" title="Background colour" oninput="certPreview()"><input type="color" id="cd-accent" value="${t.accent}" title="Text colour" oninput="certPreview()"><input type="color" id="cd-border" value="${t.border}" title="Border colour" oninput="certPreview()"></div></div>
+    </div>
+    <div class="certificate-preview-wrap"><span>Live preview</span><div id="cert-preview" class="certificate-preview"></div></div>
+  </section>`;
+}
+function readCertificateDesigner(){
+  const value=id=>document.getElementById(id)?.value;
+  return certificateTemplate({
+    emblem:value('cd-emblem'),heading:value('cd-heading'),intro:value('cd-intro'),body:value('cd-body'),scoreText:value('cd-score'),issuer:value('cd-issuer'),issuerRole:value('cd-role'),
+    font:value('cd-font'),titleFont:value('cd-title-font'),align:value('cd-align'),borderStyle:value('cd-border-style'),background:value('cd-background'),accent:value('cd-accent'),border:value('cd-border'),
+    titleSize:value('cd-title-size'),nameSize:value('cd-name-size')
+  });
+}
+function certPreview(){
+  const preview=document.getElementById('cert-preview');
+  if(!preview)return;
+  certDraft=readCertificateDesigner();
+  preview.innerHTML=renderCertificateMarkup({name:'ದರ್ಶನ (ಡೀಕೆ)',title:'ಮಾದರಿ ಕ್ವಿಜ್',score:8,total:10,date:todayStr()},certDraft);
+}
+function toggleCertificateDesigner(){
+  const designer=document.getElementById('certificate-designer'),isCertificate=document.getElementById('qf-type')?.value==='certificate';
+  if(!designer)return;
+  designer.hidden=!isCertificate;
+  if(isCertificate)certPreview();
+}
 function buildQForm(){
   const q=editQId?Q:null;
   const catOpts=Object.keys(CATS).map(k=>`<option value="${k}"${q&&q.cc===k?' selected':''}>${esc(CATS[k].label)}</option>`).join('');
@@ -800,7 +873,7 @@ function buildQForm(){
     <div class="frow"><label>Quiz Title</label><input type="text" id="qf-t" placeholder="e.g. ಕನ್ನಡ ಸಾಹಿತ್ಯ ರಸಪ್ರಶ್ನೆ"></div>
     <div class="frow"><label>Description / Announcement</label><textarea id="qf-d" rows="3" placeholder="Describe the quiz, topics, rules..."></textarea></div>
     <div class="frow2">
-      <div class="frow"><label>Type</label><select id="qf-type">
+      <div class="frow"><label>Type</label><select id="qf-type" onchange="toggleCertificateDesigner()">
         <option value="certificate">📜 Certificate Quiz</option>
         <option value="prize"${q?.type==='prize'?' selected':''}>🎁 Prize Quiz</option>
       </select></div>
@@ -815,6 +888,7 @@ function buildQForm(){
       <div class="frow"><label>Deadline (display)</label><input type="text" id="qf-dl" placeholder="e.g. 20 Jun 2025, 11:59 PM"></div>
     </div>
     <div class="frow"><label>Prize Details <span style="font-weight:400;color:var(--gd)">(for prize quiz)</span></label><textarea id="qf-pr" rows="2" placeholder="e.g. Top 3 scorers win a signed book..."></textarea></div>
+    ${certificateDesignerMarkup()}
     <div style="margin-top:20px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
         <label style="font-size:.82rem;color:var(--il);font-family:'Lora',serif;font-weight:600">Questions</label>
@@ -826,14 +900,14 @@ function buildQForm(){
   </div>`
 }
 function startCreateQuiz(){
-  editQId=false;qDraft=[];
+  editQId=false;qDraft=[];certDraft=defaultCertificateTemplate();
   document.getElementById('qfw').innerHTML=buildQForm();
   document.getElementById('qf-date').value=todayStr();
-  renderQBuilder();document.getElementById('qfw').scrollIntoView({behavior:'smooth',block:'start'})
+  renderQBuilder();toggleCertificateDesigner();document.getElementById('qfw').scrollIntoView({behavior:'smooth',block:'start'})
 }
 function startEditQuiz(){
   if(!Q)return;editQId=true;
-  qDraft=Q.questions?JSON.parse(JSON.stringify(Q.questions)):[];
+  qDraft=Q.questions?JSON.parse(JSON.stringify(Q.questions)):[];certDraft=certificateTemplate(Q.certificateTemplate);
   document.getElementById('qfw').innerHTML=buildQForm();
   document.getElementById('qf-t').value=Q.title||'';
   document.getElementById('qf-d').value=Q.description||'';
@@ -842,9 +916,9 @@ function startEditQuiz(){
   document.getElementById('qf-date').value=Q.date||'';
   document.getElementById('qf-dl').value=Q.deadline||'';
   document.getElementById('qf-pr').value=Q.prize||'';
-  renderQBuilder();document.getElementById('qfw').scrollIntoView({behavior:'smooth',block:'start'})
+  renderQBuilder();toggleCertificateDesigner();document.getElementById('qfw').scrollIntoView({behavior:'smooth',block:'start'})
 }
-function cancelQF(){document.getElementById('qfw').innerHTML='';document.getElementById('qsubs').innerHTML='';editQId=false;qDraft=[]}
+function cancelQF(){document.getElementById('qfw').innerHTML='';document.getElementById('qsubs').innerHTML='';editQId=false;qDraft=[];certDraft=null}
 async function saveQForm(){
   syncQD();
   const title=document.getElementById('qf-t')?.value.trim();
@@ -854,15 +928,16 @@ async function saveQForm(){
     if(!qDraft[i].q){alert(`Question ${i+1} has no text.`);return}
     if(qDraft[i].opts.filter(o=>o).length<2){alert(`Question ${i+1} needs at least 2 options.`);return}
   }
+  const type=document.getElementById('qf-type')?.value||'certificate';
   Q={
     id:editQId&&Q?Q.id:Date.now(),
     title,description:document.getElementById('qf-d')?.value.trim()||'',
-    type:document.getElementById('qf-type')?.value||'certificate',
+    type,
     state:document.getElementById('qf-state')?.value||'upcoming',
     date:document.getElementById('qf-date')?.value.trim()||'',
     deadline:document.getElementById('qf-dl')?.value.trim()||'',
     prize:document.getElementById('qf-pr')?.value.trim()||'',
-    questions:qDraft,stats:editQId&&Q?Q.stats:{total:0,qs:{}}
+    questions:qDraft,stats:editQId&&Q?Q.stats:{total:0,qs:{}},certificateTemplate:type==='certificate'?readCertificateDesigner():null
   };
   try{await svQ();cancelQF();renderAdQuiz()}catch(e){console.error('Quiz save failed:',e);alert('The quiz could not be saved. Please try again.')}
 }
