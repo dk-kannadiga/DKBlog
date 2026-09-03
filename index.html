@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#3d1f0a">
   <link rel="icon" type="image/svg+xml" href="/assets/dk-favicon.svg">
   <link href="https://fonts.googleapis.com/css2?family=Anek+Kannada:wght@400;500;700&family=Noto+Sans+Kannada:wght@400;500;700&family=Lora:ital,wght@0,400;0,600;1,400&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/main.css?v=20260902-3">
+  <link rel="stylesheet" href="/css/main.css?v=20260903-1">
   <title>DK's Writings · ಬರಹಗಳ ಜಗತ್ತು</title>
 </head>
 <body>
@@ -104,11 +104,17 @@
   <h1 class="stitle">🏆 Quiz Corner</h1>
   <p class="ssub">Test your knowledge · Win certificates &amp; prizes</p>
   <div class="qsubnav">
-    <button class="qsn on" id="qsn-c" onclick="qTab('c')">Current Quiz</button>
+    <button class="qsn on" id="qsn-c" onclick="qTab('c')">Available Quizzes</button>
     <button class="qsn" id="qsn-a" onclick="qTab('a')">Archive</button>
   </div>
   <div id="qcur"></div>
   <div id="qarc" style="display:none"></div>
+</div></div>
+
+<!-- ACTIVE QUIZ -->
+<div id="pqp" class="page"><div class="pc">
+  <button class="back" onclick="go('quiz')">← All Available Quizzes</button>
+  <div id="qpc"></div>
 </div></div>
 
 <!-- CERTIFICATE PAGE -->
@@ -174,7 +180,7 @@
     window.resolveFirebaseReady = resolve;
   });
 </script>
-<script type="module" src="/js/firestore-loader.js?v=20260902-3"></script>
-<script src="/js/app.js?v=20260902-5"></script>
+<script type="module" src="/js/firestore-loader.js?v=20260903-1"></script>
+<script src="/js/app.js?v=20260903-1"></script>
 </body>
 </html>

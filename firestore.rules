@@ -42,7 +42,7 @@ service cloud.firestore {
         || (signedIn() && resource.data.userId == request.auth.uid);
       allow list: if isAdmin();
       allow create: if signedIn()
-        && request.resource.data.keys().hasOnly(['quizId', 'userId', 'answers', 'submittedAt'])
+        && request.resource.data.keys().hasOnly(['quizId', 'userId', 'answers', 'participantName', 'submittedAt'])
         && request.resource.data.quizId is string
         && request.resource.data.quizId.size() >= 1
         && request.resource.data.quizId.size() <= 64
@@ -52,6 +52,9 @@ service cloud.firestore {
         && request.resource.data.answers.size() >= 1
         && request.resource.data.answers.size() <= 100
         && request.resource.data.answers.toSet().hasOnly([-1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19])
+        && request.resource.data.participantName is string
+        && request.resource.data.participantName.size() >= 1
+        && request.resource.data.participantName.size() <= 80
         && request.resource.data.submittedAt == request.time;
       allow update, delete: if isAdmin();
     }

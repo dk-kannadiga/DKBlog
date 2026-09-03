@@ -166,6 +166,8 @@ footer a:hover{opacity:.9}
 .qsn{padding:7px 20px;border:1px solid var(--gd);border-radius:20px;background:transparent;color:var(--il);cursor:pointer;font-family:'Lora',serif;font-size:.85rem;transition:all .2s}
 .qsn.on{background:var(--ac);color:#fff;border-color:var(--ac)}
 .qsn:hover:not(.on){background:var(--gl)}
+.active-quiz-list{max-width:760px;margin:0 auto}.active-quiz-list>h3{font-family:'Playfair Display','Noto Sans Kannada',serif;color:var(--ac);font-size:1.25rem;margin:0 0 3px}.active-quiz-list>p{color:var(--il);font-size:.88rem;font-style:italic;margin:0 0 16px}
+.active-quiz-card{background:var(--cb);border:1px solid var(--gl);border-left:4px solid var(--ac);border-radius:8px;padding:20px;display:flex;align-items:center;gap:15px;box-shadow:0 2px 8px rgba(44,26,14,.06)}.active-quiz-card__icon{font-size:1.8rem;flex:none}.active-quiz-card__body{flex:1;min-width:0}.active-quiz-card__meta{font-size:.74rem;color:var(--gd);font-style:italic;margin-bottom:3px}.active-quiz-card h4{font-family:'Playfair Display','Noto Sans Kannada',serif;color:var(--ink);font-size:1.1rem;line-height:1.4;margin:0 0 4px}.active-quiz-card p{font-size:.88rem;color:var(--il);line-height:1.6;margin:0 0 5px;white-space:pre-wrap}.active-quiz-card small{font-size:.75rem;color:var(--gd);font-style:italic}.active-quiz-card__button{flex:none}
 .qposter{background:var(--cb);border:2px solid var(--gd);border-radius:10px;padding:36px 32px;text-align:center;max-width:620px;margin:0 auto;box-shadow:0 4px 20px rgba(44,26,14,.1)}
 .qposter h3{font-family:'Playfair Display','Noto Sans Kannada',serif;color:var(--ac);font-size:1.7rem;margin-bottom:8px}
 .qpos-sub{color:var(--gd);font-size:.9rem;font-style:italic;margin-bottom:16px}
@@ -179,6 +181,7 @@ footer a:hover{opacity:.9}
 .qnamebox input:last-child{margin-bottom:0}
 .qnamebox input:focus{outline:none;border-color:var(--ac)}
 .qnamebox input::placeholder{color:var(--gd);font-style:italic}
+.qname-note{font-size:.74rem;color:var(--gd);font-style:italic;line-height:1.5;margin:-3px 0 10px}
 .qcard{background:var(--cb);border:1px solid var(--gl);border-left:4px solid var(--ac);border-radius:6px;padding:20px 22px;margin-bottom:14px}
 .qnum{font-size:.75rem;color:var(--gd);font-style:italic;margin-bottom:6px}
 .qtxt{font-size:.98rem;color:var(--ink);font-family:'Lora','Noto Sans Kannada',serif;margin-bottom:12px;line-height:1.6}
@@ -244,6 +247,7 @@ footer a:hover{opacity:.9}
 .qa-cl{background:var(--gl);color:var(--il);border:1px solid var(--gd)}.qa-cl:hover{background:var(--gd);color:var(--ink)}
 .qa-arc{background:#f5e6de;color:var(--ac);border:1px solid var(--ac)}.qa-arc:hover{background:var(--ac);color:#fff}
 .qa-sub{background:var(--pd);color:var(--il);border:1px solid var(--gd)}.qa-sub:hover{background:var(--gd);color:var(--ink)}
+.quiz-live-count{font-size:.82rem;color:#2d6a2d;font-style:italic;margin:2px 0 0}
 .qqbuilder{border:1px solid var(--gl);border-radius:8px;padding:16px;margin-bottom:12px;background:var(--p);position:relative}
 .qqnum{font-size:.76rem;color:var(--gd);font-style:italic;margin-bottom:8px}
 .qqbuilder textarea,.qor input[type=text]{border:1px solid var(--gl);border-radius:5px;font-family:'Lora','Noto Sans Kannada',serif;font-size:.86rem;background:var(--cb);color:var(--ink);padding:7px 10px;transition:border-color .2s}
@@ -296,6 +300,7 @@ footer a:hover{opacity:.9}
   .qsubnav{gap:8px}.qsn{padding:7px 14px}.pactions{align-items:stretch}.lbtn,.sbtn{justify-content:center;flex:1}.alog{margin-top:30px;padding:28px 20px}
   .aform{padding:16px}.adtab{padding:8px 13px}.apost{padding:14px}.apost-acts{width:100%}.editbtn,.delbtn{flex:1}.addsubrow,.newcatrow{flex-wrap:wrap}.addsubrow input,.newcatrow input{min-width:100%}.addsubbtn,.newcatbtn{width:100%}
   .frow2,.certificate-designer-grid,.collection-grid{grid-template-columns:1fr}.qog{grid-template-columns:1fr}
+  .active-quiz-card{align-items:flex-start;flex-wrap:wrap}.active-quiz-card__button{margin-left:auto}
   .certificate-designer{padding:15px}.certificate-designer__head{display:block}.certificate-kind{display:inline-block;margin-top:8px}.certificate-sheet{padding:6px}.certificate-sheet__inner{min-height:330px;padding:30px 18px}.certificate-heading{margin-bottom:24px}.certificate-name{font-size:min(var(--cert-name-size),10vw)}.certificate-footer{padding-top:32px;gap:12px;flex-wrap:wrap}
   .collection-card{padding:18px}.collection-view__head{align-items:flex-start}.collection-post{padding:14px;gap:11px}.collection-reading__actions{grid-template-columns:1fr 1fr}.collection-reading__actions>span{display:none}.collection-reading__actions .back:last-child{justify-self:start;text-align:left}
 }

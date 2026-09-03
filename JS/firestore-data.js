@@ -215,15 +215,18 @@ window.hasFirestoreQuizSubmission = async function (quizId) {
   const user = await requireUser();
   return (await getDoc(doc(db, "quizSubmissions", quizSubmissionId(quizId, user.uid)))).exists();
 };
-window.saveFirestoreQuizSubmission = async function (quizId, answers, prizeEntry = null) {
+window.saveFirestoreQuizSubmission = async function (quizId, answers, participantName, prizeEntry = null) {
   const user = await requireUser();
   const cleanAnswers = answers.map((answer) => Number.isInteger(answer) ? answer : -1);
+  const cleanParticipantName = String(participantName || "").trim().slice(0, 80);
+  if (!cleanParticipantName) throw new Error("Please enter your name.");
   const id = quizSubmissionId(quizId, user.uid);
   const batch = writeBatch(db);
   batch.set(doc(db, "quizSubmissions", id), {
     quizId: String(quizId),
     userId: user.uid,
     answers: cleanAnswers,
+    participantName: cleanParticipantName,
     submittedAt: serverTimestamp(),
   });
   if (prizeEntry) {

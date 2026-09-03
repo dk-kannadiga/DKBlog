@@ -153,6 +153,7 @@ function todayStr(){return new Date().toLocaleDateString('en-IN',{day:'numeric',
 function routePath(page,id){
   if(page==='post'&&id!==undefined&&id!==null)return `/post/${encodeURIComponent(String(id))}`;
   if(page==='qdetail'&&id!==undefined&&id!==null)return `/quiz/${encodeURIComponent(String(id))}`;
+  if(page==='qplay'&&id!==undefined&&id!==null)return `/quiz/${encodeURIComponent(String(id))}`;
   if(page==='collection'&&id!==undefined&&id!==null)return `/collection/${encodeURIComponent(String(id))}`;
   if(page==='collections')return '/collections';
   if(page==='index')return '/index';
@@ -193,10 +194,11 @@ function collectionPosts(id){
 }
 function go(page,id,{sync=true,replace=false}={}){
   if(page==='admin'&&!adminAuth){go('adminlogin',null,{sync,replace});return}
+  if(page==='qdetail'&&Q&&String(Q.id)===String(id))page='qplay';
   if(sync)syncRoute(page,id,replace);
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
   document.querySelectorAll('nav a').forEach(a=>a.classList.remove('on'));
-  const map={home:'ph',post:'pp',index:'pidx',collections:'pcols',collection:'pcol',about:'pab',adminlogin:'pal',admin:'pad',quiz:'pq',qdetail:'pqd',cert:'pcert'};
+  const map={home:'ph',post:'pp',index:'pidx',collections:'pcols',collection:'pcol',about:'pab',adminlogin:'pal',admin:'pad',quiz:'pq',qplay:'pqp',qdetail:'pqd',cert:'pcert'};
   document.getElementById(map[page])?.classList.add('on');
   if(page==='home'){document.getElementById('nh').classList.add('on');renderHome()}
   else if(page==='post'&&id)renderPost(id);
@@ -206,6 +208,7 @@ function go(page,id,{sync=true,replace=false}={}){
   else if(page==='about')document.getElementById('na').classList.add('on');
   else if(page==='admin'){if(!adminAuth){go('adminlogin');return}renderAdmin()}
   else if(page==='quiz'){document.getElementById('nq').classList.add('on');renderQuiz()}
+  else if(page==='qplay'&&id){document.getElementById('nq').classList.add('on');renderQuizPlay(id)}
   else if(page==='qdetail'&&id)renderQDetail(id);
   window.scrollTo(0,0)
 }
@@ -381,16 +384,33 @@ function qTab(t){
   if(t==='c'){c.style.display='';a.style.display='none';sc.classList.add('on');sa.classList.remove('on')}
   else{c.style.display='none';a.style.display='';sa.classList.add('on');sc.classList.remove('on');renderQArcList()}
 }
+function availableQuizzes(){return Q&&['upcoming','live'].includes(Q.state)?[Q]:[]}
 function renderQuiz(){
-  const cur=document.getElementById('qcur');
-  if(!Q){
+  const cur=document.getElementById('qcur'),quizzes=availableQuizzes();
+  if(!quizzes.length){
     cur.innerHTML=`<div style="text-align:center;padding:60px 20px">
       <div style="font-size:3rem;margin-bottom:16px">📝</div>
       <h3 style="font-family:'Playfair Display',serif;color:var(--ac);font-size:1.4rem;margin-bottom:10px">No Active Quiz Right Now</h3>
       <p style="color:var(--il);font-style:italic;margin-bottom:24px">Check back soon, or explore past quizzes in the Archive.</p>
       <button class="qsn" onclick="qTab('a')">View Archive →</button>
     </div>`;
-  } else if(Q.state==='upcoming'){
+  }else{
+    cur.innerHTML=`<section class="active-quiz-list"><h3>Choose a Quiz</h3><p>Pick a quiz to view its details and participate.</p>${quizzes.map(renderActiveQuizCard).join('')}</section>`;
+  }
+  renderQArcList()
+}
+function renderActiveQuizCard(quiz){
+  const isLive=quiz.state==='live';
+  return`<article class="active-quiz-card">
+    <div class="active-quiz-card__icon">${isLive?'🏆':'📅'}</div>
+    <div class="active-quiz-card__body"><div class="active-quiz-card__meta">${isLive?'Live now':'Upcoming'} · ${quiz.type==='prize'?'🎁 Prize Quiz':'📜 Certificate Quiz'}</div><h4>${esc(quiz.title)}</h4><p>${esc(quiz.description||'')}</p>${quiz.deadline?`<small>⏰ ${esc(quiz.deadline)}</small>`:''}</div>
+    <button class="qsn active-quiz-card__button" onclick="go('qplay',${quiz.id})">${isLive?'Participate →':'View Details →'}</button>
+  </article>`;
+}
+function renderQuizPlay(id){
+  if(!Q||String(Q.id)!==String(id)){renderQDetail(id);return}
+  const cur=document.getElementById('qpc');
+  if(Q.state==='upcoming'){
     cur.innerHTML=`<div class="qposter">
       <div style="font-size:2.5rem;margin-bottom:14px">🏆</div>
       <h3>${esc(Q.title)}</h3>
@@ -399,7 +419,7 @@ function renderQuiz(){
       ${Q.prize?`<div class="qpos-prize">🎁 Prize: ${esc(Q.prize)}</div><br>`:''}
       ${Q.deadline?`<div class="qpos-dl">⏰ Deadline: ${esc(Q.deadline)}</div>`:''}
     </div>`;
-  } else if(Q.state==='live'){
+  }else if(Q.state==='live'){
     const quizId=String(Q.id);
     if(qSubmissionQuizId!==quizId){
       qSubmissionQuizId=quizId;
@@ -409,31 +429,26 @@ function renderQuiz(){
         window.hasFirestoreQuizSubmission(Q.id)
           .then(submitted=>{if(Q&&String(Q.id)===quizId)qSubmitted=submitted})
           .catch(error=>console.error('Quiz submission check failed:',error))
-          .finally(()=>{if(Q&&String(Q.id)===quizId){qSubmissionCheckInFlight=false;renderQuiz()}});
+          .finally(()=>{if(Q&&String(Q.id)===quizId){qSubmissionCheckInFlight=false;renderQuizPlay(Q.id)}});
       }
     }
     if(qSubmissionCheckInFlight){
       cur.innerHTML='<div class="empty">Checking your quiz submission…</div>';
-    } else
-    if(qSubmitted){
+    }else if(qSubmitted){
       cur.innerHTML=`<div style="text-align:center;padding:40px"><p style="color:var(--il);font-style:italic">You have already submitted this quiz. Thank you for participating! 🙏</p></div>`;
-    } else {
+    }else{
       renderLiveQuiz(cur);
     }
-  } else if(Q.state==='closed'){
-    cur.innerHTML=`<div style="text-align:center;padding:60px 20px">
-      <div style="font-size:2rem;margin-bottom:14px">🔒</div>
-      <h3 style="font-family:'Playfair Display',serif;color:var(--ac);margin-bottom:10px">Quiz Closed</h3>
-      <p style="color:var(--il);font-style:italic">This quiz has ended. Results will be announced soon.</p>
-    </div>`;
+  }else{
+    cur.innerHTML=`<div style="text-align:center;padding:60px 20px"><div style="font-size:2rem;margin-bottom:14px">🔒</div><h3 style="font-family:'Playfair Display',serif;color:var(--ac);margin-bottom:10px">Quiz Closed</h3><p style="color:var(--il);font-style:italic">This quiz has ended. Results will be announced soon.</p></div>`;
   }
-  renderQArcList()
 }
 function renderLiveQuiz(el){
   el.innerHTML=`<div class="qform-wrap">
     <div class="qnamebox">
       <h3>Your Details</h3>
       <input type="text" id="q-name" placeholder="Your name (appears on certificate)" maxlength="80">
+      <p class="qname-note">Your name is visible only to the site administrator for participant status.</p>
       ${Q.type==='prize'?`<input type="text" id="q-con" placeholder="Email or WhatsApp (saved securely for prize contact only)" maxlength="100">`:''}
     </div>
     ${Q.questions.map((qu,i)=>`<div class="qcard" id="qc-${i}">
@@ -476,7 +491,7 @@ async function submitQuiz(){
   const submitButton=document.querySelector('.qsubmit');
   if(submitButton){submitButton.disabled=true;submitButton.textContent='Saving Answers…'}
   try{
-    await window.saveFirestoreQuizSubmission(Q.id,answers,Q.type==='prize'?{name,contact:con}:null);
+    await window.saveFirestoreQuizSubmission(Q.id,answers,name,Q.type==='prize'?{name,contact:con}:null);
   }catch(error){
     console.error('Quiz submission save failed:',error);
     alert('Your answers could not be saved. They may already have been submitted from this browser. Please refresh the page to check.');
@@ -496,7 +511,7 @@ async function submitQuiz(){
 }
 function showResults(q,answers,name,score){
   const total=q.questions.length,pct=Math.round(score/total*100);
-  const cur=document.getElementById('qcur');
+  const cur=document.getElementById('qpc')||document.getElementById('qcur');
   certData={name,title:q.title,score,total,date:todayStr(),template:q.certificateTemplate};
   let h=`<div class="qscore-box">
     <div style="font-size:1.8rem;margin-bottom:8px">${score===total?'🏆':score>=total*.7?'🎉':score>=total*.5?'👍':'📚'}</div>
@@ -830,12 +845,14 @@ function renderAdQuiz(){
   const badge=Q?({upcoming:'<span class="badge bup">Upcoming</span>',live:'<span class="badge blive">Live</span>',closed:'<span class="badge bcl">Closed</span>'}[Q.state]||''):'<span class="badge bno">No active quiz</span>';
   let statusHtml=`<div class="qstatus">
     <div class="qstatus-head"><h4>${Q?esc(Q.title):'Quiz Status'}</h4>${badge}${Q?`<span style="font-size:.74rem;color:var(--gd)">${Q.type==='prize'?'🎁 Prize':'📜 Certificate'} · ${Q.questions?.length||0} Qs</span>`:''}</div>
+    ${Q?.state==='live'?'<p class="quiz-live-count" id="q-live-count">Loading participant count…</p>':''}
     ${Q?`<div class="qacts">
       <button class="editbtn" onclick="startEditQuiz()">Edit</button>
       ${Q.state==='upcoming'?`<button class="qa qa-go" onclick="setQState('live')">▶ Go Live</button>`:''}
-      ${Q.state==='live'?`<button class="qa qa-cl" onclick="setQState('closed')">■ Close Quiz</button>`:''}
-      ${Q.state==='closed'?`<button class="qa qa-arc" onclick="doArchive()">Archive Quiz</button>`:''}
-      ${Q.type==='prize'?`<button class="qa qa-sub" onclick="viewPrizeEntries(${Q.id})">📋 Prize Entries</button>`:''}
+       ${Q.state==='live'?`<button class="qa qa-cl" onclick="setQState('closed')">■ Close Quiz</button>`:''}
+       ${Q.state==='closed'?`<button class="qa qa-arc" onclick="doArchive()">Archive Quiz</button>`:''}
+       <button class="qa qa-sub" onclick="viewQuizSubmissions(${Q.id})">👥 Participant Status</button>
+       ${Q.type==='prize'?`<button class="qa qa-sub" onclick="viewPrizeEntries(${Q.id})">📋 Prize Entries</button>`:''}
       <button class="delbtn" onclick="askDelQ()">Delete</button>
     </div>`:`<button class="addbtn" style="margin-bottom:0;margin-top:10px" onclick="startCreateQuiz()">+ Create Quiz</button>`}
   </div>`;
@@ -845,7 +862,19 @@ function renderAdQuiz(){
       <div class="apost-info"><div class="apost-title">${esc(q.title)}</div><div class="apost-meta">${q.date} · ${q.total} participants</div></div>
       <div class="apost-acts">${q.type==='prize'?`<button class="editbtn" onclick="viewPrizeEntries(${q.id})">Entries</button>`:''}<button class="delbtn" onclick="delArcQ(${q.id})">Delete</button></div>
     </div>`).join(''):'<div class="empty" style="padding:14px">No archived quizzes yet.</div>'}
-    </div>`
+    </div>`;
+  if(Q?.state==='live')loadLiveQuizCount(Q.id)
+}
+async function loadLiveQuizCount(quizId){
+  const el=document.getElementById('q-live-count');
+  if(!el||!window.getFirestoreQuizSubmissions)return;
+  try{
+    const submissions=await window.getFirestoreQuizSubmissions(quizId);
+    if(Q&&String(Q.id)===String(quizId))el.textContent=`👥 ${submissions.length} participant${submissions.length===1?'':'s'} so far`;
+  }catch(error){
+    console.error('Live participant count failed:',error);
+    if(el)el.textContent='Participant count is unavailable right now.';
+  }
 }
 async function setQState(s){
   if(!Q)return;
@@ -889,6 +918,40 @@ function askDelQ(){
 async function delQ(){
   const current=Q;Q=null;
   try{await svQ();renderAdQuiz()}catch(e){Q=current;console.error('Quiz deletion failed:',e);alert('The quiz could not be deleted. Please try again.')}
+}
+function quizSubmissionScore(quiz,answers){
+  const submitted=Array.isArray(answers)?answers:[];
+  return (quiz.questions||[]).reduce((score,question,index)=>score+(submitted[index]===question.ans?1:0),0);
+}
+async function viewQuizSubmissions(quizId){
+  const el=document.getElementById('qsubs');
+  const quiz=Q&&String(Q.id)===String(quizId)?Q:QA.find(item=>String(item.id)===String(quizId));
+  if(!quiz||!window.getFirestoreQuizSubmissions){
+    el.innerHTML='<p style="color:var(--gd);font-style:italic;padding:12px 0;font-size:.88rem">Participant status is not available.</p>';
+    return;
+  }
+  el.innerHTML='<p style="color:var(--gd);font-style:italic;padding:12px 0;font-size:.88rem">Loading participant status…</p>';
+  try{
+    const [submissions,entries]=await Promise.all([
+      window.getFirestoreQuizSubmissions(quizId),
+      quiz.type==='prize'&&window.getFirestorePrizeQuizEntries?window.getFirestorePrizeQuizEntries(quizId):Promise.resolve([])
+    ]);
+    const prizeNames=new Map(entries.map(entry=>[entry.userId,entry.name]));
+    const participants=submissions.map(submission=>({
+      name:submission.participantName||prizeNames.get(submission.userId)||'Name not recorded',
+      score:quizSubmissionScore(quiz,submission.answers),
+      submittedAt:submission.submittedAt,
+    })).sort((a,b)=>b.score-a.score||((b.submittedAt?.seconds||0)-(a.submittedAt?.seconds||0)));
+    el.innerHTML=participants.length?`<div style="display:flex;justify-content:space-between;align-items:center;margin:16px 0 8px">
+      <h4 style="font-family:'Playfair Display',serif;color:var(--ac);font-size:1rem">Participant Status (${participants.length})</h4>
+    </div><div class="subslist">${participants.map(participant=>{
+      const when=participant.submittedAt?.toDate?participant.submittedAt.toDate().toLocaleString():'—';
+      return`<div class="subrow"><strong>${esc(participant.name)}</strong> · Score: <strong>${participant.score}/${quiz.questions.length}</strong> · ${esc(when)}</div>`
+    }).join('')}</div>`:'<p style="color:var(--gd);font-style:italic;padding:12px 0;font-size:.88rem">No one has participated yet.</p>';
+  }catch(error){
+    console.error('Participant status load failed:',error);
+    el.innerHTML='<p style="color:#b23b35;padding:12px 0;font-size:.88rem">Participant status could not be loaded. Please try again.</p>';
+  }
 }
 async function viewPrizeEntries(quizId){
   const el=document.getElementById('qsubs');
