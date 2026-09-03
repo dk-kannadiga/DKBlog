@@ -3,31 +3,11 @@
 const ICONS={poem:'🌸',story:'📖',article:'✒️',other:'✦'};
 const LC={'ಕನ್ನಡ':'kn','English':'en','Mixed':'mixed'};
 
-const POSTS_CACHE_KEY='dk-writings-posts-v1';
-const COLLECTIONS_CACHE_KEY='dk-writings-collections-v1';
-function readCachedPosts(){
-  try{
-    const cached=JSON.parse(localStorage.getItem(POSTS_CACHE_KEY));
-    return Array.isArray(cached)?cached:[];
-  }catch(e){return []}
-}
-function readCachedCollections(){
-  try{
-    const cached=JSON.parse(localStorage.getItem(COLLECTIONS_CACHE_KEY));
-    return Array.isArray(cached)?cached:[];
-  }catch(e){return []}
-}
-function cachePosts(){
-  try{localStorage.setItem(POSTS_CACHE_KEY,JSON.stringify(POSTS))}catch(e){}
-}
-function cacheCollections(){
-  try{localStorage.setItem(COLLECTIONS_CACHE_KEY,JSON.stringify(COLLECTIONS))}catch(e){}
-}
-// Keep the last confirmed Firestore result for an instant, accurate refresh.
+// Always wait for the current Firestore result before showing published content.
 // The bundled sample posts are only used if Firestore is unavailable.
-let POSTS=readCachedPosts(),COLLECTIONS=readCachedCollections(),postsLoading=POSTS.length===0,collectionsLoading=COLLECTIONS.length===0,contentLoading=true,CATS=JSON.parse(JSON.stringify(DC)),likes={},likedMe=new Set();
+let POSTS=[],COLLECTIONS=[],postsLoading=true,collectionsLoading=true,contentLoading=true,CATS=JSON.parse(JSON.stringify(DC)),likes={},likedMe=new Set();
 let Q=null,QA=[...DQA],qDraft=[],editQId=false,certDraft=null,qSubmitted=false,qSubmissionQuizId=null,qSubmissionCheckInFlight=false,qSubmitting=false;
-let adminAuth=false,editId=null,collectionEditId=null,catF='all',langF='all',searchQ='',participantStatus=null,participantSort={field:'score',direction:'desc'};
+let adminAuth=false,editId=null,collectionEditId=null,catF='all',searchQ='',participantStatus=null,participantSort={field:'score',direction:'desc'};
 
 function hSearch(v){
   searchQ=v.toLowerCase().trim();
@@ -51,7 +31,7 @@ async function loadAll(){
     window.getFirestoreCollections?window.getFirestoreCollections():Promise.resolve([])
   ]);
 
-  if(posts.status==='fulfilled'){POSTS=posts.value;cachePosts()}
+  if(posts.status==='fulfilled'){POSTS=posts.value}
   else{console.error('Posts load failed:',posts.reason);if(!POSTS.length)POSTS=[...DP]}
   postsLoading=false;
   contentLoading=false;
@@ -61,7 +41,7 @@ async function loadAll(){
   else console.error('Active quiz load failed:',activeQuiz.reason);
   if(archive.status==='fulfilled')QA=archive.value.filter(q=>q.state==='archived'&&Array.isArray(q.questions));
   else console.error('Quiz archive load failed:',archive.reason);
-  if(collections.status==='fulfilled'){COLLECTIONS=collections.value;cacheCollections()}
+  if(collections.status==='fulfilled'){COLLECTIONS=collections.value}
   else console.error('Collections load failed:',collections.reason);
   collectionsLoading=false;
 
@@ -110,7 +90,7 @@ function postTags(p){
   const labels=Array.isArray(p.labels)?[...new Set(p.labels.map(x=>String(x).trim()).filter(Boolean))]:[];
   const extraLabels=labels.filter(label=>label!==p.subcat);
   const collection=findCollection(p.collectionId);
-  return `<div class="tags"><span class="tcat">${esc(p.cat)}</span>${p.subcat?`<span class="tsub">${esc(p.subcat)}</span>`:''}${extraLabels.map(label=>`<span class="tlabel">${esc(label)}</span>`).join('')}${collection?`<span class="tcollection">${esc(collection.icon||'✦')} ${esc(collection.title)}</span>`:''}<span class="tlang">${esc(p.lang)}</span></div>`
+  return `<div class="tags"><span class="tcat">${esc(p.cat)}</span>${p.subcat?`<span class="tsub">${esc(p.subcat)}</span>`:''}${extraLabels.map(label=>`<span class="tlabel">${esc(label)}</span>`).join('')}${collection?`<span class="tcollection">${esc(collection.icon||'✦')} ${esc(collection.title)}</span>`:''}</div>`
 }
 function safeContentUrl(value){
   try{
@@ -217,14 +197,9 @@ window.addEventListener('hashchange',openCurrentRoute);
 
 // ── BLOG FILTERS ──────────────────────────────────────
 function cf(btn,v){catF=v;document.querySelectorAll('.fb.cat').forEach(b=>b.classList.remove('on'));btn.classList.add('on');renderHome()}
-function lf(btn,v){langF=v;document.querySelectorAll('.fb.lang').forEach(b=>b.classList.remove('on'));btn.classList.add('on');renderHome()}
 function renderCatFilters(){
   let h=`<button class="fb cat${catF==='all'?' on':''}" onclick="cf(this,'all')">All</button>`;
   Object.keys(CATS).forEach(k=>h+=`<button class="fb cat${catF===k?' on':''}" onclick="cf(this,'${k}')">${esc(CATS[k].label)}</button>`);
-  h+=`<span class="sep">|</span><button class="fb lang${langF==='all'?' on':''}" onclick="lf(this,'all')">All Languages</button>
-    <button class="fb lang${langF==='kn'?' on':''}" onclick="lf(this,'kn')">ಕನ್ನಡ</button>
-    <button class="fb lang${langF==='en'?' on':''}" onclick="lf(this,'en')">English</button>
-    <button class="fb lang${langF==='mixed'?' on':''}" onclick="lf(this,'mixed')">Mixed</button>`;
   document.getElementById('filters').innerHTML=h
 }
 
@@ -233,7 +208,7 @@ function renderHome(){
   renderCatFilters();
   const g=document.getElementById('grid'),sr=document.getElementById('sres');
   if(postsLoading){g.innerHTML='<div class="empty">Loading writings...</div>';if(sr)sr.textContent='';return}
-  let fp=POSTS.filter(p=>(catF==='all'||p.cc===catF)&&(langF==='all'||p.lc===langF));
+  let fp=POSTS.filter(p=>catF==='all'||p.cc===catF);
   if(searchQ){
     fp=fp.filter(p=>
       p.title.toLowerCase().includes(searchQ)||
@@ -328,7 +303,6 @@ function renderIdx(){
       <div class="ii" onclick="go('post',${p.id})">
         <span class="iititle">${esc(p.title)}</span>
         ${p.subcat?`<span class="tsub" style="font-size:.7rem">${esc(p.subcat)}</span>`:''}
-        <span class="tlang" style="font-size:.7rem">${esc(p.lang)}</span>
         <span class="iimeta">${p.date}</span>
       </div>`).join('')}</div></div>`}).join('')
 }
@@ -680,7 +654,7 @@ function askDel(id){
 }
 async function delPost(id){
   const post=POSTS.find(x=>x.id===id);if(!post)return;
-  try{await window.deleteFirestorePost(post);POSTS=POSTS.filter(x=>x.id!==id);cachePosts();renderAdPosts()}
+  try{await window.deleteFirestorePost(post);POSTS=POSTS.filter(x=>x.id!==id);renderAdPosts()}
   catch(e){console.error('Post deletion failed:',e);alert('The post could not be deleted. Please try again.')}
 }
 function subsHtml(catKey,selSub){
@@ -739,7 +713,6 @@ async function savePost(){
   try{
     await svP(post);
     if(editId){const i=POSTS.findIndex(x=>x.id===editId);if(i>=0)POSTS[i]=post}else POSTS.unshift(post);
-    cachePosts();
     cancelForm();renderAdPosts();renderHome();
   }catch(e){console.error('Post save failed:',e);alert('The post could not be saved. Please try again.')}
 }
@@ -782,7 +755,7 @@ async function saveCollection(){
   try{
     await svCol(collection);
     if(existing){const index=COLLECTIONS.findIndex(item=>String(item.id)===String(existing.id));if(index>=0)COLLECTIONS[index]=collection}else COLLECTIONS.push(collection);
-    sortCollections();cacheCollections();cancelCollectionForm();renderAdCollections();renderHome();
+    sortCollections();cancelCollectionForm();renderAdCollections();renderHome();
   }catch(error){console.error('Collection save failed:',error);alert('The collection could not be saved. Please try again.')}
 }
 function askDelCollection(id){
@@ -795,7 +768,7 @@ async function delCollection(id){
   affected.forEach(post=>{post.collectionId='';post.collectionOrder=null});COLLECTIONS=COLLECTIONS.filter(item=>String(item.id)!==String(id));
   try{
     await Promise.all([...affected.map(svP),window.deleteFirestoreCollection(collection)]);
-    cachePosts();cacheCollections();cancelCollectionForm();renderAdCollections();renderAdPosts();renderHome();
+    cancelCollectionForm();renderAdCollections();renderAdPosts();renderHome();
   }catch(error){
     postSnapshots.forEach(snapshot=>{const index=POSTS.findIndex(post=>String(post.id)===String(snapshot.id));if(index>=0)POSTS[index]=snapshot});
     COLLECTIONS=collectionsSnapshot;console.error('Collection deletion failed:',error);alert('The collection could not be deleted. Please try again.');renderAdCollections();
@@ -823,7 +796,7 @@ function startRename(k){
 async function saveRename(k){
   const v=document.getElementById('rn-'+k)?.value.trim();if(!v)return;
   CATS[k].label=v;POSTS.forEach(p=>{if(p.cc===k)p.cat=v});
-  try{await svC();await Promise.all(POSTS.filter(p=>p.cc===k).map(svP));cachePosts();renderAdCats();renderHome()}
+  try{await svC();await Promise.all(POSTS.filter(p=>p.cc===k).map(svP));renderAdCats();renderHome()}
   catch(e){console.error('Category rename failed:',e);alert('The category could not be saved. Please try again.')}
 }
 async function addSub(k){
@@ -1173,14 +1146,13 @@ async function saveQForm(){
 }
 
 (async()=>{
-  // Do not make visitors wait for Firebase before they can read the site.
-  openCurrentRoute();
+  // Do not render cached content; show the latest published Firebase data only.
   try{
     await window.firebaseReady;
     await loadAll();
   }catch(e){
     console.error('Firebase refresh failed:',e);
-    contentLoading=false;
+    POSTS=[...DP];COLLECTIONS=[];postsLoading=false;collectionsLoading=false;contentLoading=false;
     openCurrentRoute();
   }
 })();
