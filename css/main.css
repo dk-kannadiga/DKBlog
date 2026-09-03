@@ -20,6 +20,10 @@ nav .admin-door{display:inline-flex;align-items:center;color:var(--gl);border:1p
 .fb{padding:5px 15px;border-radius:20px;border:1px solid var(--gd);background:transparent;color:var(--il);font-family:'Lora','Noto Sans Kannada',serif;font-size:.82rem;cursor:pointer;transition:all .2s}
 .fb.on,.fb:hover{background:var(--ac);color:#fff;border-color:var(--ac)}
 .grid{display:grid;gap:20px}
+.loadmore{text-align:center;padding:4px 0 8px}
+.loadmore-btn{border:1px solid var(--gd);border-radius:20px;background:transparent;color:var(--ac);padding:9px 20px;cursor:pointer;font-family:'Lora','Noto Sans Kannada',serif;font-size:.86rem;transition:all .2s}
+.loadmore-btn:hover{background:var(--p);border-color:var(--ac)}
+.loadmore-btn:disabled{cursor:wait;opacity:.65}
 .card{background:var(--cb);border:1px solid var(--gl);border-left:4px solid var(--ac);border-radius:6px;padding:22px 26px;cursor:pointer;transition:all .22s;box-shadow:0 2px 8px rgba(44,26,14,.06)}
 .card:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(44,26,14,.13);border-left-color:var(--gd)}
 .tags{display:flex;gap:7px;margin-bottom:9px;flex-wrap:wrap}

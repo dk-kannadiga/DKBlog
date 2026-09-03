@@ -8,11 +8,14 @@ const LC={'ಕನ್ನಡ':'kn','English':'en','Mixed':'mixed'};
 let POSTS=[],COLLECTIONS=[],postsLoading=true,collectionsLoading=true,contentLoading=true,CATS=JSON.parse(JSON.stringify(DC)),likes={},likedMe=new Set();
 let Q=null,QA=[...DQA],qDraft=[],editQId=false,certDraft=null,qSubmitted=false,qSubmissionQuizId=null,qSubmissionCheckInFlight=false,qSubmitting=false;
 let adminAuth=false,editId=null,collectionEditId=null,catF='all',searchQ='',participantStatus=null,participantSort={field:'score',direction:'desc'};
+const HOME_PAGE_SIZE=12;
+let postsFullyLoaded=false,homeHasMore=false,homeLoadingMore=false,homeVisibleCount=0,allPostsPromise=null;
 
 function hSearch(v){
   searchQ=v.toLowerCase().trim();
   const clr=document.getElementById('sclr');
   if(clr)clr.style.display=searchQ?'':'none';
+  if(searchQ&&!postsFullyLoaded)ensureAllPosts().then(()=>renderHome()).catch(e=>console.error('Full search load failed:',e));
   renderHome()
 }
 function clearSearch(){
@@ -24,15 +27,32 @@ function clearSearch(){
 
 async function loadAll(){
   const [posts,categories,activeQuiz,archive,collections] = await Promise.allSettled([
-    window.getFirestorePosts?window.getFirestorePosts():Promise.resolve([...DP]),
+    window.getFirestorePostsPage?window.getFirestorePostsPage(true):window.getFirestorePosts?window.getFirestorePosts():Promise.resolve([...DP]),
     window.getFirestoreCategories?window.getFirestoreCategories():Promise.resolve(JSON.parse(JSON.stringify(DC))),
     window.getFirestoreActiveQuiz?window.getFirestoreActiveQuiz():Promise.resolve(null),
     window.getFirestoreQuizzes?window.getFirestoreQuizzes():Promise.resolve([...DQA]),
     window.getFirestoreCollections?window.getFirestoreCollections():Promise.resolve([])
   ]);
 
-  if(posts.status==='fulfilled'){POSTS=posts.value}
-  else{console.error('Posts load failed:',posts.reason);if(!POSTS.length)POSTS=[...DP]}
+  if(posts.status==='fulfilled'){
+    const result=posts.value;
+    if(Array.isArray(result)){
+      POSTS=result;
+      postsFullyLoaded=true;
+      homeHasMore=false;
+    }else{
+      POSTS=Array.isArray(result.posts)?result.posts:[];
+      homeHasMore=Boolean(result.hasMore);
+      postsFullyLoaded=!homeHasMore;
+    }
+    homeVisibleCount=POSTS.length;
+  }else{
+    console.error('Posts load failed:',posts.reason);
+    if(!POSTS.length)POSTS=[...DP];
+    postsFullyLoaded=true;
+    homeHasMore=false;
+    homeVisibleCount=POSTS.length;
+  }
   postsLoading=false;
   contentLoading=false;
   if(categories.status==='fulfilled'&&categories.value)CATS=categories.value;
@@ -50,12 +70,78 @@ async function loadAll(){
   openCurrentRoute();
   try{
     likes={};likedMe=new Set();
-    await Promise.all(POSTS.map(async p=>{
-      likes[p.id]=await window.getFirestoreLikes(p.id);
-      if(await window.getMyFirestoreLike(p.id))likedMe.add(p.id);
-    }));
+    await loadPostReactions(POSTS);
     renderHome();
   }catch(e){console.error('Reactions load failed:',e)}
+}
+async function loadPostReactions(posts){
+  await Promise.all(posts.filter(p=>!(p.id in likes)).map(async p=>{
+    likes[p.id]=await window.getFirestoreLikes(p.id);
+    if(await window.getMyFirestoreLike(p.id))likedMe.add(p.id);
+  }));
+}
+async function ensureAllPosts(){
+  if(postsFullyLoaded)return POSTS;
+  if(!allPostsPromise){
+    allPostsPromise=(async()=>{
+      if(!window.getFirestorePosts){
+        postsFullyLoaded=true;
+        homeHasMore=false;
+        return POSTS;
+      }
+      const all=await window.getFirestorePosts();
+      POSTS=all;
+      postsFullyLoaded=true;
+      homeHasMore=false;
+      return POSTS;
+    })();
+  }
+  try{return await allPostsPromise}
+  finally{allPostsPromise=null}
+}
+async function loadMorePosts(){
+  if(homeLoadingMore)return;
+  if(postsFullyLoaded){
+    homeVisibleCount=Math.min(homeVisibleCount+HOME_PAGE_SIZE,POSTS.length);
+    renderHome();
+    return;
+  }
+  if(!homeHasMore||!window.getFirestorePostsPage)return;
+  homeLoadingMore=true;
+  renderHome();
+  try{
+    const result=await window.getFirestorePostsPage();
+    const seen=new Set(POSTS.map(post=>String(post.id)));
+    const added=(result.posts||[]).filter(post=>!seen.has(String(post.id)));
+    POSTS=[...POSTS,...added].sort((a,b)=>Number(b.id||0)-Number(a.id||0));
+    homeVisibleCount+=added.length;
+    homeHasMore=Boolean(result.hasMore);
+    if(!homeHasMore)postsFullyLoaded=true;
+    await loadPostReactions(added);
+  }catch(e){
+    console.error('More posts load failed:',e);
+    alert('Older writings could not be loaded. Please try again.');
+  }finally{
+    homeLoadingMore=false;
+    renderHome();
+  }
+}
+async function ensurePostLoaded(id){
+  let post=findPost(id);
+  if(post)return post;
+  if(window.getFirestorePostById){
+    post=await window.getFirestorePostById(id);
+    if(post){
+      POSTS=[...POSTS,post].sort((a,b)=>Number(b.id||0)-Number(a.id||0));
+      await loadPostReactions([post]);
+      return post;
+    }
+  }
+  if(!postsFullyLoaded){
+    await ensureAllPosts();
+    return findPost(id);
+  }
+  return null;
 }
 const svP=(post)=>window.saveFirestorePost(post);
 const svC=()=>window.saveFirestoreCategories(CATS);
@@ -220,24 +306,41 @@ function renderHome(){
       (Array.isArray(p.labels)&&p.labels.some(label=>String(label).toLowerCase().includes(searchQ)))||
       p.lang.toLowerCase().includes(searchQ)
     );
-    if(sr)sr.textContent=fp.length
+    if(sr)sr.textContent=!postsFullyLoaded
+      ?'Searching all writings...'
+      :fp.length
       ?`${fp.length} result${fp.length!==1?'s':''} for "${searchQ}"`
       :`No writings found for "${searchQ}"`;
   }else{if(sr)sr.textContent=''}
-  if(!fp.length){g.innerHTML='<div class="empty">No writings match.</div>';return}
-  g.innerHTML=fp.map(p=>`<div class="card" onclick="go('post',${p.id})">
+  const shown=searchQ?fp:fp.slice(0,homeVisibleCount);
+  const moreAvailable=!searchQ&&(postsFullyLoaded?fp.length>shown.length:homeHasMore);
+  if(!shown.length){
+    g.innerHTML=`<div class="empty">${searchQ?'No writings match.':'No writings match this category.'}${moreAvailable?'<br><button class="loadmore-btn" onclick="loadMorePosts()">Load older writings</button>':''}</div>`;
+    return;
+  }
+  g.innerHTML=shown.map(p=>`<div class="card" onclick="go('post',${p.id})">
     ${postTags(p)}
     <h2>${esc(p.title)}</h2><p class="exc">${esc(p.exc||autoExc(p.body))}</p>
     <div class="cf"><span>${p.date}</span><span>♥ ${likes[p.id]||0}</span></div>
-  </div>`).join('')
+  </div>`).join('')+(moreAvailable?`<div class="loadmore"><button class="loadmore-btn" onclick="loadMorePosts()"${homeLoadingMore?' disabled':''}>${homeLoadingMore?'Loading older writings...':'Load older writings'}</button></div>`:'')
 }
 async function renderPost(id){
-  const p=findPost(id),el=document.getElementById('pvc');
+  let p=findPost(id),el=document.getElementById('pvc');
   if(!p){
-    el.innerHTML=contentLoading
-      ?'<div class="empty">Loading writing...</div>'
-      :'<div class="empty">This writing could not be found.</div>';
-    return;
+    if(contentLoading){
+      el.innerHTML='<div class="empty">Loading writing...</div>';
+      return;
+    }
+    el.innerHTML='<div class="empty">Loading writing...</div>';
+    try{p=await ensurePostLoaded(id)}
+    catch(e){console.error('Writing load failed:',e)}
+    if(!p){
+      el.innerHTML='<div class="empty">This writing could not be found.</div>';
+      return;
+    }
+  }
+  if(!(p.id in likes)){
+    try{await loadPostReactions([p])}catch(e){console.error('Writing reactions load failed:',e)}
   }
   const lc=likes[p.id]||0,il=likedMe.has(p.id),cmts=await ldCmt(p.id),collectionNavigation=collectionReadingNav(p);
   const ch=cmts.length?cmts.map(c=>`<div class="ci"><div class="chdr"><span class="cauth">${esc(c.name||'Anonymous')}</span><span class="cdate">${c.date}</span></div><p class="ctxt">${esc(c.txt)}</p></div>`).join(''):'<div class="noc">Be the first to leave a thought...</div>';
@@ -298,8 +401,13 @@ async function addCmt(id){
   const cl=document.getElementById('cl'+id);
   if(cl)cl.innerHTML=arr.map(x=>`<div class="ci"><div class="chdr"><span class="cauth">${esc(x.name||'Anonymous')}</span><span class="cdate">${x.date}</span></div><p class="ctxt">${esc(x.txt)}</p></div>`).join('')
 }
-function renderIdx(){
-  document.getElementById('idxc').innerHTML=Object.keys(CATS).map(k=>{
+async function renderIdx(){
+  const el=document.getElementById('idxc');
+  if(!postsFullyLoaded){
+    el.innerHTML='<div class="empty">Loading all writings...</div>';
+    try{await ensureAllPosts()}catch(e){console.error('Index load failed:',e);el.innerHTML='<div class="empty">Writings could not be loaded.</div>';return}
+  }
+  el.innerHTML=Object.keys(CATS).map(k=>{
     const ps=POSTS.filter(p=>p.cc===k);if(!ps.length)return'';
     return`<div class="icat"><h3>${ICONS[k]||'✦'} ${esc(CATS[k].label)}</h3><div class="ilist">${ps.map(p=>`
       <div class="ii" onclick="go('post',${p.id})">
@@ -322,10 +430,14 @@ function collectionReadingNav(post){
     </div>
   </nav>`;
 }
-function renderCollections(){
+async function renderCollections(){
   const el=document.getElementById('colc');
   if(collectionsLoading){el.innerHTML='<div class="empty">Loading collections...</div>';return}
   if(!COLLECTIONS.length){el.innerHTML='<div class="empty">No collections are published yet.</div>';return}
+  if(!postsFullyLoaded){
+    el.innerHTML='<div class="empty">Loading collections...</div>';
+    try{await ensureAllPosts()}catch(e){console.error('Collections load failed:',e);el.innerHTML='<div class="empty">Collections could not be loaded.</div>';return}
+  }
   el.innerHTML=`<div class="collection-grid">${COLLECTIONS.map(collection=>{
     const posts=collectionPosts(collection.id);
     return`<article class="collection-card" onclick="go('collection',${collection.id})">
@@ -334,11 +446,15 @@ function renderCollections(){
     </article>`
   }).join('')}</div>`;
 }
-function renderCollection(id){
+async function renderCollection(id){
   const collection=findCollection(id),el=document.getElementById('colvc');
   if(!collection){
     el.innerHTML=collectionsLoading?'<div class="empty">Loading collection...</div>':'<div class="empty">This collection could not be found.</div>';
     return;
+  }
+  if(!postsFullyLoaded){
+    el.innerHTML='<div class="empty">Loading collection...</div>';
+    try{await ensureAllPosts()}catch(e){console.error('Collection load failed:',e);el.innerHTML='<div class="empty">This collection could not be loaded.</div>';return}
   }
   const posts=collectionPosts(collection.id);
   el.innerHTML=`<section class="collection-view">
@@ -621,18 +737,30 @@ async function aLogin(){
   }
 }
 async function aLogout(){adminAuth=false;await window.signOutAdmin();go('home')}
-function aTab(btn,tab){
+async function aTab(btn,tab){
   document.querySelectorAll('.adtab').forEach(b=>b.classList.remove('on'));
   document.querySelectorAll('.adtabc').forEach(c=>c.classList.remove('on'));
   btn.classList.add('on');document.getElementById('atab-'+tab).classList.add('on');
-  if(tab==='collections')renderAdCollections();
+  if(['posts','collections','cats'].includes(tab)&&!postsFullyLoaded){
+    const status=document.getElementById(tab==='posts'?'apl':tab==='collections'?'cpl':'cw');
+    if(status)status.innerHTML='<div class="empty">Loading all writings...</div>';
+    try{await ensureAllPosts()}catch(e){console.error('Admin posts load failed:',e);if(status)status.innerHTML='<div class="empty">Writings could not be loaded.</div>';return}
+  }
+  if(tab==='posts')renderAdPosts();
+  else if(tab==='collections')renderAdCollections();
   else if(tab==='cats')renderAdCats();
   else if(tab==='quiz')renderAdQuiz()
 }
-function renderAdmin(){
+async function renderAdmin(){
   document.querySelectorAll('.adtab').forEach((b,i)=>b.classList.toggle('on',i===0));
   document.querySelectorAll('.adtabc').forEach((c,i)=>c.classList.toggle('on',i===0));
-  document.getElementById('afw').innerHTML='';document.getElementById('cfw').innerHTML='';editId=null;collectionEditId=null;renderAdPosts()
+  document.getElementById('afw').innerHTML='';document.getElementById('cfw').innerHTML='';editId=null;collectionEditId=null;
+  const list=document.getElementById('apl');
+  if(!postsFullyLoaded){
+    list.innerHTML='<div class="empty">Loading all writings...</div>';
+    try{await ensureAllPosts()}catch(e){console.error('Admin posts load failed:',e);list.innerHTML='<div class="empty">Writings could not be loaded.</div>';return}
+  }
+  renderAdPosts()
 }
 
 // ── ADMIN: POSTS ──────────────────────────────────────
