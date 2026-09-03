@@ -12,6 +12,9 @@
     }
   },
   "hosting": {
+    "predeploy": [
+      "node scripts/generate-rss-sitemap.mjs"
+    ],
     "public": ".",
     "headers": [
       {
@@ -29,6 +32,24 @@
           {
             "key": "Cache-Control",
             "value": "public, max-age=31536000, immutable"
+          }
+        ]
+      },
+      {
+        "source": "rss.xml",
+        "headers": [
+          {
+            "key": "Content-Type",
+            "value": "application/rss+xml; charset=utf-8"
+          }
+        ]
+      },
+      {
+        "source": "sitemap.xml",
+        "headers": [
+          {
+            "key": "Content-Type",
+            "value": "application/xml; charset=utf-8"
           }
         ]
       }

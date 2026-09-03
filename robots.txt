@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://dkblog-6c5e5.web.app/sitemap.xml
