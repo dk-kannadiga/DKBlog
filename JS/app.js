@@ -27,7 +27,7 @@ function cacheCollections(){
 // The bundled sample posts are only used if Firestore is unavailable.
 let POSTS=readCachedPosts(),COLLECTIONS=readCachedCollections(),postsLoading=POSTS.length===0,collectionsLoading=COLLECTIONS.length===0,contentLoading=true,CATS=JSON.parse(JSON.stringify(DC)),likes={},likedMe=new Set();
 let Q=null,QA=[...DQA],qDraft=[],editQId=false,certDraft=null,qSubmitted=false,qSubmissionQuizId=null,qSubmissionCheckInFlight=false,qSubmitting=false;
-let adminAuth=false,editId=null,collectionEditId=null,catF='all',langF='all',searchQ='';
+let adminAuth=false,editId=null,collectionEditId=null,catF='all',langF='all',searchQ='',participantStatus=null,participantSort={field:'score',direction:'desc'};
 
 function hSearch(v){
   searchQ=v.toLowerCase().trim();
@@ -923,6 +923,33 @@ function quizSubmissionScore(quiz,answers){
   const submitted=Array.isArray(answers)?answers:[];
   return (quiz.questions||[]).reduce((score,question,index)=>score+(submitted[index]===question.ans?1:0),0);
 }
+function participantTimestamp(participant){
+  return (participant.submittedAt?.seconds||0)*1000000000+(participant.submittedAt?.nanoseconds||0);
+}
+function setParticipantSort(field){
+  if(!participantStatus)return;
+  participantSort=participantSort.field===field
+    ?{field,direction:participantSort.direction==='desc'?'asc':'desc'}
+    :{field,direction:'desc'};
+  renderParticipantStatus();
+}
+function renderParticipantStatus(){
+  const el=document.getElementById('qsubs'),data=participantStatus;
+  if(!el||!data)return;
+  const {quiz,participants}=data,total=(quiz.questions||[]).length,direction=participantSort.direction==='asc'?1:-1;
+  const sorted=[...participants].sort((a,b)=>{
+    const primary=participantSort.field==='score'?a.score-b.score:participantTimestamp(a)-participantTimestamp(b);
+    if(primary)return primary*direction;
+    return participantSort.field==='score'?participantTimestamp(b)-participantTimestamp(a):b.score-a.score;
+  });
+  const arrow=field=>participantSort.field===field?(participantSort.direction==='desc'?'↓':'↑'):'↕';
+  el.innerHTML=`<div class="participant-status-head"><h4>Participant Status (${participants.length})</h4><span>Click Score or Submitted to sort.</span></div>
+    <div class="participant-table"><div class="participant-table__header"><span>Name</span><button class="participant-sort" onclick="setParticipantSort('score')">Score ${arrow('score')}</button><button class="participant-sort" onclick="setParticipantSort('submitted')">Submitted ${arrow('submitted')}</button></div>
+    ${sorted.map(participant=>{
+      const when=participant.submittedAt?.toDate?participant.submittedAt.toDate().toLocaleString():'—';
+      return`<div class="participant-row"><strong>${esc(participant.name)}</strong><span><strong>${participant.score}/${total}</strong></span><time>${esc(when)}</time></div>`
+    }).join('')}</div>`;
+}
 async function viewQuizSubmissions(quizId){
   const el=document.getElementById('qsubs');
   const quiz=Q&&String(Q.id)===String(quizId)?Q:QA.find(item=>String(item.id)===String(quizId));
@@ -930,6 +957,7 @@ async function viewQuizSubmissions(quizId){
     el.innerHTML='<p style="color:var(--gd);font-style:italic;padding:12px 0;font-size:.88rem">Participant status is not available.</p>';
     return;
   }
+  participantStatus=null;
   el.innerHTML='<p style="color:var(--gd);font-style:italic;padding:12px 0;font-size:.88rem">Loading participant status…</p>';
   try{
     const [submissions,entries]=await Promise.all([
@@ -941,13 +969,14 @@ async function viewQuizSubmissions(quizId){
       name:submission.participantName||prizeNames.get(submission.userId)||'Name not recorded',
       score:quizSubmissionScore(quiz,submission.answers),
       submittedAt:submission.submittedAt,
-    })).sort((a,b)=>b.score-a.score||((b.submittedAt?.seconds||0)-(a.submittedAt?.seconds||0)));
-    el.innerHTML=participants.length?`<div style="display:flex;justify-content:space-between;align-items:center;margin:16px 0 8px">
-      <h4 style="font-family:'Playfair Display',serif;color:var(--ac);font-size:1rem">Participant Status (${participants.length})</h4>
-    </div><div class="subslist">${participants.map(participant=>{
-      const when=participant.submittedAt?.toDate?participant.submittedAt.toDate().toLocaleString():'—';
-      return`<div class="subrow"><strong>${esc(participant.name)}</strong> · Score: <strong>${participant.score}/${quiz.questions.length}</strong> · ${esc(when)}</div>`
-    }).join('')}</div>`:'<p style="color:var(--gd);font-style:italic;padding:12px 0;font-size:.88rem">No one has participated yet.</p>';
+    }));
+    if(participants.length){
+      participantStatus={quiz,participants};
+      participantSort={field:'score',direction:'desc'};
+      renderParticipantStatus();
+    }else{
+      el.innerHTML='<p style="color:var(--gd);font-style:italic;padding:12px 0;font-size:.88rem">No one has participated yet.</p>';
+    }
   }catch(error){
     console.error('Participant status load failed:',error);
     el.innerHTML='<p style="color:#b23b35;padding:12px 0;font-size:.88rem">Participant status could not be loaded. Please try again.</p>';
