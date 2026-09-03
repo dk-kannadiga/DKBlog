@@ -7,9 +7,12 @@ import {
   getDoc,
   getDocs,
   getFirestore,
+  limit,
+  orderBy,
   query,
   serverTimestamp,
   setDoc,
+  startAfter,
   writeBatch,
   where,
 } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
@@ -38,6 +41,9 @@ const auth = getAuth(app);
 
 let currentUser = null;
 let owner = false;
+const POST_PAGE_SIZE = 12;
+let postPageCursor = null;
+let postPageHasMore = true;
 let resolveAuthReady;
 const authReady = new Promise((resolve) => {
   resolveAuthReady = resolve;
@@ -122,6 +128,34 @@ window.getFirestorePosts = async function () {
   return snapshot.docs
     .map((post) => ({ ...post.data(), firestoreId: post.id }))
     .sort((a, b) => Number(b.id || 0) - Number(a.id || 0));
+};
+window.getFirestorePostsPage = async function (reset = false) {
+  if (reset) {
+    postPageCursor = null;
+    postPageHasMore = true;
+  }
+  if (!postPageHasMore) return { posts: [], hasMore: false };
+  const constraints = [orderBy("id", "desc")];
+  if (postPageCursor) constraints.push(startAfter(postPageCursor));
+  constraints.push(limit(POST_PAGE_SIZE + 1));
+  const snapshot = await getDocs(query(collection(db, "posts"), ...constraints));
+  const page = snapshot.docs.slice(0, POST_PAGE_SIZE);
+  postPageCursor = page[page.length - 1] || postPageCursor;
+  postPageHasMore = snapshot.docs.length > POST_PAGE_SIZE;
+  return {
+    posts: page.map((post) => ({ ...post.data(), firestoreId: post.id })),
+    hasMore: postPageHasMore,
+  };
+};
+window.getFirestorePostById = async function (postId) {
+  const numericId = Number(postId);
+  const candidates = Number.isFinite(numericId) ? [numericId, String(postId)] : [String(postId)];
+  for (const candidate of [...new Set(candidates)]) {
+    const snapshot = await getDocs(query(collection(db, "posts"), where("id", "==", candidate), limit(1)));
+    const result = snapshot.docs[0];
+    if (result) return { ...result.data(), firestoreId: result.id };
+  }
+  return null;
 };
 window.saveFirestorePost = async function (post) {
   const { firestoreId, ...postData } = post;
