@@ -12,6 +12,11 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.enabled == true;
     }
 
+    function isOwnQuizSubmission(submissionId) {
+      return signedIn()
+        && submissionId.matches('^.+_' + request.auth.uid + '$');
+    }
+
     match /admins/{userId} {
       allow get: if signedIn() && request.auth.uid == userId;
       allow list, create, update, delete: if false;
@@ -38,8 +43,7 @@ service cloud.firestore {
     }
 
     match /quizSubmissions/{submissionId} {
-      allow get: if isAdmin()
-        || (signedIn() && resource.data.userId == request.auth.uid);
+      allow get: if isAdmin() || isOwnQuizSubmission(submissionId);
       allow list: if isAdmin();
       allow create: if signedIn()
         && request.resource.data.keys().hasOnly(['quizId', 'userId', 'answers', 'participantName', 'submittedAt'])
