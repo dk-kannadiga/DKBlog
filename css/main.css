@@ -11,6 +11,7 @@ nav a{color:var(--gl);text-decoration:none;font-size:.82rem;padding:5px 13px;bor
 nav a:hover,nav a.on{background:var(--gd);color:var(--ink);border-color:var(--gd)}
 nav a.quiz-link{border-color:rgba(200,168,122,.5);color:var(--gl)}
 nav a.quiz-link.on,nav a.quiz-link:hover{background:var(--ac);color:#fff;border-color:var(--ac)}
+nav a.admin-door{border-color:transparent;opacity:.32;padding:5px 8px;font-size:.78rem}nav a.admin-door:hover,nav a.admin-door:focus-visible{background:transparent;color:var(--gd);border-color:transparent;opacity:.95;outline:none}
 .page{display:none}.page.on{display:block}
 .pc{max-width:920px;margin:0 auto;padding:36px 24px 80px}
 .stitle{font-family:'Playfair Display','Noto Sans Kannada',serif;font-size:1.9rem;color:var(--ac);margin-bottom:6px}
