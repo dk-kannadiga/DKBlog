@@ -182,8 +182,12 @@ const [posts, collections, quizzes, activeQuizDocument] = await Promise.all([
   listCollection("quizzes", token),
   firestoreFetch("siteSettings/activeQuiz", token).catch(() => null),
 ]);
-const generatedAt = new Date();
 const activeQuiz = activeQuizDocument ? firestoreDocument(activeQuizDocument).quiz : null;
+const generatedAt = [...posts, ...collections, ...quizzes, activeQuiz]
+  .flatMap((item) => item ? [item.publishedAt, item.updatedAt, item.date] : [])
+  .map((value) => new Date(value))
+  .filter((date) => !Number.isNaN(date.valueOf()))
+  .reduce((latest, date) => date > latest ? date : latest, new Date("2024-01-01T00:00:00.000Z"));
 
 await Promise.all([
   writeFile(join(ROOT, "rss.xml"), renderRss(posts, generatedAt), "utf8"),
