@@ -101,7 +101,7 @@ function safeContentUrl(value){
 function safePostHtml(html){
   const template=document.createElement('template');
   template.innerHTML=String(html||'');
-  const allowed=new Set(['a','b','blockquote','br','div','em','i','img','li','ol','p','span','strong','u','ul']);
+  const allowed=new Set(['a','b','blockquote','br','code','div','em','h2','h3','h4','i','img','li','ol','p','pre','span','strong','u','ul']);
   const blocked=new Set(['base','embed','form','iframe','link','meta','object','script','style','svg']);
   for(const el of Array.from(template.content.querySelectorAll('*')).reverse()){
     const tag=el.tagName.toLowerCase();
@@ -110,12 +110,14 @@ function safePostHtml(html){
     const href=tag==='a'?safeContentUrl(el.getAttribute('href')):'';
     const src=tag==='img'?safeContentUrl(el.getAttribute('src')):'';
     const alt=tag==='img'?(el.getAttribute('alt')||''):'';
+    const sizeClass=tag==='span'&&['rt-size-small','rt-size-large'].includes(el.getAttribute('class')||'')?el.getAttribute('class'):'';
     for(const attr of Array.from(el.attributes))el.removeAttribute(attr.name);
     if(tag==='a'&&href){el.setAttribute('href',href);el.setAttribute('target','_blank');el.setAttribute('rel','noopener noreferrer')}
     if(tag==='img'){
       if(!src){el.remove();continue}
       el.setAttribute('src',src);if(alt)el.setAttribute('alt',alt)
     }
+    if(sizeClass)el.setAttribute('class',sizeClass);
   }
   return template.innerHTML;
 }
@@ -665,6 +667,78 @@ function updateSubs(catKey){const el=document.getElementById('f-sc');if(el)el.in
 function collectionOpts(selectedId){
   return`<option value="">— No collection —</option>${COLLECTIONS.map(collection=>`<option value="${collection.id}"${String(collection.id)===String(selectedId||'')?' selected':''}>${esc(collection.icon||'✦')} ${esc(collection.title)}</option>`).join('')}`
 }
+let richSelection=null;
+function richEditor(){return document.getElementById('f-b')}
+function captureRichSelection(){
+  const editor=richEditor(),selection=window.getSelection();
+  if(!editor||!selection||!selection.rangeCount)return;
+  const range=selection.getRangeAt(0);
+  if(editor.contains(range.commonAncestorContainer))richSelection=range.cloneRange();
+}
+function restoreRichSelection(){
+  const editor=richEditor(),selection=window.getSelection();
+  if(!editor)return false;
+  editor.focus();
+  if(!richSelection||!selection)return true;
+  selection.removeAllRanges();selection.addRange(richSelection);
+  return true;
+}
+function normaliseRichFontSize(){
+  const editor=richEditor();if(!editor)return;
+  editor.querySelectorAll('font').forEach(font=>{
+    const size=Number(font.getAttribute('size')),sizeClass=size>=5?'rt-size-large':size<=2?'rt-size-small':'';
+    const children=Array.from(font.childNodes);
+    if(sizeClass){
+      const span=document.createElement('span');span.className=sizeClass;span.append(...children);font.replaceWith(span);
+    }else font.replaceWith(...children);
+  });
+}
+function richCommand(command,value=null){
+  if(!restoreRichSelection())return;
+  document.execCommand(command,false,value);
+  normaliseRichFontSize();captureRichSelection();
+}
+function richBlock(tag){
+  if(!['p','h2','h3','h4'].includes(tag))return;
+  richCommand('formatBlock',tag);
+}
+function richFontSize(direction){richCommand('fontSize',direction==='increase'?'5':'2')}
+function richClearFormatting(){
+  richCommand('removeFormat');
+  const editor=richEditor();if(!editor)return;
+  editor.querySelectorAll('span.rt-size-small,span.rt-size-large').forEach(span=>span.replaceWith(...Array.from(span.childNodes)));
+  captureRichSelection();
+}
+function richLink(){
+  const entered=window.prompt('Paste a link (https://...)');if(entered===null)return;
+  const href=safeContentUrl(entered.trim());
+  if(!href){alert('Please enter a valid http or https link.');return}
+  richCommand('createLink',href);
+}
+function richImage(){
+  const entered=window.prompt('Paste an image link (https://...)');if(entered===null)return;
+  const src=safeContentUrl(entered.trim());
+  if(!src){alert('Please enter a valid http or https image link.');return}
+  richCommand('insertImage',src);
+}
+function richPastePlainText(event){
+  event.preventDefault();
+  const text=event.clipboardData?.getData('text/plain')||'';
+  richCommand('insertText',text);
+}
+function richEditorHtml(){
+  const editor=richEditor();if(!editor)return'';
+  normaliseRichFontSize();
+  return safePostHtml(editor.innerHTML).trim();
+}
+function richEditorText(){
+  return String(richEditor()?.innerText||'').trim();
+}
+function setRichEditorContent(post){
+  const editor=richEditor();if(!editor)return;
+  editor.innerHTML=safePostHtml(post.html||bodyToRichHtml(post.body||''));
+  richSelection=null;
+}
 function buildFormHtml(){
   const p=editId?POSTS.find(x=>x.id===editId):null;
   const catOpts=Object.keys(CATS).map(k=>`<option value="${k}"${p&&p.cc===k?' selected':''}>${esc(CATS[k].label)}</option>`).join('');
@@ -687,8 +761,36 @@ function buildFormHtml(){
       <div class="frow"><label>Collection order <span style="font-weight:400;color:var(--gd)">(optional)</span></label><input type="number" id="f-co" min="1" step="1" placeholder="e.g. 1"></div>
     </div>
     <div class="frow"><label>Excerpt <span style="font-weight:400;color:var(--gd)">(optional)</span></label><textarea id="f-e" rows="2" placeholder="Auto-generated if blank"></textarea></div>
-    ${p?.html?'<p class="import-note">Imported formatting is preserved until you change the body. Saving body edits updates the reader version from the text below.</p>':''}
-    <div class="frow"><label>Body</label><textarea id="f-b" rows="13" placeholder="Your writing..."></textarea></div>
+    <p class="import-note">Use the toolbar to format your writing. Existing formatted posts open here with their formatting preserved.</p>
+    <div class="frow"><label>Body</label>
+      <div class="rich-editor">
+        <div class="rich-toolbar" aria-label="Text formatting tools">
+          <button type="button" onmousedown="event.preventDefault()" onclick="richCommand('bold')" title="Bold"><strong>B</strong></button>
+          <button type="button" onmousedown="event.preventDefault()" onclick="richCommand('italic')" title="Italic"><em>I</em></button>
+          <button type="button" onmousedown="event.preventDefault()" onclick="richCommand('underline')" title="Underline"><u>U</u></button>
+          <button type="button" onmousedown="event.preventDefault()" onclick="richFontSize('decrease')" title="Decrease font size">A−</button>
+          <button type="button" onmousedown="event.preventDefault()" onclick="richFontSize('increase')" title="Increase font size">A+</button>
+          <select onmousedown="captureRichSelection()" onchange="richBlock(this.value);this.value=''" title="Text style">
+            <option value="">Text style</option><option value="p">Normal text</option><option value="h2">Large heading</option><option value="h3">Medium heading</option><option value="h4">Small heading</option>
+          </select>
+          <span class="rich-toolbar__break"></span>
+          <button type="button" onmousedown="event.preventDefault()" onclick="richCommand('insertUnorderedList')" title="Bulleted list">• List</button>
+          <button type="button" onmousedown="event.preventDefault()" onclick="richCommand('insertOrderedList')" title="Numbered list">1. List</button>
+          <button type="button" onmousedown="event.preventDefault()" onclick="richCommand('outdent')" title="Decrease list indentation">⇤</button>
+          <button type="button" onmousedown="event.preventDefault()" onclick="richCommand('indent')" title="Indent list item / create a sub-list">⇥</button>
+          <button type="button" onmousedown="event.preventDefault()" onclick="richCommand('formatBlock','blockquote')" title="Quote">❝</button>
+          <button type="button" onmousedown="event.preventDefault()" onclick="richCommand('formatBlock','pre')" title="Code block">&lt;/&gt;</button>
+          <span class="rich-toolbar__break"></span>
+          <button type="button" onmousedown="event.preventDefault()" onclick="richLink()" title="Add link">🔗</button>
+          <button type="button" onmousedown="event.preventDefault()" onclick="richImage()" title="Add image from a link">🖼</button>
+          <button type="button" onmousedown="event.preventDefault()" onclick="richClearFormatting()" title="Clear selected formatting">Tx</button>
+          <button type="button" onmousedown="event.preventDefault()" onclick="richCommand('undo')" title="Undo">↶</button>
+          <button type="button" onmousedown="event.preventDefault()" onclick="richCommand('redo')" title="Redo">↷</button>
+        </div>
+        <div id="f-b" class="rich-editor__body" contenteditable="true" role="textbox" aria-multiline="true" spellcheck="true" data-placeholder="Write your post here..." oninput="captureRichSelection()" onkeyup="captureRichSelection()" onmouseup="captureRichSelection()" onfocus="captureRichSelection()" onpaste="richPastePlainText(event)"></div>
+      </div>
+      <p class="rich-editor__hint">For a sub-list, make a list first, then place the cursor in an item and use ⇥.</p>
+    </div>
     <div class="fbts"><button class="savebtn" onclick="savePost()">💾 Save</button><button class="cancelbtn" onclick="cancelForm()">Cancel</button></div>
   </div>`
 }
@@ -697,7 +799,7 @@ function startEdit(id){
   editId=id;const p=POSTS.find(x=>x.id===id);if(!p)return;
   document.getElementById('afw').innerHTML=buildFormHtml();
   document.getElementById('f-t').value=p.title;document.getElementById('f-d').value=p.date;
-  document.getElementById('f-e').value=p.exc||'';document.getElementById('f-b').value=p.body;document.getElementById('f-co').value=Number(p.collectionOrder)>0?p.collectionOrder:'';
+  document.getElementById('f-e').value=p.exc||'';setRichEditorContent(p);document.getElementById('f-co').value=Number(p.collectionOrder)>0?p.collectionOrder:'';
   document.getElementById('afw').scrollIntoView({behavior:'smooth',block:'start'})
 }
 function cancelForm(){document.getElementById('afw').innerHTML='';editId=null}
@@ -705,11 +807,10 @@ async function savePost(){
   const title=document.getElementById('f-t').value.trim(),langV=document.getElementById('f-l').value;
   const catKey=document.getElementById('f-c').value,subcat=document.getElementById('f-sc').value;
   const date=document.getElementById('f-d').value.trim(),exc=document.getElementById('f-e').value.trim();
-  const body=document.getElementById('f-b').value.trim(),collectionId=document.getElementById('f-col').value,collectionOrder=Number.parseInt(document.getElementById('f-co').value,10);
+  const body=richEditorText(),html=richEditorHtml(),collectionId=document.getElementById('f-col').value,collectionOrder=Number.parseInt(document.getElementById('f-co').value,10);
   if(!title||!catKey||!body){alert('Title, Category, and Body are required.');return}
   const previous=editId?POSTS.find(x=>x.id===editId):null;
-  const post={...(previous||{}),id:editId||Date.now(),title,lang:langV,lc:LC[langV]||'kn',cat:CATS[catKey].label,cc:catKey,subcat:subcat||'',collectionId,collectionOrder:collectionId&&Number.isInteger(collectionOrder)&&collectionOrder>0?collectionOrder:null,date:date||todayStr(),exc:exc||autoExc(body),body};
-  if(previous?.html&&body!==previous.body)post.html=bodyToRichHtml(body);
+  const post={...(previous||{}),id:editId||Date.now(),title,lang:langV,lc:LC[langV]||'kn',cat:CATS[catKey].label,cc:catKey,subcat:subcat||'',collectionId,collectionOrder:collectionId&&Number.isInteger(collectionOrder)&&collectionOrder>0?collectionOrder:null,date:date||todayStr(),exc:exc||autoExc(body),body,html};
   try{
     await svP(post);
     if(editId){const i=POSTS.findIndex(x=>x.id===editId);if(i>=0)POSTS[i]=post}else POSTS.unshift(post);
