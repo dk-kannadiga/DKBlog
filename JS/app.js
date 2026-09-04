@@ -1062,7 +1062,7 @@ function renderAdQuiz(){
     `<div style="margin-top:28px"><h4 style="font-family:'Playfair Display',serif;color:var(--ac);margin-bottom:14px;font-size:1rem">Archive (${QA.length})</h4>
     ${QA.length?QA.map(q=>`<div class="apost">
       <div class="apost-info"><div class="apost-title">${esc(q.title)}</div><div class="apost-meta">${q.date} · ${q.total} participants</div></div>
-      <div class="apost-acts">${q.type==='prize'?`<button class="editbtn" onclick="viewPrizeEntries(${q.id})">Entries</button>`:''}<button class="delbtn" onclick="delArcQ(${q.id})">Delete</button></div>
+      <div class="apost-acts">${q.type==='prize'?`<button class="editbtn" onclick="viewPrizeEntries(${q.id})">Entries</button>`:''}<button class="editbtn" onclick="repeatArchivedQuiz(${q.id})">↻ Repeat</button><button class="delbtn" onclick="delArcQ(${q.id})">Delete</button></div>
     </div>`).join(''):'<div class="empty" style="padding:14px">No archived quizzes yet.</div>'}
     </div>`;
   if(Q?.state==='live')loadLiveQuizCount(Q.id)
@@ -1100,7 +1100,7 @@ async function doArchive(){
       if(answers[i]===qu.ans)stats.qs[i].c++;else stats.qs[i].w++;
     });
   });
-  const archive={id:Q.id,title:Q.title,date:Q.date,type:Q.type,total:stats.total,state:'archived',certificateTemplate:Q.certificateTemplate||null,
+  const archive={id:Q.id,title:Q.title,description:Q.description||'',date:Q.date,deadline:Q.deadline||'',prize:Q.prize||'',type:Q.type,total:stats.total,state:'archived',certificateTemplate:Q.certificateTemplate||null,
     questions:Q.questions.map((qu,i)=>({...qu,stats:stats.qs[i]||{c:0,w:0}}))};
   try{
     await window.saveFirestoreQuizArchive(archive);
@@ -1215,6 +1215,26 @@ async function viewPrizeEntries(quizId){
 async function delArcQ(id){
   try{await window.deleteFirestoreQuizArchive(id);QA=QA.filter(q=>q.id!==id);renderAdQuiz()}
   catch(e){console.error('Quiz archive deletion failed:',e);alert('The archived quiz could not be deleted. Please try again.')}
+}
+function repeatArchivedQuiz(id){
+  const archived=findQuiz(id);
+  if(!archived)return;
+  if(Q){
+    alert('Close and archive the current quiz before creating a repeat.');
+    return;
+  }
+  editQId=false;
+  qDraft=(archived.questions||[]).map(({stats,...question})=>JSON.parse(JSON.stringify(question)));
+  certDraft=certificateTemplate(archived.certificateTemplate);
+  document.getElementById('qfw').innerHTML=buildQForm();
+  document.getElementById('qf-t').value=archived.title?archived.title+' — Repeat':'Repeat Quiz';
+  document.getElementById('qf-d').value=archived.description||'';
+  document.getElementById('qf-type').value=archived.type||'certificate';
+  document.getElementById('qf-state').value='upcoming';
+  document.getElementById('qf-date').value=todayStr();
+  document.getElementById('qf-dl').value='';
+  document.getElementById('qf-pr').value=archived.prize||'';
+  renderQBuilder();toggleCertificateDesigner();document.getElementById('qfw').scrollIntoView({behavior:'smooth',block:'start'});
 }
 
 // ── QUIZ FORM (Admin) ─────────────────────────────────
