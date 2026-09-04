@@ -209,7 +209,7 @@ function safePostHtml(html){
 }
 function postContent(p){
   const cover=safeContentUrl(p.coverImage);
-  const coverHtml=cover?`<img class="post-cover" src="${cover}" alt="${esc(p.title)} cover">`:'';
+  const coverHtml=cover?`<img class="post-cover" src="${cover}" alt="" onerror="this.remove()">`:'';
   return p.html?coverHtml+safePostHtml(p.html):esc(p.body)
 }
 function bodyToRichHtml(body){
