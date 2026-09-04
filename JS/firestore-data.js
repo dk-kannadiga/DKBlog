@@ -23,6 +23,7 @@ import {
   signInAnonymously,
   signInWithPopup,
   signInWithRedirect,
+  getRedirectResult,
   signOut,
 } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
 
@@ -39,6 +40,10 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
+const redirectResultPromise = getRedirectResult(auth).catch((error) => {
+  console.error("Google redirect sign-in could not be completed:", error);
+  return null;
+});
 
 let currentUser = null;
 let owner = false;
@@ -78,6 +83,12 @@ onAuthStateChanged(auth, async (user) => {
   owner = false;
   try {
     if (!user) {
+      const redirectResult = await redirectResultPromise;
+      if (redirectResult?.user) {
+        currentUser = redirectResult.user;
+        owner = await refreshOwner(currentUser);
+        return;
+      }
       await becomeAnonymous();
       return;
     }
