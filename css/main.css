@@ -46,7 +46,7 @@ nav .admin-door{display:inline-flex;align-items:center;color:var(--gl);border:1p
 .richbody blockquote{margin:1.25em 0;padding:14px 18px;border-left:3px solid var(--gd);background:var(--cb);color:var(--il)}
 .richbody h2,.richbody h3,.richbody h4{font-family:'Playfair Display','Noto Sans Kannada',serif;color:var(--ac);line-height:1.35;margin:1.4em 0 .6em}.richbody h2{font-size:1.5rem}.richbody h3{font-size:1.27rem}.richbody h4{font-size:1.08rem}
 .richbody pre{margin:1.25em 0;padding:14px 16px;background:#25170e;color:#fff6e8;border-radius:6px;white-space:pre-wrap;overflow-x:auto;font:normal .88rem/1.65 ui-monospace,SFMono-Regular,Consolas,monospace}.richbody code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace}.richbody :not(pre)>code{padding:2px 5px;background:var(--pd);color:var(--ac);border-radius:3px;font-size:.88em}
-.rt-size-small{font-size:.85em}.rt-size-large{font-size:1.22em}
+.rt-size-small{font-size:.85em}.rt-size-large{font-size:1.22em}.rt-line-compact{line-height:1.45}.rt-line-spacious{line-height:2.3}
 .richbody img{display:block;max-width:100%;height:auto;margin:1.4em auto;border:1px solid var(--gl);border-radius:5px}
 .richbody img.post-cover{max-height:460px;object-fit:contain;background:var(--cb)}
 .richbody a{color:var(--ac);text-decoration-thickness:1px;text-underline-offset:2px}

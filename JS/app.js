@@ -197,13 +197,14 @@ function safePostHtml(html){
     const src=tag==='img'?safeContentUrl(el.getAttribute('src')):'';
     const alt=tag==='img'?(el.getAttribute('alt')||''):'';
     const sizeClass=tag==='span'&&['rt-size-small','rt-size-large'].includes(el.getAttribute('class')||'')?el.getAttribute('class'):'';
+    const lineClass=['p','div','li','blockquote','h2','h3','h4','pre'].includes(tag)&&['rt-line-compact','rt-line-spacious'].includes(el.getAttribute('class')||'')?el.getAttribute('class'):'';
     for(const attr of Array.from(el.attributes))el.removeAttribute(attr.name);
     if(tag==='a'&&href){el.setAttribute('href',href);el.setAttribute('target','_blank');el.setAttribute('rel','noopener noreferrer')}
     if(tag==='img'){
       if(!src){el.remove();continue}
       el.setAttribute('src',src);if(alt)el.setAttribute('alt',alt)
     }
-    if(sizeClass)el.setAttribute('class',sizeClass);
+    if(sizeClass||lineClass)el.setAttribute('class',sizeClass||lineClass);
   }
   return template.innerHTML;
 }
@@ -831,6 +832,31 @@ function richBlock(tag){
   richCommand('formatBlock',tag);
 }
 function richFontSize(direction){richCommand('fontSize',direction==='increase'?'5':'2')}
+function richLineSpacing(spacing){
+  if(!['compact','normal','spacious'].includes(spacing)||!restoreRichSelection())return;
+  const editor=richEditor(),selection=window.getSelection();
+  if(!editor||!selection||!selection.rangeCount)return;
+  const range=selection.getRangeAt(0),selector='p,div,li,blockquote,h2,h3,h4,pre';
+  let targets=[];
+  if(range.collapsed){
+    const start=range.startContainer.nodeType===1?range.startContainer:range.startContainer.parentElement;
+    const target=start?.closest(selector);
+    if(target&&editor.contains(target))targets=[target];
+  }else{
+    const candidates=Array.from(editor.querySelectorAll(selector)).filter(block=>range.intersectsNode(block));
+    targets=candidates.filter(block=>!candidates.some(other=>other!==block&&block.contains(other)));
+  }
+  if(!targets.length){
+    alert('Place the cursor in a paragraph, or select the paragraphs you want to adjust.');
+    return;
+  }
+  targets.forEach(block=>{
+    block.classList.remove('rt-line-compact','rt-line-spacious');
+    if(spacing==='compact')block.classList.add('rt-line-compact');
+    if(spacing==='spacious')block.classList.add('rt-line-spacious');
+  });
+  captureRichSelection();
+}
 function richClearFormatting(){
   richCommand('removeFormat');
   const editor=richEditor();if(!editor)return;
@@ -898,6 +924,9 @@ function buildFormHtml(){
           <button type="button" onmousedown="event.preventDefault()" onclick="richCommand('underline')" title="Underline"><u>U</u></button>
           <button type="button" onmousedown="event.preventDefault()" onclick="richFontSize('decrease')" title="Decrease font size">A−</button>
           <button type="button" onmousedown="event.preventDefault()" onclick="richFontSize('increase')" title="Increase font size">A+</button>
+          <button type="button" onmousedown="event.preventDefault()" onclick="richLineSpacing('compact')" title="Reduce line spacing for selected paragraph(s)">↕−</button>
+          <button type="button" onmousedown="event.preventDefault()" onclick="richLineSpacing('normal')" title="Use normal line spacing for selected paragraph(s)">↕</button>
+          <button type="button" onmousedown="event.preventDefault()" onclick="richLineSpacing('spacious')" title="Increase line spacing for selected paragraph(s)">↕+</button>
           <select onmousedown="captureRichSelection()" onchange="richBlock(this.value);this.value=''" title="Text style">
             <option value="">Text style</option><option value="p">Normal text</option><option value="h2">Large heading</option><option value="h3">Medium heading</option><option value="h4">Small heading</option>
           </select>
