@@ -22,14 +22,12 @@ import {
   onAuthStateChanged,
   signInAnonymously,
   signInWithPopup,
-  signInWithRedirect,
-  getRedirectResult,
   signOut,
 } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCHuyfBo7zAKlYc6Gq9uOPQavv_bwxh4x4",
-  authDomain: "dkblog-6c5e5.web.app",
+  authDomain: "dkblog-6c5e5.firebaseapp.com",
   projectId: "dkblog-6c5e5",
   storageBucket: "dkblog-6c5e5.firebasestorage.app",
   messagingSenderId: "37742053196",
@@ -40,10 +38,6 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
-const redirectResultPromise = getRedirectResult(auth).catch((error) => {
-  console.error("Google redirect sign-in could not be completed:", error);
-  return null;
-});
 
 let currentUser = null;
 let owner = false;
@@ -83,12 +77,6 @@ onAuthStateChanged(auth, async (user) => {
   owner = false;
   try {
     if (!user) {
-      const redirectResult = await redirectResultPromise;
-      if (redirectResult?.user) {
-        currentUser = redirectResult.user;
-        owner = await refreshOwner(currentUser);
-        return;
-      }
       await becomeAnonymous();
       return;
     }
@@ -121,13 +109,6 @@ window.signInAdmin = async function () {
   if (!currentUser || currentUser.isAnonymous) {
     const provider = new GoogleAuthProvider();
     provider.setCustomParameters({ prompt: "select_account" });
-    const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
-      || window.matchMedia("(display-mode: standalone)").matches;
-    if (isMobile) {
-      sessionStorage.setItem("dk-open-admin-after-signin", "1");
-      await signInWithRedirect(auth, provider);
-      return { redirecting: true };
-    }
     const result = await signInWithPopup(auth, provider);
     currentUser = result.user;
   }

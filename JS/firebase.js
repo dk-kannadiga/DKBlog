@@ -5,7 +5,7 @@ import {
 
 const firebaseConfig = {
   apiKey: "AIzaSyCHuyfBo7zAKlYc6Gq9uOPQavv_bwxh4x4",
-  authDomain: "dkblog-6c5e5.web.app",
+  authDomain: "dkblog-6c5e5.firebaseapp.com",
   projectId: "dkblog-6c5e5",
   storageBucket: "dkblog-6c5e5.firebasestorage.app",
   messagingSenderId: "37742053196",
