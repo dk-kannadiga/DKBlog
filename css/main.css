@@ -40,14 +40,13 @@ nav .admin-door{display:inline-flex;align-items:center;color:var(--gl);border:1p
 .pbody{font-size:1rem;line-height:1.95;color:var(--ink);margin-bottom:36px;white-space:pre-wrap;font-family:'Lora','Noto Sans Kannada',serif}
 .pbody.poem{font-style:italic;line-height:2.1;padding:22px 30px;background:var(--cb);border-left:3px solid var(--gd);border-radius:4px}
 .pbody.richbody{white-space:normal}
-.richbody p,.richbody div{margin:0 0 1.2em}
-.pbody.poem.richbody p,.pbody.poem.richbody div{margin:0}
+.richbody p,.richbody div{margin:0}
 .richbody ul,.richbody ol{margin:0 0 1.2em;padding-left:1.5em}
 .richbody li{margin:.35em 0}
 .richbody blockquote{margin:1.25em 0;padding:14px 18px;border-left:3px solid var(--gd);background:var(--cb);color:var(--il)}
 .richbody h2,.richbody h3,.richbody h4{font-family:'Playfair Display','Noto Sans Kannada',serif;color:var(--ac);line-height:1.35;margin:1.4em 0 .6em}.richbody h2{font-size:1.5rem}.richbody h3{font-size:1.27rem}.richbody h4{font-size:1.08rem}
 .richbody pre{margin:1.25em 0;padding:14px 16px;background:#25170e;color:#fff6e8;border-radius:6px;white-space:pre-wrap;overflow-x:auto;font:normal .88rem/1.65 ui-monospace,SFMono-Regular,Consolas,monospace}.richbody code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace}.richbody :not(pre)>code{padding:2px 5px;background:var(--pd);color:var(--ac);border-radius:3px;font-size:.88em}
-.rt-size-small{font-size:.85em}.rt-size-large{font-size:1.22em}.rt-line-compact{line-height:1.45}.rt-line-spacious{line-height:2.3}
+.rt-size-small{font-size:.85em}.rt-size-large{font-size:1.22em}
 .richbody img{display:block;max-width:100%;height:auto;margin:1.4em auto;border:1px solid var(--gl);border-radius:5px}
 .richbody img.post-cover{max-height:460px;object-fit:contain;background:var(--cb)}
 .richbody a{color:var(--ac);text-decoration-thickness:1px;text-underline-offset:2px}
@@ -141,6 +140,7 @@ footer a:hover{opacity:.9}
 .frow input:focus,.frow select:focus,.frow textarea:focus{outline:none;border-color:var(--ac)}
 .frow select{cursor:pointer}
 .rich-editor{border:1px solid var(--gl);border-radius:7px;overflow:hidden;background:var(--cb)}.rich-toolbar{display:flex;flex-wrap:wrap;gap:6px;padding:8px;background:var(--pd);border-bottom:1px solid var(--gl)}.rich-toolbar button,.rich-toolbar select{min-height:31px;border:1px solid var(--gd);border-radius:5px;background:var(--cb);color:var(--il);font-family:'Lora','Noto Sans Kannada',serif;font-size:.75rem;cursor:pointer}.rich-toolbar button{min-width:33px;padding:3px 8px}.rich-toolbar select{padding:3px 7px;max-width:128px}.rich-toolbar button:hover,.rich-toolbar button:focus-visible,.rich-toolbar select:focus{background:var(--ac);color:#fff;border-color:var(--ac);outline:none}.rich-toolbar__break{height:25px;width:1px;background:var(--gd);margin:3px 1px}.rich-editor__body{min-height:320px;padding:14px 16px;background:var(--cb);color:var(--ink);font-family:'Lora','Noto Sans Kannada',serif;font-size:.96rem;line-height:1.85;outline:none}.rich-editor__body:focus{box-shadow:inset 0 0 0 2px rgba(122,59,30,.16)}.rich-editor__body:empty:before{content:attr(data-placeholder);color:var(--gd);font-style:italic;pointer-events:none}.rich-editor__body p,.rich-editor__body div{margin:0 0 1em}.rich-editor__body.poem-editor p,.rich-editor__body.poem-editor div{margin:0}.rich-editor__body ul,.rich-editor__body ol{margin:0 0 1em;padding-left:1.6em}.rich-editor__body li{margin:.3em 0}.rich-editor__body blockquote{margin:1em 0;padding:11px 14px;border-left:3px solid var(--gd);background:var(--p);color:var(--il)}.rich-editor__body h2,.rich-editor__body h3,.rich-editor__body h4{font-family:'Playfair Display','Noto Sans Kannada',serif;color:var(--ac);line-height:1.35;margin:1.2em 0 .55em}.rich-editor__body h2{font-size:1.45rem}.rich-editor__body h3{font-size:1.2rem}.rich-editor__body h4{font-size:1.05rem}.rich-editor__body pre{margin:1em 0;padding:12px 14px;background:#25170e;color:#fff6e8;border-radius:5px;white-space:pre-wrap;font:normal .86rem/1.65 ui-monospace,SFMono-Regular,Consolas,monospace}.rich-editor__body img{display:block;max-width:100%;height:auto;margin:1em auto;border:1px solid var(--gl);border-radius:5px}.rich-editor__hint{margin:7px 0 0;color:var(--gd);font-size:.75rem;font-style:italic;line-height:1.5}
+.rich-editor__body p,.rich-editor__body div{margin:0}
 .import-note{margin:-2px 0 12px;padding:8px 11px;border-left:3px solid var(--gd);background:var(--pd);color:var(--il);font-size:.78rem;line-height:1.55}
 .frow2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
 .frow2 .frow{margin-bottom:0}
