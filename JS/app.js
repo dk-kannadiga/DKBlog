@@ -792,7 +792,11 @@ function subsHtml(catKey,selSub){
   if(!catKey||!CATS[catKey])return'<option value="">— choose a main category first —</option>';
   return'<option value="">— Select sub-category —</option>'+CATS[catKey].subs.map(s=>`<option value="${esc(s)}"${s===selSub?' selected':''}>${esc(s)}</option>`).join('')
 }
-function updateSubs(catKey){const el=document.getElementById('f-sc');if(el)el.innerHTML=subsHtml(catKey,'')}
+function updateSubs(catKey){
+  const el=document.getElementById('f-sc');if(el)el.innerHTML=subsHtml(catKey,'');
+  setPoemEditor(catKey);
+}
+function setPoemEditor(catKey){document.getElementById('f-b')?.classList.toggle('poem-editor',catKey==='poem')}
 function collectionOpts(selectedId){
   return`<option value="">— No collection —</option>${COLLECTIONS.map(collection=>`<option value="${collection.id}"${String(collection.id)===String(selectedId||'')?' selected':''}>${esc(collection.icon||'✦')} ${esc(collection.title)}</option>`).join('')}`
 }
@@ -957,6 +961,7 @@ function startEdit(id){
   document.getElementById('afw').innerHTML=buildFormHtml();
   document.getElementById('f-t').value=p.title;document.getElementById('f-d').value=p.date;
   document.getElementById('f-e').value=p.exc||'';setRichEditorContent(p);document.getElementById('f-co').value=Number(p.collectionOrder)>0?p.collectionOrder:'';
+  setPoemEditor(p.cc);
   document.getElementById('afw').scrollIntoView({behavior:'smooth',block:'start'})
 }
 function cancelForm(){document.getElementById('afw').innerHTML='';editId=null}
