@@ -22,6 +22,7 @@ import {
   onAuthStateChanged,
   signInAnonymously,
   signInWithPopup,
+  signInWithRedirect,
   signOut,
 } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
 
@@ -109,6 +110,13 @@ window.signInAdmin = async function () {
   if (!currentUser || currentUser.isAnonymous) {
     const provider = new GoogleAuthProvider();
     provider.setCustomParameters({ prompt: "select_account" });
+    const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
+      || window.matchMedia("(display-mode: standalone)").matches;
+    if (isMobile) {
+      sessionStorage.setItem("dk-open-admin-after-signin", "1");
+      await signInWithRedirect(auth, provider);
+      return { redirecting: true };
+    }
     const result = await signInWithPopup(auth, provider);
     currentUser = result.user;
   }

@@ -11,6 +11,14 @@ let adminAuth=false,editId=null,collectionEditId=null,catF='all',searchQ='',part
 const HOME_PAGE_SIZE=12;
 let postsFullyLoaded=false,homeHasMore=false,homeLoadingMore=false,homeVisibleCount=0,allPostsPromise=null;
 
+window.addEventListener('dk-auth-changed',(event)=>{
+  adminAuth=Boolean(event.detail?.owner);
+  if(adminAuth&&sessionStorage.getItem('dk-open-admin-after-signin')==='1'){
+    sessionStorage.removeItem('dk-open-admin-after-signin');
+    go('admin');
+  }
+});
+
 function hSearch(v){
   searchQ=v.toLowerCase().trim();
   const clr=document.getElementById('sclr');
@@ -726,7 +734,8 @@ async function aLogin(){
   const error=document.getElementById('aerr');
   error.textContent='Opening secure sign-in…';
   try{
-    await window.signInAdmin();
+    const result=await window.signInAdmin();
+    if(result?.redirecting)return;
     adminAuth=window.isFirebaseOwner();
     if(!adminAuth)throw new Error('This account is not authorized to administer the site.');
     error.textContent='';go('admin');

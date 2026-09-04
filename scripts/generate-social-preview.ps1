@@ -21,6 +21,38 @@ function Add-Ornament {
   $Canvas.FillPolygon($Brush, $points)
 }
 
+function New-AppIcon {
+  param([int]$Size)
+
+  $icon = [System.Drawing.Bitmap]::new($Size, $Size)
+  $canvas = [System.Drawing.Graphics]::FromImage($icon)
+  $canvas.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::AntiAlias
+  $canvas.TextRenderingHint = [System.Drawing.Text.TextRenderingHint]::AntiAliasGridFit
+  $canvas.Clear([System.Drawing.Color]::FromArgb(61, 26, 8))
+
+  $margin = [int]($Size * 0.09)
+  $border = [System.Drawing.Pen]::new([System.Drawing.Color]::FromArgb(200, 168, 122), [Math]::Max(2, [int]($Size * 0.032)))
+  $canvas.DrawRectangle($border, $margin, $margin, $Size - 2 * $margin, $Size - 2 * $margin)
+
+  $font = [System.Drawing.Font]::new('Georgia', [int]($Size * 0.30), [System.Drawing.FontStyle]::Bold)
+  $text = 'DK'
+  $textSize = $canvas.MeasureString($text, $font)
+  $canvas.DrawString($text, $font, [System.Drawing.SolidBrush]::new([System.Drawing.Color]::FromArgb(247, 234, 213)), ($Size - $textSize.Width) / 2, ($Size - $textSize.Height) / 2 - ($Size * 0.02))
+
+  $dotBrush = [System.Drawing.SolidBrush]::new([System.Drawing.Color]::FromArgb(200, 168, 122))
+  $dot = [Math]::Max(3, [int]($Size * 0.032))
+  $canvas.FillEllipse($dotBrush, ($Size - $dot) / 2, $Size * 0.76, $dot, $dot)
+
+  $destination = Join-Path $PSScriptRoot ("..\assets\dk-app-icon-{0}.png" -f $Size)
+  $icon.Save($destination, [System.Drawing.Imaging.ImageFormat]::Png)
+
+  $dotBrush.Dispose()
+  $font.Dispose()
+  $border.Dispose()
+  $canvas.Dispose()
+  $icon.Dispose()
+}
+
 $width = 1200
 $height = 630
 $image = [System.Drawing.Bitmap]::new($width, $height)
@@ -80,3 +112,6 @@ $borderPen.Dispose()
 $gradient.Dispose()
 $graphics.Dispose()
 $image.Dispose()
+
+New-AppIcon 192
+New-AppIcon 512
