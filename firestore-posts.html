@@ -2,14 +2,14 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>All Firestore Posts</title>
+    <title>ಎಲ್ಲ ಫೈರ್‌ಸ್ಟೋರ್ ಬರಹಗಳು</title>
 </head>
 <body>
 
-<h1>All Posts From Firestore</h1>
+<h1>ಫೈರ್‌ಸ್ಟೋರ್‌ನಲ್ಲಿರುವ ಎಲ್ಲ ಬರಹಗಳು</h1>
 
 <div id="posts">
-    Loading...
+    ತರಲಾಗುತ್ತಿದೆ…
 </div>
 
 <script type="module">
@@ -59,8 +59,8 @@ async function loadPosts() {
             html += `
                 <div style="border:1px solid #ccc;padding:15px;margin:15px;">
                     <h2>${p.title}</h2>
-                    <p><b>Date:</b> ${p.date}</p>
-                    <p><b>Language:</b> ${p.lang}</p>
+                    <p><b>ದಿನಾಂಕ:</b> ${p.date}</p>
+                    <p><b>ಭಾಷೆ:</b> ${p.lang}</p>
                     <p>${p.excerpt}</p>
                 </div>
             `;
@@ -74,7 +74,7 @@ async function loadPosts() {
         console.error(err);
 
         postsDiv.innerHTML =
-            "<h3>Error:</h3><pre>" + err.message + "</pre>";
+            "<h3>ದೋಷ:</h3><pre>" + err.message + "</pre>";
 
     }
 

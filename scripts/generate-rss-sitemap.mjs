@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 
 const PROJECT_ID = "dkblog-6c5e5";
 const SITE_URL = "https://dkblog-6c5e5.web.app";
-const SITE_TITLE = "DK's Writings · ಬರಹಗಳ ಜಗತ್ತು";
+const SITE_TITLE = "ಡೀಕೆಯ ಬರಹಗಳು · ಬರಹಗಳ ಜಗತ್ತು";
 const FEED_LIMIT = 20;
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -113,7 +113,7 @@ function renderRss(posts, generatedAt) {
       const description = post.exc || String(post.body || "").slice(0, 240);
       const article = textToHtml(post.body || post.exc || "");
       return `    <item>
-      <title>${xmlEscape(post.title || "Untitled")}</title>
+      <title>${xmlEscape(post.title || "ಶೀರ್ಷಿಕೆಯಿಲ್ಲ")}</title>
       <link>${xmlEscape(url)}</link>
       <guid isPermaLink="true">${xmlEscape(url)}</guid>
       <pubDate>${itemDate(post, generatedAt).toUTCString()}</pubDate>
@@ -128,7 +128,7 @@ function renderRss(posts, generatedAt) {
   <channel>
     <title>${xmlEscape(SITE_TITLE)}</title>
     <link>${SITE_URL}/</link>
-    <description>Poems, stories, articles, and quizzes by DK.</description>
+    <description>ಡೀಕೆಯ ಕವನಗಳು, ಕಥೆಗಳು, ಲೇಖನಗಳು ಮತ್ತು ಕ್ವಿಜ಼್‌ಗಳು</description>
     <language>kn</language>
     <lastBuildDate>${generatedAt.toUTCString()}</lastBuildDate>
     <atom:link href="${SITE_URL}/rss.xml" rel="self" type="application/rss+xml"/>

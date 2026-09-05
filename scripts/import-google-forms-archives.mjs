@@ -77,7 +77,7 @@ function quizFromForm(form) {
     description: `Migrated from Google Forms. ${form.total} responses were recorded.`,
     type: "certificate",
     state: "archived",
-    date: "Google Forms archive",
+    date: "ಗೂಗಲ್ ಫಾರ್ಮ್ಸ್ ಸಂಗ್ರಹ",
     total: form.total,
     questions,
     source: "google-forms",

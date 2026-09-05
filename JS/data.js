@@ -5,9 +5,9 @@ const DP=[
   {id:4,title:"ಹೊಸ ಬೆಳಕು / New Light",lang:"Mixed",lc:"mixed",cat:"ಕವನ / Poem",cc:"poem",subcat:"Free Verse",date:"01 Jan 2024",exc:"ಹಳೆಯದು ಮುಗಿದಿದೆ, ಹೊಸದು ಬರುತ್ತಿದೆ — the old fades like ink washed in rain...",body:"ಹಳೆಯದು ಮುಗಿದಿದೆ, ಹೊಸದು ಬರುತ್ತಿದೆ\nThe old fades like ink washed in rain,\nಮನಸ್ಸು ಹೇಳುತ್ತದೆ — let go, begin again.\n\nಭೂತ ಒಂದು ಪಾಠ, ಭವಿಷ್ಯ ಒಂದು ಬಾಗಿಲು\nThe present — just this breath, this moment, this light.\nಎದ್ದೇಳು, ನಡೆ, ಬರೆ —\nwrite what the night could not."}
 ];
 const DC={
-  poem:{label:'ಕವನ / Poem',subs:['ಭಾವಗೀತೆ (Lyric)','ಷಟ್ಪದಿ (Shatpadi)','ಮುಕ್ತಕ (Muktaka)','ವಚನ (Vachana)','ಹಾಯ್ಕು (Haiku)','ಅಕ್ರೋಸ್ಟಿಕ್ (Acrostic)','Free Verse','Other']},
-  story:{label:'ಕಥೆ / Story',subs:['ಸಣ್ಣ ಕಥೆ (Short Story)','ಮಿನಿ ಕಥೆ (Flash Fiction)',"ಮಕ್ಕಳ ಕಥೆ (Children's)",'ಕಾದಂಬರಿ ಭಾಗ (Novel Excerpt)','Other']},
-  article:{label:'ಲೇಖನ / Article',subs:['ಚಿಂತನ (Reflection)','ವಿಮರ್ಶೆ (Critique)','ಅಭಿಪ್ರಾಯ (Opinion)','ತಂತ್ರಜ್ಞಾನ (Technology)','ಪ್ರವಾಸ (Travel)','Other']},
+  poem:{label:'ಕವನ / Poem',subs:['ಭಾವಗೀತೆ (Lyric)','ಷಟ್ಪದಿ (Shatpadi)','ಮುಕ್ತಕ (Muktaka)','ವಚನ (Vachana)','ಹಾಯ್ಕು (Haiku)','ಅಕ್ರೋಸ್ಟಿಕ್ (Acrostic)','Free Verse','ಇತರೆ']},
+  story:{label:'ಕಥೆ / Story',subs:['ಸಣ್ಣ ಕಥೆ (Short Story)','ಮಿನಿ ಕಥೆ (Flash Fiction)',"ಮಕ್ಕಳ ಕಥೆ (Children's)",'ಕಾದಂಬರಿ ಭಾಗ (Novel Excerpt)','ಇತರೆ']},
+  article:{label:'ಲೇಖನ / Article',subs:['ಚಿಂತನ (Reflection)','ವಿಮರ್ಶೆ (Critique)','ಅಭಿಪ್ರಾಯ (Opinion)','ತಂತ್ರಜ್ಞಾನ (Technology)','ಪ್ರವಾಸ (Travel)','ಇತರೆ']},
   other:{label:'ಇತರೆ / Other',subs:['Essay','Memoir','Translation','Other']}
 };
 // ── QUIZ DEFAULT ARCHIVE ──────────────────────────────

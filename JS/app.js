@@ -120,7 +120,7 @@ async function loadMorePosts(){
     await loadPostReactions(added);
   }catch(e){
     console.error('More posts load failed:',e);
-    alert('Older writings could not be loaded. Please try again.');
+    alert('ಹಳೆಯ ಬರಹಗಳನ್ನು ತರಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ. ದಯವಿಟ್ಟು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.');
   }finally{
     homeLoadingMore=false;
     renderHome();
@@ -286,7 +286,7 @@ window.addEventListener('hashchange',openCurrentRoute);
 // ── BLOG FILTERS ──────────────────────────────────────
 function cf(btn,v){catF=v;document.querySelectorAll('.fb.cat').forEach(b=>b.classList.remove('on'));btn.classList.add('on');renderHome()}
 function renderCatFilters(){
-  let h=`<button class="fb cat${catF==='all'?' on':''}" onclick="cf(this,'all')">All</button>`;
+  let h=`<button class="fb cat${catF==='all'?' on':''}" onclick="cf(this,'all')">ಎಲ್ಲವೂ</button>`;
   Object.keys(CATS).forEach(k=>h+=`<button class="fb cat${catF===k?' on':''}" onclick="cf(this,'${k}')">${esc(CATS[k].label)}</button>`);
   document.getElementById('filters').innerHTML=h
 }
@@ -295,7 +295,7 @@ function renderCatFilters(){
 function renderHome(){
   renderCatFilters();
   const g=document.getElementById('grid'),sr=document.getElementById('sres');
-  if(postsLoading){g.innerHTML='<div class="empty">Loading writings...</div>';if(sr)sr.textContent='';return}
+  if(postsLoading){g.innerHTML='<div class="empty">ಬರಹಗಳನ್ನು ತರಲಾಗುತ್ತಿದೆ...</div>';if(sr)sr.textContent='';return}
   let fp=POSTS.filter(p=>catF==='all'||p.cc===catF);
   if(searchQ){
     fp=fp.filter(p=>
@@ -307,35 +307,35 @@ function renderHome(){
       p.lang.toLowerCase().includes(searchQ)
     );
     if(sr)sr.textContent=!postsFullyLoaded
-      ?'Searching all writings...'
+      ?'ಎಲ್ಲ ಬರಹಗಳಲ್ಲಿ ಹುಡುಕಲಾಗುತ್ತಿದೆ...'
       :fp.length
-      ?`${fp.length} result${fp.length!==1?'s':''} for "${searchQ}"`
-      :`No writings found for "${searchQ}"`;
+      ?`"${searchQ}" ಹುಡುಕಾಟಕ್ಕೆ ${fp.length} ಫಲಿತಾಂಶ${fp.length!==1?'ಗಳು':''}`
+      :`"${searchQ}" ಹುಡುಕಾಟಕ್ಕೆ ಯಾವುದೇ ಬರಹ ಸಿಗಲಿಲ್ಲ`;
   }else{if(sr)sr.textContent=''}
   const shown=searchQ?fp:fp.slice(0,homeVisibleCount);
   const moreAvailable=!searchQ&&(postsFullyLoaded?fp.length>shown.length:homeHasMore);
   if(!shown.length){
-    g.innerHTML=`<div class="empty">${searchQ?'No writings match.':'No writings match this category.'}${moreAvailable?'<br><button class="loadmore-btn" onclick="loadMorePosts()">Load older writings</button>':''}</div>`;
+    g.innerHTML=`<div class="empty">${searchQ?'ಹೊಂದಿಕೆಯಾಗುವ ಬರಹಗಳಿಲ್ಲ.':'ಈ ವಿಭಾಗಕ್ಕೆ ಹೊಂದಿಕೆಯಾಗುವ ಬರಹಗಳಿಲ್ಲ.'}${moreAvailable?'<br><button class="loadmore-btn" onclick="loadMorePosts()">ಹಳೆಯ ಬರಹಗಳನ್ನು ತೋರಿಸಿ</button>':''}</div>`;
     return;
   }
   g.innerHTML=shown.map(p=>`<div class="card" onclick="go('post',${p.id})">
     ${postTags(p)}
     <h2>${esc(p.title)}</h2><p class="exc">${esc(p.exc||autoExc(p.body))}</p>
     <div class="cf"><span>${p.date}</span><span>♥ ${likes[p.id]||0}</span></div>
-  </div>`).join('')+(moreAvailable?`<div class="loadmore"><button class="loadmore-btn" onclick="loadMorePosts()"${homeLoadingMore?' disabled':''}>${homeLoadingMore?'Loading older writings...':'Load older writings'}</button></div>`:'')
+  </div>`).join('')+(moreAvailable?`<div class="loadmore"><button class="loadmore-btn" onclick="loadMorePosts()"${homeLoadingMore?' disabled':''}>${homeLoadingMore?'ಹಳೆಯ ಬರಹಗಳನ್ನು ತರಲಾಗುತ್ತಿದೆ...':'ಹಳೆಯ ಬರಹಗಳನ್ನು ತೋರಿಸಿ'}</button></div>`:'')
 }
 async function renderPost(id){
   let p=findPost(id),el=document.getElementById('pvc');
   if(!p){
     if(contentLoading){
-      el.innerHTML='<div class="empty">Loading writing...</div>';
+      el.innerHTML='<div class="empty">ಬರಹವನ್ನು ತರಲಾಗುತ್ತಿದೆ...</div>';
       return;
     }
-    el.innerHTML='<div class="empty">Loading writing...</div>';
+    el.innerHTML='<div class="empty">ಬರಹವನ್ನು ತರಲಾಗುತ್ತಿದೆ...</div>';
     try{p=await ensurePostLoaded(id)}
     catch(e){console.error('Writing load failed:',e)}
     if(!p){
-      el.innerHTML='<div class="empty">This writing could not be found.</div>';
+      el.innerHTML='<div class="empty">ಈ ಬರಹ ಸಿಗಲಿಲ್ಲ.</div>';
       return;
     }
   }
@@ -343,36 +343,36 @@ async function renderPost(id){
     try{await loadPostReactions([p])}catch(e){console.error('Writing reactions load failed:',e)}
   }
   const lc=likes[p.id]||0,il=likedMe.has(p.id),cmts=await ldCmt(p.id),collectionNavigation=collectionReadingNav(p);
-  const ch=cmts.length?cmts.map(c=>`<div class="ci"><div class="chdr"><span class="cauth">${esc(c.name||'Anonymous')}</span><span class="cdate">${c.date}</span></div><p class="ctxt">${esc(c.txt)}</p></div>`).join(''):'<div class="noc">Be the first to leave a thought...</div>';
+  const ch=cmts.length?cmts.map(c=>`<div class="ci"><div class="chdr"><span class="cauth">${esc(c.name||'ಅನಾಮಧೇಯ')}</span><span class="cdate">${c.date}</span></div><p class="ctxt">${esc(c.txt)}</p></div>`).join(''):'<div class="noc">ಮೊದಲ ಪ್ರತಿಕ್ರಿಯೆ ನಿಮ್ಮದಾಗಲಿ...</div>';
   el.innerHTML=`<div class="pvh">
     ${postTags(p)}
-    <h1>${esc(p.title)}</h1><p class="pmeta">Written on ${p.date}</p></div>
+    <h1>${esc(p.title)}</h1><p class="pmeta">ಬರೆದ ದಿನ: ${p.date}</p></div>
     <div class="pbody${p.cc==='poem'?' poem':''}${p.html?' richbody':''}">${postContent(p)}</div>
     <div class="div">✦</div>
     <div class="pactions">
-      <button class="lbtn${il?' liked':''}" id="lb${p.id}" onclick="tlike(${p.id})">${il?'♥':'♡'} <span id="lc${p.id}">${lc}</span> ${lc===1?'like':'likes'}</button>
-      <button class="sbtn" onclick="shr(${p.id})">↗ Share</button>
-      <span class="stoast" id="st${p.id}">Link copied!</span>
+      <button class="lbtn${il?' liked':''}" id="lb${p.id}" onclick="tlike(${p.id})">${il?'♥':'♡'} <span id="lc${p.id}">${lc}</span> ${lc===1?'ಮೆಚ್ಚುಗೆ':'ಮೆಚ್ಚುಗೆಗಳು'}</button>
+      <button class="sbtn" onclick="shr(${p.id})">↗ ಹಂಚಿಕೊಳ್ಳಿ</button>
+      <span class="stoast" id="st${p.id}">ಕೊಂಡಿಯನ್ನು ನಕಲಿಸಲಾಗಿದೆ!</span>
     </div>
-    <div class="cs"><h3>Thoughts &amp; Reactions</h3>
+    <div class="cs"><h3>ಅಭಿಪ್ರಾಯಗಳು ಮತ್ತು ಪ್ರತಿಕ್ರಿಯೆಗಳು</h3>
       <div class="cform">
-        <input type="text" id="cn${p.id}" placeholder="Your name (leave blank for anonymous)" maxlength="60">
-        <textarea id="ct${p.id}" rows="3" placeholder="Write your thoughts here..."></textarea>
-        <button class="csub" onclick="addCmt(${p.id})">Post Comment</button>
+        <input type="text" id="cn${p.id}" placeholder="ನಿಮ್ಮ ಹೆಸರು (ಅನಾಮಧೇಯವಾಗಿರಲು ಖಾಲಿ ಬಿಡಿ)" maxlength="60">
+        <textarea id="ct${p.id}" rows="3" placeholder="ನಿಮ್ಮ ಅನಿಸಿಕೆಗಳನ್ನು ಇಲ್ಲಿ ಬರೆಯಿರಿ..."></textarea>
+        <button class="csub" onclick="addCmt(${p.id})">ಪ್ರತಿಕ್ರಿಯೆ ಪ್ರಕಟಿಸಿ</button>
       </div>
       <div class="clist" id="cl${p.id}">${ch}</div>
     </div>
     <div class="div" style="margin-top:36px">✦ ✦ ✦</div>
     ${collectionNavigation}
     <div class="pnav">
-      <button class="back" onclick="go('home')">← All Writings</button>
-      <button class="back" onclick="go('index')">☰ Index</button>
-      <button class="back" onclick="go('about')">✍ About Me</button>
+      <button class="back" onclick="go('home')">← ಎಲ್ಲ ಬರಹಗಳು</button>
+      <button class="back" onclick="go('index')">☰ ಪಟ್ಟಿ</button>
+      <button class="back" onclick="go('about')">✍ ನನ್ನ ಬಗ್ಗೆ</button>
     </div>`
 }
 async function tlike(id){
   const next=!likedMe.has(id);
-  try{await window.toggleFirestoreLike(id,next)}catch(e){console.error('Reaction failed:',e);alert('Your reaction could not be saved. Please try again.');return}
+  try{await window.toggleFirestoreLike(id,next)}catch(e){console.error('Reaction failed:',e);alert('ನಿಮ್ಮ ಪ್ರತಿಕ್ರಿಯೆಯನ್ನು ಉಳಿಸಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ. ದಯವಿಟ್ಟು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.');return}
   if(next){likedMe.add(id);likes[id]=(likes[id]||0)+1}
   else{likedMe.delete(id);likes[id]=Math.max(0,(likes[id]||0)-1)}
 
@@ -382,30 +382,30 @@ async function tlike(id){
 
   if(btn){
     btn.className='lbtn'+(il?' liked':'');
-    btn.innerHTML=`${il?'♥':'♡'} <span id="lc${id}">${lc}</span> ${lc===1?'like':'likes'}`;
+    btn.innerHTML=`${il?'♥':'♡'} <span id="lc${id}">${lc}</span> ${lc===1?'ಮೆಚ್ಚುಗೆ':'ಮೆಚ್ಚುಗೆಗಳು'}`;
   }
 }
 function shr(id){
   const p=findPost(id),t=document.getElementById('st'+id),url=new URL(routePath('post',id),location.origin).href;
-  if(navigator.share)navigator.share({title:p?.title||'',text:'A writing by DK',url}).catch(()=>{});
+  if(navigator.share)navigator.share({title:p?.title||'',text:'ಡೀಕೆಯ ಒಂದು ಬರಹ',url}).catch(()=>{});
   else{try{navigator.clipboard.writeText(url)}catch(e){}if(t){t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500)}}
 }
 async function addCmt(id){
   const n=document.getElementById('cn'+id),t=document.getElementById('ct'+id);
   if(!t?.value.trim())return;
-  if(t.value.trim().length>2000){alert('Please keep comments under 2,000 characters.');return}
-  const c={name:n.value.trim()||'Anonymous',txt:t.value.trim(),date:todayStr()};
+  if(t.value.trim().length>2000){alert('ದಯವಿಟ್ಟು ಪ್ರತಿಕ್ರಿಯೆಯನ್ನು 2,000 ಅಕ್ಷರಗಳೊಳಗೆ ಬರೆಯಿರಿ.');return}
+  const c={name:n.value.trim()||'ಅನಾಮಧೇಯ',txt:t.value.trim(),date:todayStr()};
   let arr;
-  try{arr=await svCmt(id,c)}catch(e){console.error('Comment save failed:',e);alert('Your comment could not be posted. Please try again.');return}
+  try{arr=await svCmt(id,c)}catch(e){console.error('Comment save failed:',e);alert('ನಿಮ್ಮ ಪ್ರತಿಕ್ರಿಯೆಯನ್ನು ಪ್ರಕಟಿಸಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ. ದಯವಿಟ್ಟು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.');return}
   n.value='';t.value='';
   const cl=document.getElementById('cl'+id);
-  if(cl)cl.innerHTML=arr.map(x=>`<div class="ci"><div class="chdr"><span class="cauth">${esc(x.name||'Anonymous')}</span><span class="cdate">${x.date}</span></div><p class="ctxt">${esc(x.txt)}</p></div>`).join('')
+  if(cl)cl.innerHTML=arr.map(x=>`<div class="ci"><div class="chdr"><span class="cauth">${esc(x.name||'ಅನಾಮಧೇಯ')}</span><span class="cdate">${x.date}</span></div><p class="ctxt">${esc(x.txt)}</p></div>`).join('')
 }
 async function renderIdx(){
   const el=document.getElementById('idxc');
   if(!postsFullyLoaded){
-    el.innerHTML='<div class="empty">Loading all writings...</div>';
-    try{await ensureAllPosts()}catch(e){console.error('Index load failed:',e);el.innerHTML='<div class="empty">Writings could not be loaded.</div>';return}
+    el.innerHTML='<div class="empty">ಎಲ್ಲ ಬರಹಗಳನ್ನು ತರಲಾಗುತ್ತಿದೆ...</div>';
+    try{await ensureAllPosts()}catch(e){console.error('Index load failed:',e);el.innerHTML='<div class="empty">ಬರಹಗಳನ್ನು ತರಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ.</div>';return}
   }
   el.innerHTML=Object.keys(CATS).map(k=>{
     const ps=POSTS.filter(p=>p.cc===k);if(!ps.length)return'';
@@ -421,51 +421,51 @@ function collectionReadingNav(post){
   const collection=findCollection(post.collectionId);
   if(!collection)return'';
   const posts=collectionPosts(collection.id),index=posts.findIndex(item=>String(item.id)===String(post.id)),previous=index>0?posts[index-1]:null,next=index>=0&&index<posts.length-1?posts[index+1]:null;
-  return`<nav class="collection-reading" aria-label="Collection navigation">
+  return`<nav class="collection-reading" aria-label="ಸಂಕಲನದಲ್ಲಿ ಸಂಚರಿಸಿ">
     <span class="collection-reading__label">${esc(collection.icon||'✦')} ${esc(collection.title)}</span>
     <div class="collection-reading__actions">
-      ${previous?`<button class="back" onclick="go('post',${previous.id})">← Previous</button>`:'<span></span>'}
-      <button class="back" onclick="go('collection',${collection.id})">View Collection</button>
-      ${next?`<button class="back" onclick="go('post',${next.id})">Next →</button>`:'<span></span>'}
+      ${previous?`<button class="back" onclick="go('post',${previous.id})">← ಹಿಂದಿನ ಬರಹ</button>`:'<span></span>'}
+      <button class="back" onclick="go('collection',${collection.id})">ಸಂಕಲನ ನೋಡಿ</button>
+      ${next?`<button class="back" onclick="go('post',${next.id})">ಮುಂದಿನ ಬರಹ →</button>`:'<span></span>'}
     </div>
   </nav>`;
 }
 async function renderCollections(){
   const el=document.getElementById('colc');
-  if(collectionsLoading){el.innerHTML='<div class="empty">Loading collections...</div>';return}
-  if(!COLLECTIONS.length){el.innerHTML='<div class="empty">No collections are published yet.</div>';return}
+  if(collectionsLoading){el.innerHTML='<div class="empty">ಸಂಕಲನಗಳನ್ನು ತರಲಾಗುತ್ತಿದೆ...</div>';return}
+  if(!COLLECTIONS.length){el.innerHTML='<div class="empty">ಇನ್ನೂ ಯಾವುದೇ ಸಂಕಲನ ಪ್ರಕಟವಾಗಿಲ್ಲ.</div>';return}
   if(!postsFullyLoaded){
-    el.innerHTML='<div class="empty">Loading collections...</div>';
-    try{await ensureAllPosts()}catch(e){console.error('Collections load failed:',e);el.innerHTML='<div class="empty">Collections could not be loaded.</div>';return}
+    el.innerHTML='<div class="empty">ಸಂಕಲನಗಳನ್ನು ತರಲಾಗುತ್ತಿದೆ...</div>';
+    try{await ensureAllPosts()}catch(e){console.error('Collections load failed:',e);el.innerHTML='<div class="empty">ಸಂಕಲನಗಳನ್ನು ತರಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ.</div>';return}
   }
   el.innerHTML=`<div class="collection-grid">${COLLECTIONS.map(collection=>{
     const posts=collectionPosts(collection.id);
     return`<article class="collection-card" onclick="go('collection',${collection.id})">
       <div class="collection-card__icon">${esc(collection.icon||'✦')}</div>
-      <div><h2>${esc(collection.title)}</h2><p>${esc(collection.description||'A collection of writings by DK.')}</p><span>${posts.length} ${posts.length===1?'writing':'writings'} →</span></div>
+      <div><h2>${esc(collection.title)}</h2><p>${esc(collection.description||'ಡೀಕೆಯ ಬರಹಗಳ ಒಂದು ಸಂಕಲನ.')}</p><span>${posts.length} ${posts.length===1?'ಬರಹ':'ಬರಹಗಳು'} →</span></div>
     </article>`
   }).join('')}</div>`;
 }
 async function renderCollection(id){
   const collection=findCollection(id),el=document.getElementById('colvc');
   if(!collection){
-    el.innerHTML=collectionsLoading?'<div class="empty">Loading collection...</div>':'<div class="empty">This collection could not be found.</div>';
+    el.innerHTML=collectionsLoading?'<div class="empty">ಸಂಕಲನವನ್ನು ತರಲಾಗುತ್ತಿದೆ...</div>':'<div class="empty">ಈ ಸಂಕಲನ ಸಿಗಲಿಲ್ಲ.</div>';
     return;
   }
   if(!postsFullyLoaded){
-    el.innerHTML='<div class="empty">Loading collection...</div>';
-    try{await ensureAllPosts()}catch(e){console.error('Collection load failed:',e);el.innerHTML='<div class="empty">This collection could not be loaded.</div>';return}
+    el.innerHTML='<div class="empty">ಸಂಕಲನವನ್ನು ತರಲಾಗುತ್ತಿದೆ...</div>';
+    try{await ensureAllPosts()}catch(e){console.error('Collection load failed:',e);el.innerHTML='<div class="empty">ಈ ಸಂಕಲನವನ್ನು ತರಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ.</div>';return}
   }
   const posts=collectionPosts(collection.id);
   el.innerHTML=`<section class="collection-view">
-    <div class="collection-view__head"><div class="collection-card__icon">${esc(collection.icon||'✦')}</div><div><h1>${esc(collection.title)}</h1><p>${esc(collection.description||'A collection of writings by DK.')}</p></div></div>
-    <div class="pactions"><button class="sbtn" onclick="shrCollection(${collection.id})">↗ Share Collection</button><span class="stoast" id="cst${collection.id}">Link copied!</span></div>
-    ${posts.length?`<div class="collection-post-list">${posts.map((post,index)=>`<article class="collection-post" onclick="go('post',${post.id})"><span class="collection-post__number">${index+1}</span><div><h2>${esc(post.title)}</h2><p>${esc(post.exc||autoExc(post.body))}</p><small>${esc(post.date)} · ${esc(post.cat)}</small></div><span aria-hidden="true">→</span></article>`).join('')}</div>`:'<div class="empty">No writings have been added to this collection yet.</div>'}
+    <div class="collection-view__head"><div class="collection-card__icon">${esc(collection.icon||'✦')}</div><div><h1>${esc(collection.title)}</h1><p>${esc(collection.description||'ಡೀಕೆಯ ಬರಹಗಳ ಒಂದು ಸಂಕಲನ.')}</p></div></div>
+    <div class="pactions"><button class="sbtn" onclick="shrCollection(${collection.id})">↗ ಸಂಕಲನ ಹಂಚಿಕೊಳ್ಳಿ</button><span class="stoast" id="cst${collection.id}">ಕೊಂಡಿಯನ್ನು ನಕಲಿಸಲಾಗಿದೆ!</span></div>
+    ${posts.length?`<div class="collection-post-list">${posts.map((post,index)=>`<article class="collection-post" onclick="go('post',${post.id})"><span class="collection-post__number">${index+1}</span><div><h2>${esc(post.title)}</h2><p>${esc(post.exc||autoExc(post.body))}</p><small>${esc(post.date)} · ${esc(post.cat)}</small></div><span aria-hidden="true">→</span></article>`).join('')}</div>`:'<div class="empty">ಈ ಸಂಕಲನಕ್ಕೆ ಇನ್ನೂ ಯಾವುದೇ ಬರಹ ಸೇರಿಸಿಲ್ಲ.</div>'}
   </section>`;
 }
 function shrCollection(id){
   const collection=findCollection(id),toast=document.getElementById('cst'+id),url=new URL(routePath('collection',id),location.origin).href;
-  if(navigator.share)navigator.share({title:collection?.title||'',text:'A collection by DK',url}).catch(()=>{});
+  if(navigator.share)navigator.share({title:collection?.title||'',text:'ಡೀಕೆಯ ಒಂದು ಸಂಕಲನ',url}).catch(()=>{});
   else{try{navigator.clipboard.writeText(url)}catch(e){}if(toast){toast.classList.add('show');setTimeout(()=>toast.classList.remove('show'),2500)}}
 }
 
@@ -482,12 +482,12 @@ function renderQuiz(){
   if(!quizzes.length){
     cur.innerHTML=`<div style="text-align:center;padding:60px 20px">
       <div style="font-size:3rem;margin-bottom:16px">📝</div>
-      <h3 style="font-family:'Playfair Display',serif;color:var(--ac);font-size:1.4rem;margin-bottom:10px">No Active Quiz Right Now</h3>
-      <p style="color:var(--il);font-style:italic;margin-bottom:24px">Check back soon, or explore past quizzes in the Archive.</p>
-      <button class="qsn" onclick="qTab('a')">View Archive →</button>
+      <h3 style="font-family:'Playfair Display',serif;color:var(--ac);font-size:1.4rem;margin-bottom:10px">ಸದ್ಯ ಯಾವುದೇ ಕ್ವಿಜ಼್ ನಡೆಯುತ್ತಿಲ್ಲ</h3>
+      <p style="color:var(--il);font-style:italic;margin-bottom:24px">ಸ್ವಲ್ಪ ಸಮಯದ ಬಳಿಕ ಮತ್ತೆ ನೋಡಿ ಅಥವಾ ಹಳೆಯ ಕ್ವಿಜ಼್‌ಗಳನ್ನು ವೀಕ್ಷಿಸಿ.</p>
+      <button class="qsn" onclick="qTab('a')">ಹಳೆಯ ಕ್ವಿಜ಼್‌ಗಳನ್ನು ನೋಡಿ →</button>
     </div>`;
   }else{
-    cur.innerHTML=`<section class="active-quiz-list"><h3>Choose a Quiz</h3><p>Pick a quiz to view its details and participate.</p>${quizzes.map(renderActiveQuizCard).join('')}</section>`;
+    cur.innerHTML=`<section class="active-quiz-list"><h3>ಕ್ವಿಜ಼್ ಆಯ್ಕೆಮಾಡಿ</h3><p>ವಿವರಗಳನ್ನು ನೋಡಲು ಮತ್ತು ಭಾಗವಹಿಸಲು ಕ್ವಿಜ಼್ಅ‌ನ್ನು ಆಯ್ಕೆಮಾಡಿ.</p>${quizzes.map(renderActiveQuizCard).join('')}</section>`;
   }
   renderQArcList()
 }
@@ -495,8 +495,8 @@ function renderActiveQuizCard(quiz){
   const isLive=quiz.state==='live';
   return`<article class="active-quiz-card">
     <div class="active-quiz-card__icon">${isLive?'🏆':'📅'}</div>
-    <div class="active-quiz-card__body"><div class="active-quiz-card__meta">${isLive?'Live now':'Upcoming'} · ${quiz.type==='prize'?'🎁 Prize Quiz':'📜 Certificate Quiz'}</div><h4>${esc(quiz.title)}</h4><p>${esc(quiz.description||'')}</p>${quiz.deadline?`<small>⏰ ${esc(quiz.deadline)}</small>`:''}</div>
-    <button class="qsn active-quiz-card__button" onclick="go('qplay',${quiz.id})">${isLive?'Participate →':'View Details →'}</button>
+    <div class="active-quiz-card__body"><div class="active-quiz-card__meta">${isLive?'ಈಗ ನಡೆಯುತ್ತಿದೆ':'ಮುಂಬರುವ'} · ${quiz.type==='prize'?'🎁 ಬಹುಮಾನದ ಕ್ವಿಜ಼್':'📜 ಪ್ರಮಾಣಪತ್ರದ ಕ್ವಿಜ಼್'}</div><h4>${esc(quiz.title)}</h4><p>${esc(quiz.description||'')}</p>${quiz.deadline?`<small>⏰ ${esc(quiz.deadline)}</small>`:''}</div>
+    <button class="qsn active-quiz-card__button" onclick="go('qplay',${quiz.id})">${isLive?'ಭಾಗವಹಿಸಿ →':'ವಿವರಗಳನ್ನು ನೋಡಿ →'}</button>
   </article>`;
 }
 function renderQuizPlay(id){
@@ -508,8 +508,8 @@ function renderQuizPlay(id){
       <h3>${esc(Q.title)}</h3>
       <div class="qpos-sub">${Q.date?'📅 '+esc(Q.date):''}</div>
       <p class="qpos-desc">${esc(Q.description||'')}</p>
-      ${Q.prize?`<div class="qpos-prize">🎁 Prize: ${esc(Q.prize)}</div><br>`:''}
-      ${Q.deadline?`<div class="qpos-dl">⏰ Deadline: ${esc(Q.deadline)}</div>`:''}
+      ${Q.prize?`<div class="qpos-prize">🎁 ಬಹುಮಾನ: ${esc(Q.prize)}</div><br>`:''}
+      ${Q.deadline?`<div class="qpos-dl">⏰ ಕೊನೆಯ ಸಮಯ: ${esc(Q.deadline)}</div>`:''}
     </div>`;
   }else if(Q.state==='live'){
     const quizId=String(Q.id);
@@ -525,26 +525,26 @@ function renderQuizPlay(id){
       }
     }
     if(qSubmissionCheckInFlight){
-      cur.innerHTML='<div class="empty">Checking your quiz submission…</div>';
+      cur.innerHTML='<div class="empty">ನಿಮ್ಮ ಕ್ವಿಜ಼್ ಉತ್ತರ ಸಲ್ಲಿಕೆಯನ್ನು ಪರಿಶೀಲಿಸಲಾಗುತ್ತಿದೆ…</div>';
     }else if(qSubmitted){
-      cur.innerHTML=`<div style="text-align:center;padding:40px"><p style="color:var(--il);font-style:italic">You have already submitted this quiz. Thank you for participating! 🙏</p></div>`;
+      cur.innerHTML=`<div style="text-align:center;padding:40px"><p style="color:var(--il);font-style:italic">ನೀವು ಈ ಕ್ವಿಜ಼್‌ಗೆ ಈಗಾಗಲೇ ಉತ್ತರಗಳನ್ನು ಸಲ್ಲಿಸಿದ್ದೀರಿ. ಭಾಗವಹಿಸಿದ್ದಕ್ಕೆ ಧನ್ಯವಾದಗಳು! 🙏</p></div>`;
     }else{
       renderLiveQuiz(cur);
     }
   }else{
-    cur.innerHTML=`<div style="text-align:center;padding:60px 20px"><div style="font-size:2rem;margin-bottom:14px">🔒</div><h3 style="font-family:'Playfair Display',serif;color:var(--ac);margin-bottom:10px">Quiz Closed</h3><p style="color:var(--il);font-style:italic">This quiz has ended. Results will be announced soon.</p></div>`;
+    cur.innerHTML=`<div style="text-align:center;padding:60px 20px"><div style="font-size:2rem;margin-bottom:14px">🔒</div><h3 style="font-family:'Playfair Display',serif;color:var(--ac);margin-bottom:10px">ಕ್ವಿಜ಼್ ಮುಕ್ತಾಯವಾಗಿದೆ</h3><p style="color:var(--il);font-style:italic">ಈ ಕ್ವಿಜ಼್ ಮುಗಿದಿದೆ. ಫಲಿತಾಂಶಗಳನ್ನು ಶೀಘ್ರದಲ್ಲೇ ಪ್ರಕಟಿಸಲಾಗುವುದು.</p></div>`;
   }
 }
 function renderLiveQuiz(el){
   el.innerHTML=`<div class="qform-wrap">
     <div class="qnamebox">
-      <h3>Your Details</h3>
-      <input type="text" id="q-name" placeholder="Your name (appears on certificate)" maxlength="80">
-      <p class="qname-note">Your name is visible only to the site administrator for participant status.</p>
-      ${Q.type==='prize'?`<input type="text" id="q-con" placeholder="Email or WhatsApp (saved securely for prize contact only)" maxlength="100">`:''}
+      <h3>ನಿಮ್ಮ ವಿವರಗಳು</h3>
+      <input type="text" id="q-name" placeholder="ನಿಮ್ಮ ಹೆಸರು (ಪ್ರಮಾಣಪತ್ರದಲ್ಲಿ ಕಾಣಿಸುತ್ತದೆ)" maxlength="80">
+      <p class="qname-note">ಭಾಗವಹಿಸಿದವರ ವಿವರಗಳಿಗಾಗಿ ನಿಮ್ಮ ಹೆಸರು ತಾಣದ ನಿರ್ವಾಹಕರಿಗೆ ಮಾತ್ರ ಕಾಣಿಸುತ್ತದೆ.</p>
+      ${Q.type==='prize'?`<input type="text" id="q-con" placeholder="ಮಿಂಚಂಚೆ ಅಥವಾ ವಾಟ್ಸಾಪ್ ಸಂಖ್ಯೆ (ಬಹುಮಾನದ ಕುರಿತು ಸಂಪರ್ಕಿಸಲು ಮಾತ್ರ ಸುರಕ್ಷಿತವಾಗಿ ಉಳಿಸಲಾಗುತ್ತದೆ)" maxlength="100">`:''}
     </div>
     ${Q.questions.map((qu,i)=>`<div class="qcard" id="qc-${i}">
-      <div class="qnum">Question ${i+1} of ${Q.questions.length}</div>
+      <div class="qnum">ಒಟ್ಟು ${Q.questions.length} ಪ್ರಶ್ನೆಗಳಲ್ಲಿ ${i+1}ನೇ ಪ್ರಶ್ನೆ</div>
       <div class="qtxt">${esc(qu.q)}</div>
       <div class="qopts">${qu.opts.map((o,j)=>`
         <label class="qopt" id="qo-${i}-${j}" onclick="selOpt(${i},${j})">
@@ -552,7 +552,7 @@ function renderLiveQuiz(el){
         </label>`).join('')}
       </div>
     </div>`).join('')}
-    <button class="qsubmit" onclick="submitQuiz()">Submit Answers ✓</button>
+    <button class="qsubmit" onclick="submitQuiz()">ಉತ್ತರಗಳನ್ನು ಸಲ್ಲಿಸಿ ✓</button>
   </div>`
 }
 function selOpt(qi,oi){
@@ -564,30 +564,30 @@ function selOpt(qi,oi){
 async function submitQuiz(){
   if(qSubmitting)return;
   const name=document.getElementById('q-name')?.value.trim();
-  if(!name){alert('Please enter your name before submitting.');return}
+  if(!name){alert('ಸಲ್ಲಿಸುವ ಮೊದಲು ದಯವಿಟ್ಟು ನಿಮ್ಮ ಹೆಸರನ್ನು ನಮೂದಿಸಿ.');return}
   if(!Q)return;
   const answers=Q.questions.map((_,i)=>{
     const c=document.querySelector(`input[name="qr-${i}"]:checked`);return c?parseInt(c.value):-1
   });
   const ua=answers.filter(a=>a===-1).length;
-  if(ua>0&&!confirm(`${ua} question(s) unanswered. Submit anyway?`))return;
+  if(ua>0&&!confirm(`${ua} ಪ್ರಶ್ನೆಗಳಿಗೆ ಉತ್ತರಿಸಿಲ್ಲ. ಆದರೂ ಸಲ್ಲಿಸಬೇಕೇ?`))return;
   let score=0;
   Q.questions.forEach((q,i)=>{if(answers[i]===q.ans)score++});
   const con=Q.type==='prize'?document.getElementById('q-con')?.value.trim()||'':'';
-  if(Q.type==='prize'&&con.length<3){alert('Please enter an email address or WhatsApp number for prize contact.');return}
+  if(Q.type==='prize'&&con.length<3){alert('ಬಹುಮಾನದ ಕುರಿತು ಸಂಪರ್ಕಿಸಲು ದಯವಿಟ್ಟು ಮಿಂಚಂಚೆ ವಿಳಾಸ ಅಥವಾ ವಾಟ್ಸಾಪ್ ಸಂಖ್ಯೆಯನ್ನು ನಮೂದಿಸಿ.');return}
   if(!window.saveFirestoreQuizSubmission){
-    alert('The quiz submission service is not ready. Please try again in a moment.');
+    alert('ಕ್ವಿಜ಼್ ಉತ್ತರ ಸಲ್ಲಿಸುವ ಸೇವೆ ಇನ್ನೂ ಸಿದ್ಧವಾಗಿಲ್ಲ. ದಯವಿಟ್ಟು ಸ್ವಲ್ಪ ಹೊತ್ತಿನ ಬಳಿಕ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.');
     return;
   }
   qSubmitting=true;
   const submitButton=document.querySelector('.qsubmit');
-  if(submitButton){submitButton.disabled=true;submitButton.textContent='Saving Answers…'}
+  if(submitButton){submitButton.disabled=true;submitButton.textContent='ಉತ್ತರಗಳನ್ನು ಉಳಿಸಲಾಗುತ್ತಿದೆ…'}
   try{
     await window.saveFirestoreQuizSubmission(Q.id,answers,name,Q.type==='prize'?{name,contact:con}:null);
   }catch(error){
     console.error('Quiz submission save failed:',error);
-    alert('Your answers could not be saved. They may already have been submitted from this browser. Please refresh the page to check.');
-    if(submitButton){submitButton.disabled=false;submitButton.textContent='Submit Answers ✓'}
+    alert('ನಿಮ್ಮ ಉತ್ತರಗಳನ್ನು ಉಳಿಸಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ. ಈ ಬ್ರೌಸರ್‌ನಿಂದ ಈಗಾಗಲೇ ಸಲ್ಲಿಸಿರಬಹುದು. ಪರಿಶೀಲಿಸಲು ಪುಟವನ್ನು ಮರುಲೋಡ್ ಮಾಡಿ.');
+    if(submitButton){submitButton.disabled=false;submitButton.textContent='ಉತ್ತರಗಳನ್ನು ಸಲ್ಲಿಸಿ ✓'}
     qSubmitting=false;
     return;
   }
@@ -608,14 +608,14 @@ function showResults(q,answers,name,score){
   let h=`<div class="qscore-box">
     <div style="font-size:1.8rem;margin-bottom:8px">${score===total?'🏆':score>=total*.7?'🎉':score>=total*.5?'👍':'📚'}</div>
     <div class="qscore">${score} / ${total}</div>
-    <div class="qscore-sub">${pct}% · ${score===total?'Perfect!':score>=total*.7?'Well done!':score>=total*.5?'Good effort!':'Keep reading!'}</div>
-    ${q.type==='certificate'?`<br><button class="certbtn" onclick="genCert()">📜 Download Certificate</button>`:''}
-    ${q.type==='prize'?`<p style="color:var(--il);font-size:.88rem;font-style:italic;margin-top:14px">Thank you ${esc(name)}! If you're among the winners, we'll reach out to you soon. 🎁</p>`:''}
+    <div class="qscore-sub">${pct}% · ${score===total?'ಎಲ್ಲವೂ ಸರಿ!':score>=total*.7?'ಚೆನ್ನಾಗಿ ಮಾಡಿದ್ದೀರಿ!':score>=total*.5?'ಒಳ್ಳೆಯ ಪ್ರಯತ್ನ!':'ಓದು ಮುಂದುವರಿಸಿ!'}</div>
+    ${q.type==='certificate'?`<br><button class="certbtn" onclick="genCert()">📜 ಪ್ರಮಾಣಪತ್ರ ಡೌನ್‌ಲೋಡ್ ಮಾಡಿ</button>`:''}
+    ${q.type==='prize'?`<p style="color:var(--il);font-size:.88rem;font-style:italic;margin-top:14px">ಧನ್ಯವಾದಗಳು ${esc(name)}! ನೀವು ವಿಜೇತರಲ್ಲಿ ಒಬ್ಬರಾಗಿದ್ದರೆ, ಶೀಘ್ರದಲ್ಲೇ ನಿಮ್ಮನ್ನು ಸಂಪರ್ಕಿಸುತ್ತೇವೆ. 🎁</p>`:''}
   </div><div class="qform-wrap">`;
   q.questions.forEach((qu,i)=>{
     const ua=answers[i],ok=ua===qu.ans;
     h+=`<div class="qcard" style="border-left-color:${ok?'#2d6a2d':'#c0392b'}">
-      <div class="qnum">Q${i+1} — ${ok?'✓ Correct':'✗ Incorrect'}</div>
+      <div class="qnum">ಪ್ರಶ್ನೆ ${i+1} — ${ok?'✓ ಸರಿ':'✗ ತಪ್ಪು'}</div>
       <div class="qtxt">${esc(qu.q)}</div>
       <div class="qopts">${qu.opts.map((o,j)=>`
         <div class="qopt${j===qu.ans?' ok':ua===j&&!ok?' bad':''}">
@@ -635,9 +635,9 @@ const CERT_FONT_STACKS={
 };
 function defaultCertificateTemplate(){
   return{
-    emblem:'✦ ✦ ✦',heading:'Certificate of Participation',intro:'This is to certify that',
-    body:'has successfully participated in {quizTitle}',scoreText:'Score: {score} / {total} ({percent}%)',
-    issuer:`DK's Writings`,issuerRole:'ಬರಹಗಾರ / Author',background:'#fffdf5',accent:'#7a3b1e',border:'#c8a87a',
+    emblem:'✦ ✦ ✦',heading:'ಭಾಗವಹಿಸಿದ ಪ್ರಮಾಣಪತ್ರ',intro:'ಈ ಮೂಲಕ ಪ್ರಮಾಣೀಕರಿಸುವುದೇನೆಂದರೆ,',
+    body:'{quizTitle} ಕ್ವಿಜ಼್‌ನಲ್ಲಿ ಯಶಸ್ವಿಯಾಗಿ ಭಾಗವಹಿಸಿದ್ದಾರೆ.',scoreText:'ಅಂಕಗಳು: {score} / {total} ({percent}%)',
+    issuer:`ಡೀಕೆಯ ಬರಹಗಳು`,issuerRole:'ಬರಹಗಾರ',background:'#fffdf5',accent:'#7a3b1e',border:'#c8a87a',
     font:'Lora',titleFont:'Playfair Display',align:'center',borderStyle:'double',titleSize:26,nameSize:38,
   };
 }
@@ -678,31 +678,31 @@ function genCert(){
 }
 function renderQArcList(){
   const el=document.getElementById('qarc');
-  if(!QA.length){el.innerHTML='<div class="empty">No archived quizzes yet. Past quizzes will appear here.</div>';return}
-  el.innerHTML='<h3 style="font-family:\'Playfair Display\',serif;color:var(--ac);margin-bottom:16px">Past Quizzes</h3>'+
+  if(!QA.length){el.innerHTML='<div class="empty">ಇನ್ನೂ ಯಾವುದೇ ಹಳೆಯ ಕ್ವಿಜ಼್‌ಗಳಿಲ್ಲ. ಮುಗಿದ ಕ್ವಿಜ಼್‌ಗಳು ಇಲ್ಲಿ ಕಾಣಿಸುತ್ತವೆ.</div>';return}
+  el.innerHTML='<h3 style="font-family:\'Playfair Display\',serif;color:var(--ac);margin-bottom:16px">ಹಳೆಯ ಕ್ವಿಜ಼್‌ಗಳು</h3>'+
   QA.map(q=>`<div class="aqcard" onclick="go('qdetail',${q.id})">
     <div><div class="aqcard-title">${esc(q.title)}</div>
-    <div class="aqcard-meta">${q.date} · ${q.total} participants · ${(q.questions||[]).length} questions</div></div>
-    <span class="tsub" style="font-size:.74rem">${q.type==='prize'?'🎁 Prize':'📜 Certificate'}</span>
+    <div class="aqcard-meta">${q.date} · ${q.total} ಭಾಗವಹಿಸಿದವರು · ${(q.questions||[]).length} ಪ್ರಶ್ನೆಗಳು</div></div>
+    <span class="tsub" style="font-size:.74rem">${q.type==='prize'?'🎁 ಬಹುಮಾನ':'📜 ಪ್ರಮಾಣಪತ್ರ'}</span>
   </div>`).join('')
 }
 function renderQDetail(id){
   const q=findQuiz(id),el=document.getElementById('qdc');
   if(!q){
     el.innerHTML=contentLoading
-      ?'<div class="empty">Loading quiz...</div>'
-      :'<div class="empty">This quiz could not be found.</div>';
+      ?'<div class="empty">ಕ್ವಿಜ಼್ಅ‌ನ್ನು ತರಲಾಗುತ್ತಿದೆ...</div>'
+      :'<div class="empty">ಈ ಕ್ವಿಜ಼್ ಸಿಗಲಿಲ್ಲ.</div>';
     return;
   }
   const tot=q.questions.reduce((s,qu)=>{const t=(qu.stats?.c||0)+(qu.stats?.w||0);return s+t},0);
   const cor=q.questions.reduce((s,qu)=>s+(qu.stats?.c||0),0);
   el.innerHTML=`
     <h1 class="stitle">${esc(q.title)}</h1>
-    <p class="ssub">${q.date} · ${q.type==='certificate'?'Certificate Quiz':'Prize Quiz'}</p>
+    <p class="ssub">${q.date} · ${q.type==='certificate'?'ಪ್ರಮಾಣಪತ್ರದ ಕ್ವಿಜ಼್':'ಬಹುಮಾನದ ಕ್ವಿಜ಼್'}</p>
     <div class="aqstats">
-      <div class="aqstat"><div class="aqstat-n">${q.total}</div><div class="aqstat-l">Participants</div></div>
-      <div class="aqstat"><div class="aqstat-n">${q.questions.length}</div><div class="aqstat-l">Questions</div></div>
-      <div class="aqstat"><div class="aqstat-n">${tot?Math.round(cor/tot*100)+'%':'—'}</div><div class="aqstat-l">Avg. Correct</div></div>
+      <div class="aqstat"><div class="aqstat-n">${q.total}</div><div class="aqstat-l">ಭಾಗವಹಿಸಿದವರು</div></div>
+      <div class="aqstat"><div class="aqstat-n">${q.questions.length}</div><div class="aqstat-l">ಪ್ರಶ್ನೆಗಳು</div></div>
+      <div class="aqstat"><div class="aqstat-n">${tot?Math.round(cor/tot*100)+'%':'—'}</div><div class="aqstat-l">ಸರಿಯಾದ ಉತ್ತರಗಳ ಸರಾಸರಿ</div></div>
     </div>
     ${q.questions.map((qu,i)=>{
       const c=qu.stats?.c||0,w=qu.stats?.w||0,t=c+w,p=t?Math.round(c/t*100):0;
@@ -710,14 +710,14 @@ function renderQDetail(id){
         <div class="aqq-t">${i+1}. ${esc(qu.q)}</div>
         ${qu.opts.map((o,j)=>`<div class="aqopt${j===qu.ans?' ans':''}">${j===qu.ans?'✓ ':''}${esc(o)}</div>`).join('')}
         ${qu.exp?`<div class="qexp">💡 ${esc(qu.exp)}</div>`:''}
-        ${t?`<div class="sbar"><div class="sbar-f" style="width:${p}%"></div></div><div class="spct">${p}% correct (${c} of ${t})</div>`:''}
+        ${t?`<div class="sbar"><div class="sbar-f" style="width:${p}%"></div></div><div class="spct">${p}% ಸರಿ (ಒಟ್ಟು ${t}ರಲ್ಲಿ ${c})</div>`:''}
       </div>`}).join('')}
     <div class="div" style="margin-top:32px">✦</div>
-    <div class="pnav"><button class="back" onclick="go('quiz')">← Back to Quiz</button><button class="sbtn" onclick="shrQ(${q.id})">↗ Share Quiz</button><span class="stoast" id="qst${q.id}">Link copied!</span></div>`
+    <div class="pnav"><button class="back" onclick="go('quiz')">← ಕ್ವಿಜ಼್‌ಗೆ ಹಿಂತಿರುಗಿ</button><button class="sbtn" onclick="shrQ(${q.id})">↗ ಕ್ವಿಜ಼್ ಹಂಚಿಕೊಳ್ಳಿ</button><span class="stoast" id="qst${q.id}">ಕೊಂಡಿಯನ್ನು ನಕಲಿಸಲಾಗಿದೆ!</span></div>`
 }
 function shrQ(id){
   const q=findQuiz(id),t=document.getElementById('qst'+id),url=new URL(routePath('qdetail',id),location.origin).href;
-  if(navigator.share)navigator.share({title:q?.title||'',text:'A quiz by DK',url}).catch(()=>{});
+  if(navigator.share)navigator.share({title:q?.title||'',text:'ಡೀಕೆಯ ಒಂದು ಕ್ವಿಜ಼್',url}).catch(()=>{});
   else{try{navigator.clipboard.writeText(url)}catch(e){}if(t){t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500)}}
 }
 
