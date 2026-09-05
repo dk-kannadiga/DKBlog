@@ -256,6 +256,15 @@ footer a:hover{opacity:.9}
 .qa-arc{background:#f5e6de;color:var(--ac);border:1px solid var(--ac)}.qa-arc:hover{background:var(--ac);color:#fff}
 .qa-sub{background:var(--pd);color:var(--il);border:1px solid var(--gd)}.qa-sub:hover{background:var(--gd);color:var(--ink)}
 .quiz-live-count{font-size:.82rem;color:#2d6a2d;font-style:italic;margin:2px 0 0}
+.admin-quiz-share{background:var(--cb);border:1px solid var(--gd);border-radius:8px;padding:18px 20px;margin-bottom:20px;scroll-margin-top:150px;min-width:0}
+.admin-quiz-share__head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:8px}
+.admin-quiz-share__head h4{color:var(--ac);font-family:'Playfair Display','Noto Sans Kannada',serif}
+.admin-quiz-share__title{overflow-wrap:anywhere;margin-bottom:16px;color:var(--il)}
+.admin-quiz-share__help,.admin-quiz-share__status{font-size:.82rem;color:var(--il);line-height:1.6}
+.admin-quiz-share__status{margin:12px 0;min-height:1.6em}
+.admin-quiz-share .frow input,.admin-quiz-share .frow textarea{font-size:16px;line-height:1.6;min-width:0}
+.admin-quiz-share .qa,.admin-quiz-share .cancelbtn{min-height:44px}
+.admin-quiz-share .qa:disabled{opacity:.6;cursor:wait}
 .qqbuilder{border:1px solid var(--gl);border-radius:8px;padding:16px;margin-bottom:12px;background:var(--p);position:relative}
 .qqnum{font-size:.76rem;color:var(--gd);font-style:italic;margin-bottom:8px}
 .qqbuilder textarea,.qor input[type=text]{border:1px solid var(--gl);border-radius:5px;font-family:'Lora','Noto Sans Kannada',serif;font-size:.86rem;background:var(--cb);color:var(--ink);padding:7px 10px;transition:border-color .2s}

@@ -1042,6 +1042,75 @@ async function addMainCat(){
 }
 
 // ── ADMIN: QUIZ ───────────────────────────────────────
+const adminQuizInvitations=new Map();
+function adminShareQuiz(id){return Q&&String(Q.id)===String(id)?Q:findQuiz(id)}
+function rememberAdminQuizInvitation(){
+  const panel=document.getElementById('admin-quiz-share'),input=document.getElementById('admin-quiz-invitation');
+  if(adminAuth&&panel&&input)adminQuizInvitations.set(panel.dataset.quizId,input.value);
+}
+function openAdminQuizShare(id){
+  if(!adminAuth)return;
+  const quiz=adminShareQuiz(id),host=document.getElementById('qshare');
+  if(!quiz||!host)return;
+  const key=String(quiz.id),url=new URL(routePath('qdetail',quiz.id),location.origin).href;
+  const introduction=quiz.state==='live'?'Join my quiz!':quiz.state==='upcoming'?'A new quiz is coming soon!':'Explore this quiz!';
+  const invitation=adminQuizInvitations.get(key)??[introduction,quiz.title,quiz.description||''].filter(Boolean).join('\n\n');
+  host.innerHTML=`<section class="admin-quiz-share" id="admin-quiz-share" data-quiz-id="${esc(key)}" aria-labelledby="admin-quiz-share-heading">
+    <div class="admin-quiz-share__head"><h4 id="admin-quiz-share-heading">Share Quiz</h4><button type="button" class="cancelbtn" onclick="document.getElementById('qshare').innerHTML=''">Close</button></div>
+    <p class="admin-quiz-share__title">${esc(quiz.title)}</p>
+    <div class="frow"><label for="admin-quiz-link">Quiz link</label><input id="admin-quiz-link" type="url" readonly value="${esc(url)}" onclick="this.select()"></div>
+    <div class="frow"><label for="admin-quiz-invitation">Invitation text</label><textarea id="admin-quiz-invitation" rows="6" oninput="rememberAdminQuizInvitation()" aria-describedby="admin-quiz-share-help">${esc(invitation)}</textarea></div>
+    <p id="admin-quiz-share-help" class="admin-quiz-share__help">Edit your invitation in any language. The quiz link is added automatically when you copy or share the invitation.</p>
+    <div class="qacts"><button type="button" class="qa qa-sub" onclick="copyAdminQuizShare('link')">Copy link</button><button type="button" class="qa qa-sub" onclick="copyAdminQuizShare('invitation')">Copy invitation + link</button><button type="button" class="qa qa-go" id="admin-quiz-share-send" onclick="sendAdminQuizShare()">↗ Share…</button></div>
+    <p class="admin-quiz-share__status" id="admin-quiz-share-status" role="status" aria-live="polite"></p>
+    <div class="frow" id="admin-quiz-share-manual" hidden><label for="admin-quiz-share-copy">Press and hold to copy this text</label><textarea id="admin-quiz-share-copy" readonly rows="5"></textarea></div>
+  </section>`;
+  const panel=document.getElementById('admin-quiz-share');
+  panel.scrollIntoView({behavior:'smooth',block:'start'});
+}
+function adminQuizShareData(){
+  const panel=document.getElementById('admin-quiz-share');
+  if(!adminAuth||!panel)return null;
+  const quiz=adminShareQuiz(panel.dataset.quizId);
+  if(!quiz)return null;
+  const url=new URL(routePath('qdetail',quiz.id),location.origin).href;
+  const invitation=document.getElementById('admin-quiz-invitation').value.trim();
+  // Keep the link within the shared text so text-only destinations receive it too.
+  const text=invitation?(invitation.includes(url)?invitation:invitation+'\n\n'+url):url;
+  return {title:quiz.title||'A quiz by DK',url,text};
+}
+async function copyAdminQuizShare(kind){
+  const data=adminQuizShareData();
+  if(!data)return;
+  const text=kind==='link'?data.url:data.text;
+  const status=document.getElementById('admin-quiz-share-status'),manual=document.getElementById('admin-quiz-share-manual'),copy=document.getElementById('admin-quiz-share-copy');
+  status.textContent='';manual.hidden=true;
+  try{
+    if(!navigator.clipboard?.writeText)throw new Error('Clipboard unavailable');
+    await navigator.clipboard.writeText(text);
+    status.textContent=kind==='link'?'Quiz link copied.':'Invitation and quiz link copied.';
+  }catch(error){
+    status.textContent='Automatic copying is unavailable. Select the text below and copy it.';
+    manual.hidden=false;copy.value=text;copy.focus();copy.select();
+  }
+}
+async function sendAdminQuizShare(){
+  const data=adminQuizShareData();
+  if(!data)return;
+  const status=document.getElementById('admin-quiz-share-status'),button=document.getElementById('admin-quiz-share-send');
+  if(button.disabled)return;
+  if(!navigator.share){
+    status.textContent='Use Copy invitation + link, then paste it into the app you want to share with.';
+    return;
+  }
+  status.textContent='';button.disabled=true;
+  try{
+    await navigator.share({title:data.title,text:data.text});
+    status.textContent='Invitation passed to your chosen app.';
+  }catch(error){
+    if(error.name!=='AbortError')status.textContent='Sharing could not open. Use Copy invitation + link instead.';
+  }finally{button.disabled=false}
+}
 function renderAdQuiz(){
   const el=document.getElementById('atab-quiz');
   const badge=Q?({upcoming:'<span class="badge bup">Upcoming</span>',live:'<span class="badge blive">Live</span>',closed:'<span class="badge bcl">Closed</span>'}[Q.state]||''):'<span class="badge bno">No active quiz</span>';
@@ -1050,6 +1119,7 @@ function renderAdQuiz(){
     ${Q?.state==='live'?'<p class="quiz-live-count" id="q-live-count">Loading participant count…</p>':''}
     ${Q?`<div class="qacts">
       <button class="editbtn" onclick="startEditQuiz()">Edit</button>
+      <button type="button" class="qa qa-sub" onclick="openAdminQuizShare(${Q.id})">↗ Share Quiz</button>
       ${Q.state==='upcoming'?`<button class="qa qa-go" onclick="setQState('live')">▶ Go Live</button>`:''}
        ${Q.state==='live'?`<button class="qa qa-cl" onclick="setQState('closed')">■ Close Quiz</button>`:''}
        ${Q.state==='closed'?`<button class="qa qa-arc" onclick="doArchive()">Archive Quiz</button>`:''}
@@ -1058,11 +1128,11 @@ function renderAdQuiz(){
       <button class="delbtn" onclick="askDelQ()">Delete</button>
     </div>`:`<button class="addbtn" style="margin-bottom:0;margin-top:10px" onclick="startCreateQuiz()">+ Create Quiz</button>`}
   </div>`;
-  el.innerHTML=statusHtml+'<div id="qfw"></div><div id="qsv"></div><div id="qsubs"></div>'+
+  el.innerHTML=statusHtml+'<div id="qshare"></div><div id="qfw"></div><div id="qsv"></div><div id="qsubs"></div>'+
     `<div style="margin-top:28px"><h4 style="font-family:'Playfair Display',serif;color:var(--ac);margin-bottom:14px;font-size:1rem">Archive (${QA.length})</h4>
     ${QA.length?QA.map(q=>`<div class="apost">
       <div class="apost-info"><div class="apost-title">${esc(q.title)}</div><div class="apost-meta">${q.date} · ${q.total} participants</div></div>
-      <div class="apost-acts">${q.type==='prize'?`<button class="editbtn" onclick="viewPrizeEntries(${q.id})">Entries</button>`:''}<button class="editbtn" onclick="repeatArchivedQuiz(${q.id})">↻ Repeat</button><button class="delbtn" onclick="delArcQ(${q.id})">Delete</button></div>
+      <div class="apost-acts"><button type="button" class="editbtn" onclick="openAdminQuizShare(${q.id})">↗ Share</button>${q.type==='prize'?`<button class="editbtn" onclick="viewPrizeEntries(${q.id})">Entries</button>`:''}<button class="editbtn" onclick="repeatArchivedQuiz(${q.id})">↻ Repeat</button><button class="delbtn" onclick="delArcQ(${q.id})">Delete</button></div>
     </div>`).join(''):'<div class="empty" style="padding:14px">No archived quizzes yet.</div>'}
     </div>`;
   if(Q?.state==='live')loadLiveQuizCount(Q.id)
