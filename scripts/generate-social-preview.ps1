@@ -79,26 +79,26 @@ $graphics.DrawRectangle($borderPen, 42, 42, 1116, 546)
 $graphics.DrawRectangle([System.Drawing.Pen]::new([System.Drawing.Color]::FromArgb(95, 200, 168, 122), 1), 56, 56, 1088, 518)
 
 $graphics.DrawLine($finePen, 370, 165, 830, 165)
-$graphics.DrawLine($finePen, 370, 510, 830, 510)
+$graphics.DrawLine($finePen, 370, 535, 830, 535)
 
 Add-Ornament $graphics $ornamentBrush 345 165
 Add-Ornament $graphics $ornamentBrush 862 165
-Add-Ornament $graphics $ornamentBrush 345 510
-Add-Ornament $graphics $ornamentBrush 862 510
+Add-Ornament $graphics $ornamentBrush 345 535
+Add-Ornament $graphics $ornamentBrush 862 535
 
 $markFont = [System.Drawing.Font]::new('Georgia', 156, [System.Drawing.FontStyle]::Bold)
 $markSize = $graphics.MeasureString('DK', $markFont)
-$graphics.DrawString('DK', $markFont, [System.Drawing.SolidBrush]::new($cream), ($width - $markSize.Width) / 2, 182)
+$graphics.DrawString('DK', $markFont, [System.Drawing.SolidBrush]::new($cream), ($width - $markSize.Width) / 2, 165)
 
 $titleFont = [System.Drawing.Font]::new('Tunga', 44, [System.Drawing.FontStyle]::Bold)
 $title = 'ಡೀಕೆಯ ಬರಹಗಳು'
 $titleSize = $graphics.MeasureString($title, $titleFont)
-$graphics.DrawString($title, $titleFont, [System.Drawing.SolidBrush]::new($softCream), ($width - $titleSize.Width) / 2, 350)
+$graphics.DrawString($title, $titleFont, [System.Drawing.SolidBrush]::new($softCream), ($width - $titleSize.Width) / 2, 365)
 
 $subtitleFont = [System.Drawing.Font]::new('Tunga', 30, [System.Drawing.FontStyle]::Regular)
 $subtitle = 'ಮಾತು, ಚಿಂತನೆ ಮತ್ತು ಕನ್ನಡ.'
 $subtitleSize = $graphics.MeasureString($subtitle, $subtitleFont)
-$graphics.DrawString($subtitle, $subtitleFont, [System.Drawing.SolidBrush]::new($gold), ($width - $subtitleSize.Width) / 2, 425)
+$graphics.DrawString($subtitle, $subtitleFont, [System.Drawing.SolidBrush]::new($gold), ($width - $subtitleSize.Width) / 2, 455)
 
 $output = Join-Path $PSScriptRoot '..\assets\dk-social-preview.png'
 $image.Save($output, [System.Drawing.Imaging.ImageFormat]::Png)
