@@ -146,7 +146,7 @@ function sitemapEntry(location, date, priority) {
   </url>`;
 }
 
-function renderSitemap({ posts, collections, quizzes, activeQuiz }, generatedAt) {
+function renderSitemap({ posts, collections, books, quizzes, activeQuiz }, generatedAt) {
   const entries = new Map();
   const add = (path, date, priority) => {
     const location = `${SITE_URL}${path}`;
@@ -155,9 +155,10 @@ function renderSitemap({ posts, collections, quizzes, activeQuiz }, generatedAt)
   };
 
   add("/", generatedAt, "1.0");
-  ["/index", "/collections", "/about", "/quiz"].forEach((path) => add(path, generatedAt, "0.7"));
+  ["/index", "/collections", "/library", "/about", "/quiz"].forEach((path) => add(path, generatedAt, "0.7"));
   posts.forEach((post) => add(`/post/${encodeURIComponent(String(post.id))}`, itemDate(post, generatedAt), "0.8"));
   collections.forEach((collection) => add(`/collection/${encodeURIComponent(String(collection.id))}`, itemDate(collection, generatedAt), "0.6"));
+  books.forEach((book) => add(`/library/book/${encodeURIComponent(String(book.id))}`, itemDate(book, generatedAt), "0.6"));
   quizzes
     .filter((quiz) => Array.isArray(quiz.questions))
     .forEach((quiz) => add(`/quiz/${encodeURIComponent(String(quiz.id))}`, itemDate(quiz, generatedAt), "0.5"));
@@ -176,14 +177,15 @@ ${[...entries.entries()]
 }
 
 const token = await firebaseToken();
-const [posts, collections, quizzes, activeQuizDocument] = await Promise.all([
+const [posts, collections, books, quizzes, activeQuizDocument] = await Promise.all([
   listCollection("posts", token),
   listCollection("collections", token),
+  listCollection("libraryBooks", token),
   listCollection("quizzes", token),
   firestoreFetch("siteSettings/activeQuiz", token).catch(() => null),
 ]);
 const activeQuiz = activeQuizDocument ? firestoreDocument(activeQuizDocument).quiz : null;
-const generatedAt = [...posts, ...collections, ...quizzes, activeQuiz]
+const generatedAt = [...posts, ...collections, ...books, ...quizzes, activeQuiz]
   .flatMap((item) => item ? [item.publishedAt, item.updatedAt, item.date] : [])
   .map((value) => new Date(value))
   .filter((date) => !Number.isNaN(date.valueOf()))
@@ -191,7 +193,7 @@ const generatedAt = [...posts, ...collections, ...quizzes, activeQuiz]
 
 await Promise.all([
   writeFile(join(ROOT, "rss.xml"), renderRss(posts, generatedAt), "utf8"),
-  writeFile(join(ROOT, "sitemap.xml"), renderSitemap({ posts, collections, quizzes, activeQuiz }, generatedAt), "utf8"),
+  writeFile(join(ROOT, "sitemap.xml"), renderSitemap({ posts, collections, books, quizzes, activeQuiz }, generatedAt), "utf8"),
 ]);
 
 console.log(`Generated rss.xml with ${Math.min(posts.length, FEED_LIMIT)} posts and sitemap.xml with ${posts.length} post URLs.`);

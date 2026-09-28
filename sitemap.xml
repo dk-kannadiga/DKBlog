@@ -21,6 +21,11 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://dkblog-6c5e5.web.app/library</loc>
+    <lastmod>2026-09-14</lastmod>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://dkblog-6c5e5.web.app/post/1703428496000</loc>
     <lastmod>2023-12-24</lastmod>
     <priority>0.8</priority>

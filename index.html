@@ -27,7 +27,7 @@
   <link rel="alternate" type="application/rss+xml" title="ಡೀಕೆಯ ಬರಹಗಳ ಆರ್‌ಎಸ್‌ಎಸ್ ಸುದ್ದಿ ಹರಿವು" href="/rss.xml">
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8227844604374941" crossorigin="anonymous"></script>
   <link href="https://fonts.googleapis.com/css2?family=Anek+Kannada:wght@400;500;700&family=Noto+Sans+Kannada:wght@400;500;700&family=Lora:ital,wght@0,400;0,600;1,400&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/main.css?v=20260905-1">
+  <link rel="stylesheet" href="/css/main.css?v=20260928-1">
   <title>ಡೀಕೆಯ ಬರಹಗಳು · ಬರಹಗಳ ಜಗತ್ತು</title>
 </head>
 <body>
@@ -39,6 +39,7 @@
       <a href="#" id="nh" onclick="go('home');return false">ಮುಖಪುಟ</a>
       <a href="#" id="ni" onclick="go('index');return false">ಬರಹಗಳ ಪಟ್ಟಿ</a>
       <a href="#" id="nc" onclick="go('collections');return false">ಸಂಕಲನಗಳು</a>
+      <a href="#" id="nl" onclick="go('library');return false">📚 ಪುಸ್ತಕಾಲಯ</a>
       <a href="#" id="na" onclick="go('about');return false">ನನ್ನ ಬಗ್ಗೆ</a>
       <a href="#" id="nq" class="quiz-link" onclick="go('quiz');return false">🏆 ಕ್ವಿಜ಼್</a>
       <a href="#" class="admin-door" onclick="go('adminlogin');return false" aria-label="Admin" title="Admin">⚙</a>
@@ -94,6 +95,32 @@
 <div id="pcol" class="page"><div class="pc">
   <button class="back" onclick="go('collections')">← ಎಲ್ಲ ಸಂಕಲನಗಳು</button>
   <div id="colvc"></div>
+</div></div>
+
+<!-- LIBRARY -->
+<div id="plib" class="page"><div class="pc">
+  <h1 class="stitle">📚 ನನ್ನ ಪುಸ್ತಕಾಲಯ</h1>
+  <p class="ssub">ನನ್ನ ಬಳಿಯಿರುವ ಪುಸ್ತಕಗಳನ್ನು ಹುಡುಕಿ · ಲಭ್ಯವಿರುವ ಪುಸ್ತಕಗಳನ್ನು ಎರವಲು ಕೇಳಿ</p>
+  <div class="library-toolbar">
+    <div class="searchbar library-search">
+      <input type="text" id="lib-search" placeholder="ಪುಸ್ತಕ, ಲೇಖಕ, ಭಾಷೆ ಅಥವಾ ವಿಭಾಗವನ್ನು ಹುಡುಕಿ..." oninput="librarySearch(this.value)">
+      <button class="sclear" id="lib-search-clear" style="display:none" onclick="clearLibrarySearch()">×</button>
+    </div>
+    <select id="lib-availability" class="library-filter" onchange="libraryFilter(this.value)" aria-label="ಲಭ್ಯತೆಯ ಆಧಾರದಲ್ಲಿ ವಿಂಗಡಿಸಿ">
+      <option value="all">ಎಲ್ಲ ಪುಸ್ತಕಗಳು</option>
+      <option value="available">ಲಭ್ಯವಿರುವ ಪುಸ್ತಕಗಳು</option>
+      <option value="borrowed">ಎರವಲು ನೀಡಿದ ಪುಸ್ತಕಗಳು</option>
+      <option value="reference">ಎರವಲಿಗೆ ಇಲ್ಲದ ಪುಸ್ತಕಗಳು</option>
+    </select>
+  </div>
+  <div id="lib-count" class="sres"></div>
+  <div id="lib-grid" class="library-grid"><div class="empty">ಪುಸ್ತಕಗಳನ್ನು ತರಲಾಗುತ್ತಿದೆ...</div></div>
+</div></div>
+
+<!-- LIBRARY BOOK DETAIL -->
+<div id="pbook" class="page"><div class="pc">
+  <button class="back" onclick="go('library')">← ಪುಸ್ತಕಾಲಯಕ್ಕೆ ಹಿಂತಿರುಗಿ</button>
+  <div id="book-view"></div>
 </div></div>
 
 <!-- ABOUT -->
@@ -169,6 +196,7 @@
   <div class="adtabs">
     <div class="adtab on" onclick="aTab(this,'posts')">Posts</div>
     <div class="adtab" onclick="aTab(this,'collections')">Collections</div>
+    <div class="adtab" onclick="aTab(this,'library')">Library</div>
     <div class="adtab" onclick="aTab(this,'cats')">Categories</div>
     <div class="adtab" onclick="aTab(this,'quiz')">Quiz</div>
   </div>
@@ -179,6 +207,14 @@
   <div id="atab-collections" class="adtabc">
     <button class="addbtn" onclick="startAddCollection()">＋ New Collection</button>
     <div id="cfw"></div><div id="cpl"></div>
+  </div>
+  <div id="atab-library" class="adtabc">
+    <button class="addbtn" onclick="startAddLibraryBook()">＋ New Book</button>
+    <div id="libfw"></div>
+    <h3 class="admin-section-title">Books</h3>
+    <div id="libpl"></div>
+    <h3 class="admin-section-title">Borrowing Requests &amp; Loans</h3>
+    <div id="librl"></div>
   </div>
   <div id="atab-cats" class="adtabc">
     <div id="cw"></div>
@@ -200,8 +236,8 @@
     window.resolveFirebaseReady = resolve;
   });
 </script>
-<script type="module" src="/js/firestore-loader.js?v=20260904-5"></script>
-<script src="/js/app.js?v=20260905-2"></script>
+<script type="module" src="/js/firestore-loader.js?v=20260928-1"></script>
+<script src="/js/app.js?v=20260928-1"></script>
 <script>
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js"));

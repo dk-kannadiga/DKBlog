@@ -187,6 +187,75 @@ window.deleteFirestoreCollection = async function (item) {
   await deleteDoc(doc(db, "collections", item.firestoreId || String(item.id)));
 };
 
+window.getFirestoreLibraryBooks = async function () {
+  const snapshot = await getDocs(collection(db, "libraryBooks"));
+  return snapshot.docs
+    .map((item) => ({ ...item.data(), firestoreId: item.id, id: item.data().id || item.id }))
+    .sort((a, b) => String(a.title || "").localeCompare(String(b.title || ""), "kn"));
+};
+window.getFirestoreLibraryBookById = async function (bookId) {
+  const snapshot = await getDoc(doc(db, "libraryBooks", String(bookId)));
+  return snapshot.exists()
+    ? { ...snapshot.data(), firestoreId: snapshot.id, id: snapshot.data().id || snapshot.id }
+    : null;
+};
+window.saveFirestoreLibraryBook = async function (book) {
+  const { firestoreId, ...bookData } = book;
+  await setDoc(
+    doc(db, "libraryBooks", firestoreId || String(bookData.id)),
+    { ...bookData, updatedAt: serverTimestamp() },
+    { merge: true },
+  );
+};
+window.deleteFirestoreLibraryBook = async function (book) {
+  await deleteDoc(doc(db, "libraryBooks", book.firestoreId || String(book.id)));
+};
+function libraryRequestId(bookId, userId) {
+  return `${String(bookId)}_${userId}`;
+}
+window.getMyFirestoreLibraryRequest = async function (bookId) {
+  const user = await requireUser();
+  const snapshot = await getDoc(doc(db, "libraryRequests", libraryRequestId(bookId, user.uid)));
+  return snapshot.exists() ? { ...snapshot.data(), firestoreId: snapshot.id } : null;
+};
+window.saveFirestoreLibraryRequest = async function (book, request) {
+  const user = await requireUser();
+  const bookId = String(book.id);
+  await setDoc(doc(db, "libraryRequests", libraryRequestId(bookId, user.uid)), {
+    bookId,
+    bookTitle: String(book.title || "").trim().slice(0, 160),
+    userId: user.uid,
+    name: String(request.name || "").trim().slice(0, 80),
+    contact: String(request.contact || "").trim().slice(0, 120),
+    message: String(request.message || "").trim().slice(0, 500),
+    status: "requested",
+    requestedAt: serverTimestamp(),
+  });
+};
+window.getFirestoreLibraryRequests = async function () {
+  const snapshot = await getDocs(collection(db, "libraryRequests"));
+  return snapshot.docs.map((item) => ({ ...item.data(), firestoreId: item.id }));
+};
+window.setFirestoreLibraryRequestStatus = async function (requestId, bookId, status, bookStatus, details = {}) {
+  const batch = writeBatch(db);
+  batch.set(
+    doc(db, "libraryRequests", String(requestId)),
+    { status, ...details, updatedAt: serverTimestamp() },
+    { merge: true },
+  );
+  if (bookStatus) {
+    batch.set(
+      doc(db, "libraryBooks", String(bookId)),
+      { status: bookStatus, updatedAt: serverTimestamp() },
+      { merge: true },
+    );
+  }
+  await batch.commit();
+};
+window.deleteFirestoreLibraryRequest = async function (requestId) {
+  await deleteDoc(doc(db, "libraryRequests", String(requestId)));
+};
+
 window.getFirestoreCategories = async function () {
   const categories = await getDoc(doc(db, "siteSettings", "categories"));
   return categories.exists() ? categories.data().items : null;

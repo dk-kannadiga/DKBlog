@@ -5,9 +5,9 @@ const LC={'ಕನ್ನಡ':'kn','English':'en','Mixed':'mixed'};
 
 // Always wait for the current Firestore result before showing published content.
 // The bundled sample posts are only used if Firestore is unavailable.
-let POSTS=[],COLLECTIONS=[],postsLoading=true,collectionsLoading=true,contentLoading=true,CATS=JSON.parse(JSON.stringify(DC)),likes={},likedMe=new Set();
+let POSTS=[],COLLECTIONS=[],BOOKS=[],postsLoading=true,collectionsLoading=true,libraryLoading=true,contentLoading=true,CATS=JSON.parse(JSON.stringify(DC)),likes={},likedMe=new Set();
 let Q=null,QA=[...DQA],qDraft=[],editQId=false,certDraft=null,qSubmitted=false,qSubmissionQuizId=null,qSubmissionCheckInFlight=false,qSubmitting=false;
-let adminAuth=false,editId=null,collectionEditId=null,catF='all',searchQ='',participantStatus=null,participantSort={field:'score',direction:'desc'};
+let adminAuth=false,editId=null,collectionEditId=null,bookEditId=null,catF='all',searchQ='',librarySearchQ='',libraryAvailability='all',libraryRequests=[],libraryAdminLoading=false,participantStatus=null,participantSort={field:'score',direction:'desc'};
 const HOME_PAGE_SIZE=12;
 let postsFullyLoaded=false,homeHasMore=false,homeLoadingMore=false,homeVisibleCount=0,allPostsPromise=null;
 
@@ -26,12 +26,13 @@ function clearSearch(){
 }
 
 async function loadAll(){
-  const [posts,categories,activeQuiz,archive,collections] = await Promise.allSettled([
+  const [posts,categories,activeQuiz,archive,collections,libraryBooks] = await Promise.allSettled([
     window.getFirestorePostsPage?window.getFirestorePostsPage(true):window.getFirestorePosts?window.getFirestorePosts():Promise.resolve([...DP]),
     window.getFirestoreCategories?window.getFirestoreCategories():Promise.resolve(JSON.parse(JSON.stringify(DC))),
     window.getFirestoreActiveQuiz?window.getFirestoreActiveQuiz():Promise.resolve(null),
     window.getFirestoreQuizzes?window.getFirestoreQuizzes():Promise.resolve([...DQA]),
-    window.getFirestoreCollections?window.getFirestoreCollections():Promise.resolve([])
+    window.getFirestoreCollections?window.getFirestoreCollections():Promise.resolve([]),
+    window.getFirestoreLibraryBooks?window.getFirestoreLibraryBooks():Promise.resolve([])
   ]);
 
   if(posts.status==='fulfilled'){
@@ -64,6 +65,9 @@ async function loadAll(){
   if(collections.status==='fulfilled'){COLLECTIONS=collections.value}
   else console.error('Collections load failed:',collections.reason);
   collectionsLoading=false;
+  if(libraryBooks.status==='fulfilled')BOOKS=libraryBooks.value;
+  else console.error('Library load failed:',libraryBooks.reason);
+  libraryLoading=false;
 
   // Show the Firestore content as soon as it arrives. Likes are deliberately
   // loaded afterward because they require the anonymous visitor session.
@@ -220,9 +224,11 @@ function todayStr(){return new Date().toLocaleDateString('en-IN',{day:'numeric',
 // ── NAVIGATION ────────────────────────────────────────
 function routePath(page,id){
   if(page==='post'&&id!==undefined&&id!==null)return `/post/${encodeURIComponent(String(id))}`;
+  if(page==='book'&&id!==undefined&&id!==null)return `/library/book/${encodeURIComponent(String(id))}`;
   if(page==='qdetail'&&id!==undefined&&id!==null)return `/quiz/${encodeURIComponent(String(id))}`;
   if(page==='qplay'&&id!==undefined&&id!==null)return `/quiz/${encodeURIComponent(String(id))}`;
   if(page==='collection'&&id!==undefined&&id!==null)return `/collection/${encodeURIComponent(String(id))}`;
+  if(page==='library')return '/library';
   if(page==='collections')return '/collections';
   if(page==='index')return '/index';
   if(page==='about')return '/about';
@@ -235,8 +241,10 @@ function routeFromLocation(){
   if(legacy)return {page:legacy[1]==='post'?'post':'qdetail',id:decodeURIComponent(legacy[2])};
   const parts=location.pathname.split('/').filter(Boolean).map(part=>decodeURIComponent(part));
   if(parts[0]==='post'&&parts[1])return {page:'post',id:parts[1]};
+  if(parts[0]==='library'&&parts[1]==='book'&&parts[2])return {page:'book',id:parts[2]};
   if(parts[0]==='quiz'&&parts[1])return {page:'qdetail',id:parts[1]};
   if(parts[0]==='collection'&&parts[1])return {page:'collection',id:parts[1]};
+  if(parts[0]==='library')return {page:'library'};
   if(parts[0]==='quiz')return {page:'quiz'};
   if(parts[0]==='collections')return {page:'collections'};
   if(parts[0]==='index')return {page:'index'};
@@ -256,6 +264,7 @@ function openCurrentRoute(){
 function findPost(id){return POSTS.find(post=>String(post.id)===String(id))}
 function findQuiz(id){return QA.find(quiz=>String(quiz.id)===String(id))}
 function findCollection(id){return COLLECTIONS.find(collection=>String(collection.id)===String(id))}
+function findBook(id){return BOOKS.find(book=>String(book.id)===String(id))}
 function collectionPosts(id){
   const position=post=>Number(post.collectionOrder)>0?Number(post.collectionOrder):Number(post.id)||0;
   return POSTS.filter(post=>String(post.collectionId||'')===String(id)).sort((a,b)=>position(a)-position(b)||Number(a.id)-Number(b.id));
@@ -266,13 +275,15 @@ function go(page,id,{sync=true,replace=false}={}){
   if(sync)syncRoute(page,id,replace);
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
   document.querySelectorAll('nav a').forEach(a=>a.classList.remove('on'));
-  const map={home:'ph',post:'pp',index:'pidx',collections:'pcols',collection:'pcol',about:'pab',adminlogin:'pal',admin:'pad',quiz:'pq',qplay:'pqp',qdetail:'pqd',cert:'pcert'};
+  const map={home:'ph',post:'pp',index:'pidx',collections:'pcols',collection:'pcol',library:'plib',book:'pbook',about:'pab',adminlogin:'pal',admin:'pad',quiz:'pq',qplay:'pqp',qdetail:'pqd',cert:'pcert'};
   document.getElementById(map[page])?.classList.add('on');
   if(page==='home'){document.getElementById('nh').classList.add('on');renderHome()}
   else if(page==='post'&&id)renderPost(id);
   else if(page==='index'){document.getElementById('ni').classList.add('on');renderIdx()}
   else if(page==='collections'){document.getElementById('nc').classList.add('on');renderCollections()}
   else if(page==='collection'&&id){document.getElementById('nc').classList.add('on');renderCollection(id)}
+  else if(page==='library'){document.getElementById('nl').classList.add('on');renderLibrary()}
+  else if(page==='book'&&id){document.getElementById('nl').classList.add('on');renderLibraryBook(id)}
   else if(page==='about')document.getElementById('na').classList.add('on');
   else if(page==='admin'){if(!adminAuth){go('adminlogin');return}renderAdmin()}
   else if(page==='quiz'){document.getElementById('nq').classList.add('on');renderQuiz()}
@@ -467,6 +478,113 @@ function shrCollection(id){
   const collection=findCollection(id),toast=document.getElementById('cst'+id),url=new URL(routePath('collection',id),location.origin).href;
   if(navigator.share)navigator.share({title:collection?.title||'',text:'ಡೀಕೆಯ ಒಂದು ಸಂಕಲನ',url}).catch(()=>{});
   else{try{navigator.clipboard.writeText(url)}catch(e){}if(toast){toast.classList.add('show');setTimeout(()=>toast.classList.remove('show'),2500)}}
+}
+
+// ── LIBRARY PUBLIC ────────────────────────────────────
+function jsArg(value){return`'${String(value).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/\r/g,'\\r').replace(/\n/g,'\\n').replace(/</g,'\\x3c').replace(/>/g,'\\x3e').replace(/&/g,'\\x26').replace(/"/g,'\\x22')}'`}
+function libraryBookState(book){
+  if(book.lendingPolicy==='reference')return{key:'reference',label:'ಎರವಲಿಗೆ ಇಲ್ಲ',className:'reference'};
+  return{
+    available:{key:'available',label:'ಲಭ್ಯವಿದೆ',className:'available'},
+    reserved:{key:'reserved',label:'ಕಾಯ್ದಿರಿಸಲಾಗಿದೆ',className:'reserved'},
+    borrowed:{key:'borrowed',label:'ಎರವಲು ನೀಡಲಾಗಿದೆ',className:'borrowed'},
+    unavailable:{key:'unavailable',label:'ಸದ್ಯ ಲಭ್ಯವಿಲ್ಲ',className:'unavailable'},
+  }[book.status]||{key:'available',label:'ಲಭ್ಯವಿದೆ',className:'available'};
+}
+function librarySearch(value){
+  librarySearchQ=String(value||'').trim().toLowerCase();
+  const clear=document.getElementById('lib-search-clear');if(clear)clear.style.display=librarySearchQ?'':'none';
+  renderLibrary();
+}
+function clearLibrarySearch(){
+  librarySearchQ='';const input=document.getElementById('lib-search');if(input)input.value='';
+  const clear=document.getElementById('lib-search-clear');if(clear)clear.style.display='none';renderLibrary();
+}
+function libraryFilter(value){libraryAvailability=value||'all';renderLibrary()}
+function renderLibrary(){
+  const grid=document.getElementById('lib-grid'),count=document.getElementById('lib-count');if(!grid)return;
+  if(libraryLoading){grid.innerHTML='<div class="empty">ಪುಸ್ತಕಗಳನ್ನು ತರಲಾಗುತ್ತಿದೆ...</div>';if(count)count.textContent='';return}
+  let books=[...BOOKS];
+  if(librarySearchQ)books=books.filter(book=>[book.title,book.author,book.language,book.category,book.isbn,book.publisher].some(value=>String(value||'').toLowerCase().includes(librarySearchQ)));
+  if(libraryAvailability==='available')books=books.filter(book=>libraryBookState(book).key==='available');
+  else if(libraryAvailability==='borrowed')books=books.filter(book=>['borrowed','reserved'].includes(libraryBookState(book).key));
+  else if(libraryAvailability==='reference')books=books.filter(book=>libraryBookState(book).key==='reference');
+  books.sort((a,b)=>String(a.title||'').localeCompare(String(b.title||''),'kn'));
+  if(count)count.textContent=`${books.length} ಪುಸ್ತಕ${books.length===1?'':'ಗಳು'}`;
+  if(!books.length){grid.innerHTML='<div class="empty">ಹೊಂದಿಕೆಯಾಗುವ ಪುಸ್ತಕಗಳು ಸಿಗಲಿಲ್ಲ.</div>';return}
+  grid.innerHTML=books.map(book=>{
+    const cover=safeContentUrl(book.coverImage),state=libraryBookState(book),argument=jsArg(book.id);
+    return`<article class="library-card" onclick="go('book',${argument})">
+      <div class="library-cover">${cover?`<img src="${esc(cover)}" alt="${esc(book.title)} ಪುಸ್ತಕದ ಮುಖಪುಟ" loading="lazy" onerror="this.parentElement.innerHTML='📚'">`:'📚'}</div>
+      <div class="library-card__body"><span class="library-status ${state.className}">${state.label}</span><h2>${esc(book.title)}</h2><p class="library-author">${esc(book.author||'ಲೇಖಕರು ತಿಳಿಸಿಲ್ಲ')}</p>
+      <p class="library-meta">${[book.language,book.category,book.year].filter(Boolean).map(esc).join(' · ')}</p>${book.description?`<p class="library-description">${esc(autoExc(book.description))}</p>`:''}</div>
+    </article>`;
+  }).join('');
+}
+async function renderLibraryBook(id){
+  const el=document.getElementById('book-view');if(!el)return;
+  let book=findBook(id);
+  if(!book&&window.getFirestoreLibraryBookById){
+    el.innerHTML='<div class="empty">ಪುಸ್ತಕದ ವಿವರಗಳನ್ನು ತರಲಾಗುತ್ತಿದೆ...</div>';
+    try{book=await window.getFirestoreLibraryBookById(id);if(book){BOOKS.push(book)}}catch(error){console.error('Library book load failed:',error)}
+  }
+  if(!book){el.innerHTML='<div class="empty">ಈ ಪುಸ್ತಕ ಸಿಗಲಿಲ್ಲ.</div>';return}
+  const cover=safeContentUrl(book.coverImage),state=libraryBookState(book),argument=jsArg(book.id);
+  el.innerHTML=`<article class="library-book-view">
+    <div class="library-book-cover">${cover?`<img src="${esc(cover)}" alt="${esc(book.title)} ಪುಸ್ತಕದ ಮುಖಪುಟ" onerror="this.parentElement.innerHTML='📚'">`:'📚'}</div>
+    <div class="library-book-info"><span class="library-status ${state.className}">${state.label}</span><h1>${esc(book.title)}</h1><p class="library-book-author">${esc(book.author||'ಲೇಖಕರು ತಿಳಿಸಿಲ್ಲ')}</p>
+      <dl class="library-facts">
+        ${book.language?`<div><dt>ಭಾಷೆ</dt><dd>${esc(book.language)}</dd></div>`:''}
+        ${book.category?`<div><dt>ವಿಭಾಗ</dt><dd>${esc(book.category)}</dd></div>`:''}
+        ${book.publisher?`<div><dt>ಪ್ರಕಾಶಕರು</dt><dd>${esc(book.publisher)}</dd></div>`:''}
+        ${book.year?`<div><dt>ವರ್ಷ</dt><dd>${esc(book.year)}</dd></div>`:''}
+        ${book.isbn?`<div><dt>ISBN</dt><dd>${esc(book.isbn)}</dd></div>`:''}
+        ${book.shelf?`<div><dt>ಇರುವ ಸ್ಥಳ</dt><dd>${esc(book.shelf)}</dd></div>`:''}
+      </dl>
+      ${book.description?`<p class="library-book-description">${esc(book.description)}</p>`:''}
+      <div class="pactions"><button class="sbtn" onclick="shareLibraryBook(${argument})">↗ ಪುಸ್ತಕ ಹಂಚಿಕೊಳ್ಳಿ</button><span class="stoast" id="book-share-toast">ಕೊಂಡಿಯನ್ನು ನಕಲಿಸಲಾಗಿದೆ!</span></div>
+    </div>
+  </article><section class="library-request" id="library-request-area"><div class="empty">ಎರವಲು ಮಾಹಿತಿಯನ್ನು ಪರಿಶೀಲಿಸಲಾಗುತ್ತಿದೆ...</div></section>`;
+  renderLibraryRequestArea(book);
+}
+async function renderLibraryRequestArea(book){
+  const el=document.getElementById('library-request-area');if(!el)return;
+  const state=libraryBookState(book);
+  if(book.lendingPolicy==='reference'){
+    el.innerHTML='<h2>ಎರವಲು</h2><p>ಈ ಪುಸ್ತಕವನ್ನು ಸ್ಥಳದಲ್ಲೇ ಓದಲು ಮಾತ್ರ ಇಡಲಾಗಿದೆ; ಎರವಲಿಗೆ ಲಭ್ಯವಿಲ್ಲ.</p>';return;
+  }
+  let existing=null;
+  try{existing=window.getMyFirestoreLibraryRequest?await window.getMyFirestoreLibraryRequest(book.id):null}
+  catch(error){console.error('Borrowing request check failed:',error);el.innerHTML='<div class="empty">ಎರವಲು ಮಾಹಿತಿಯನ್ನು ತರಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ. ದಯವಿಟ್ಟು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.</div>';return}
+  if(!document.getElementById('library-request-area'))return;
+  if(existing&&['requested','approved','borrowed'].includes(existing.status)){
+    const labels={requested:'ನಿಮ್ಮ ವಿನಂತಿಯನ್ನು ಕಳುಹಿಸಲಾಗಿದೆ. ಉತ್ತರಕ್ಕಾಗಿ ಕಾಯಿರಿ.',approved:'ನಿಮ್ಮ ವಿನಂತಿಯನ್ನು ಒಪ್ಪಲಾಗಿದೆ. ಪುಸ್ತಕ ಪಡೆಯಲು ಸಂಪರ್ಕಿಸಿ.',borrowed:`ಈ ಪುಸ್ತಕ ಈಗ ನಿಮ್ಮ ಹೆಸರಿನಲ್ಲಿ ಎರವಲಾಗಿದೆ.${existing.dueDate?' ಹಿಂದಿರುಗಿಸುವ ದಿನ: '+esc(existing.dueDate):''}`};
+    el.innerHTML=`<div class="library-request-result"><h2>ನಿಮ್ಮ ಎರವಲು ಸ್ಥಿತಿ</h2><p>${labels[existing.status]}</p></div>`;return;
+  }
+  if(state.key!=='available'){
+    el.innerHTML=`<h2>ಎರವಲು</h2><p>${state.label}. ಪುಸ್ತಕ ಮತ್ತೆ ಲಭ್ಯವಾದಾಗ ವಿನಂತಿಸಬಹುದು.</p>`;return;
+  }
+  el.innerHTML=`<h2>ಈ ಪುಸ್ತಕವನ್ನು ಎರವಲು ಕೇಳಿ</h2><p class="library-request-note">ವಿನಂತಿ ಒಪ್ಪಿದ ಬಳಿಕ ನಿಮ್ಮನ್ನು ಸಂಪರ್ಕಿಸಲಾಗುತ್ತದೆ. ನಿಮ್ಮ ಸಂಪರ್ಕ ಮಾಹಿತಿ ತಾಣದ ನಿರ್ವಾಹಕರಿಗೆ ಮಾತ್ರ ಕಾಣಿಸುತ್ತದೆ.</p>
+    <div class="library-request-form">
+      <div class="frow2"><div class="frow"><label for="borrow-name">ನಿಮ್ಮ ಹೆಸರು</label><input id="borrow-name" type="text" maxlength="80" autocomplete="name"></div><div class="frow"><label for="borrow-contact">ದೂರವಾಣಿ / ಮಿಂಚಂಚೆ</label><input id="borrow-contact" type="text" maxlength="120" autocomplete="email"></div></div>
+      <div class="frow"><label for="borrow-message">ಸಂದೇಶ <span style="font-weight:400">(ಐಚ್ಛಿಕ)</span></label><textarea id="borrow-message" rows="3" maxlength="500" placeholder="ಪುಸ್ತಕವನ್ನು ಯಾವಾಗ ಪಡೆಯಲು ಬಯಸುತ್ತೀರಿ?"></textarea></div>
+      <button class="library-request-button" id="borrow-submit" onclick="submitLibraryRequest(${jsArg(book.id)})">ವಿನಂತಿ ಕಳುಹಿಸಿ</button>
+    </div>`;
+}
+async function submitLibraryRequest(id){
+  const book=findBook(id),name=document.getElementById('borrow-name')?.value.trim(),contact=document.getElementById('borrow-contact')?.value.trim(),message=document.getElementById('borrow-message')?.value.trim()||'',button=document.getElementById('borrow-submit');
+  if(!book)return;
+  if(!name||name.length<2){alert('ದಯವಿಟ್ಟು ನಿಮ್ಮ ಹೆಸರನ್ನು ನಮೂದಿಸಿ.');return}
+  if(!contact||contact.length<3){alert('ದಯವಿಟ್ಟು ದೂರವಾಣಿ ಸಂಖ್ಯೆ ಅಥವಾ ಮಿಂಚಂಚೆ ವಿಳಾಸವನ್ನು ನಮೂದಿಸಿ.');return}
+  if(!window.saveFirestoreLibraryRequest){alert('ಎರವಲು ವಿನಂತಿ ಸೇವೆ ಸಿದ್ಧವಾಗಿಲ್ಲ. ದಯವಿಟ್ಟು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.');return}
+  if(button){button.disabled=true;button.textContent='ವಿನಂತಿಯನ್ನು ಕಳುಹಿಸಲಾಗುತ್ತಿದೆ…'}
+  try{await window.saveFirestoreLibraryRequest(book,{name,contact,message});await renderLibraryRequestArea(book)}
+  catch(error){console.error('Borrowing request save failed:',error);alert('ವಿನಂತಿಯನ್ನು ಕಳುಹಿಸಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ. ದಯವಿಟ್ಟು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.');if(button){button.disabled=false;button.textContent='ವಿನಂತಿ ಕಳುಹಿಸಿ'}}
+}
+function shareLibraryBook(id){
+  const book=findBook(id),toast=document.getElementById('book-share-toast'),url=new URL(routePath('book',id),location.origin).href;
+  if(navigator.share)navigator.share({title:book?.title||'',text:'ಡೀಕೆಯ ಪುಸ್ತಕಾಲಯದಲ್ಲಿರುವ ಪುಸ್ತಕ',url}).catch(()=>{});
+  else{try{navigator.clipboard.writeText(url)}catch(error){}if(toast){toast.classList.add('show');setTimeout(()=>toast.classList.remove('show'),2500)}}
 }
 
 // ── QUIZ PUBLIC ───────────────────────────────────────
@@ -748,13 +866,14 @@ async function aTab(btn,tab){
   }
   if(tab==='posts')renderAdPosts();
   else if(tab==='collections')renderAdCollections();
+  else if(tab==='library')loadAdminLibrary();
   else if(tab==='cats')renderAdCats();
   else if(tab==='quiz')renderAdQuiz()
 }
 async function renderAdmin(){
   document.querySelectorAll('.adtab').forEach((b,i)=>b.classList.toggle('on',i===0));
   document.querySelectorAll('.adtabc').forEach((c,i)=>c.classList.toggle('on',i===0));
-  document.getElementById('afw').innerHTML='';document.getElementById('cfw').innerHTML='';editId=null;collectionEditId=null;
+  document.getElementById('afw').innerHTML='';document.getElementById('cfw').innerHTML='';document.getElementById('libfw').innerHTML='';editId=null;collectionEditId=null;bookEditId=null;
   const list=document.getElementById('apl');
   if(!postsFullyLoaded){
     list.innerHTML='<div class="empty">Loading all writings...</div>';
@@ -1002,6 +1121,133 @@ async function delCollection(id){
     postSnapshots.forEach(snapshot=>{const index=POSTS.findIndex(post=>String(post.id)===String(snapshot.id));if(index>=0)POSTS[index]=snapshot});
     COLLECTIONS=collectionsSnapshot;console.error('Collection deletion failed:',error);alert('The collection could not be deleted. Please try again.');renderAdCollections();
   }
+}
+
+// ── ADMIN: LIBRARY ─────────────────────────────────────
+function sortLibraryBooks(){BOOKS.sort((a,b)=>String(a.title||'').localeCompare(String(b.title||''),'kn'))}
+function libraryAdminStatus(book){
+  if(book.lendingPolicy==='reference')return'Reference only';
+  return{available:'Available',reserved:'Reserved',borrowed:'Borrowed',unavailable:'Unavailable'}[book.status]||'Available';
+}
+function libraryDate(value){
+  if(!value)return'—';
+  const date=typeof value?.toDate==='function'?value.toDate():value?.seconds?new Date(value.seconds*1000):new Date(value);
+  return Number.isNaN(date.valueOf())?String(value):date.toLocaleString('en-IN',{dateStyle:'medium',timeStyle:'short'});
+}
+function libraryDateValue(value){
+  if(!value)return 0;
+  const date=typeof value?.toDate==='function'?value.toDate():value?.seconds?new Date(value.seconds*1000):new Date(value);
+  return Number.isNaN(date.valueOf())?0:date.valueOf();
+}
+async function loadAdminLibrary(){
+  if(libraryAdminLoading)return;
+  const books=document.getElementById('libpl'),requests=document.getElementById('librl');
+  if(books)books.innerHTML='<div class="empty">Loading books...</div>';
+  if(requests)requests.innerHTML='<div class="empty">Loading requests...</div>';
+  libraryAdminLoading=true;
+  try{
+    const [freshBooks,freshRequests]=await Promise.all([
+      window.getFirestoreLibraryBooks?window.getFirestoreLibraryBooks():Promise.resolve(BOOKS),
+      window.getFirestoreLibraryRequests?window.getFirestoreLibraryRequests():Promise.resolve([]),
+    ]);
+    BOOKS=freshBooks;libraryRequests=freshRequests;libraryLoading=false;sortLibraryBooks();renderAdLibraryBooks();renderAdLibraryRequests();
+  }catch(error){console.error('Admin library load failed:',error);if(books)books.innerHTML='<div class="empty">Library data could not be loaded.</div>';if(requests)requests.innerHTML=''}
+  finally{libraryAdminLoading=false}
+}
+function renderAdLibraryBooks(){
+  const el=document.getElementById('libpl');if(!el)return;
+  if(!BOOKS.length){el.innerHTML='<div class="empty">No books yet. Add the first book above.</div>';return}
+  el.innerHTML=BOOKS.map(book=>`<div class="apost">
+    <div class="apost-info"><div class="apost-title">📚 ${esc(book.title)}</div><div class="apost-meta">${esc(book.author||'Author not set')} · ${esc(libraryAdminStatus(book))}${book.shelf?' · '+esc(book.shelf):''}</div></div>
+    <div class="apost-acts"><button class="editbtn" onclick="copyLibraryBookLink(${jsArg(book.id)})">Copy Link</button><button class="editbtn" onclick="startEditLibraryBook(${jsArg(book.id)})">Edit</button><button class="delbtn" onclick="deleteLibraryBook(${jsArg(book.id)})">Delete</button></div>
+  </div>`).join('');
+}
+function libraryBookFormHtml(){
+  const book=bookEditId?findBook(bookEditId):null;
+  return`<div class="aform"><h3>${book?'Edit Book':'New Book'}</h3>
+    <div class="frow2"><div class="frow"><label>Title</label><input id="libf-title" type="text" maxlength="160"></div><div class="frow"><label>Author</label><input id="libf-author" type="text" maxlength="120"></div></div>
+    <div class="frow2"><div class="frow"><label>Language</label><input id="libf-language" type="text" maxlength="60" placeholder="e.g. ಕನ್ನಡ"></div><div class="frow"><label>Category</label><input id="libf-category" type="text" maxlength="80" placeholder="e.g. ಕಾದಂಬರಿ"></div></div>
+    <div class="frow2"><div class="frow"><label>Publisher</label><input id="libf-publisher" type="text" maxlength="120"></div><div class="frow"><label>Published year</label><input id="libf-year" type="text" maxlength="12"></div></div>
+    <div class="frow2"><div class="frow"><label>ISBN / Barcode</label><input id="libf-isbn" type="text" maxlength="32"></div><div class="frow"><label>Shelf / Location</label><input id="libf-shelf" type="text" maxlength="80" placeholder="e.g. Cupboard A · Shelf 2"></div></div>
+    <div class="frow"><label>Cover image URL <span style="font-weight:400;color:var(--gd)">(optional)</span></label><input id="libf-cover" type="url" maxlength="1000" placeholder="https://..."></div>
+    <div class="frow"><label>Description <span style="font-weight:400;color:var(--gd)">(optional)</span></label><textarea id="libf-description" rows="4" maxlength="1200"></textarea></div>
+    <div class="frow2"><div class="frow"><label>Lending</label><select id="libf-policy"><option value="lendable">Visitors may request</option><option value="reference">Reference only — no lending</option></select></div><div class="frow"><label>Availability</label><select id="libf-status"><option value="available">Available</option><option value="reserved">Reserved</option><option value="borrowed">Borrowed</option><option value="unavailable">Unavailable</option></select></div></div>
+    <div class="fbts"><button class="savebtn" onclick="saveLibraryBook()">💾 Save Book</button><button class="cancelbtn" onclick="cancelLibraryBookForm()">Cancel</button></div>
+  </div>`;
+}
+function startAddLibraryBook(){
+  bookEditId=null;document.getElementById('libfw').innerHTML=libraryBookFormHtml();document.getElementById('libf-language').value='ಕನ್ನಡ';document.getElementById('libfw').scrollIntoView({behavior:'smooth',block:'start'});
+}
+function startEditLibraryBook(id){
+  const book=findBook(id);if(!book)return;bookEditId=id;document.getElementById('libfw').innerHTML=libraryBookFormHtml();
+  const values={title:book.title,author:book.author,language:book.language,category:book.category,publisher:book.publisher,year:book.year,isbn:book.isbn,shelf:book.shelf,cover:book.coverImage,description:book.description};
+  Object.entries(values).forEach(([key,value])=>{const input=document.getElementById('libf-'+key);if(input)input.value=value||''});
+  document.getElementById('libf-policy').value=book.lendingPolicy||'lendable';document.getElementById('libf-status').value=book.status||'available';document.getElementById('libfw').scrollIntoView({behavior:'smooth',block:'start'});
+}
+function cancelLibraryBookForm(){const el=document.getElementById('libfw');if(el)el.innerHTML='';bookEditId=null}
+async function saveLibraryBook(){
+  const value=id=>document.getElementById(id)?.value.trim()||'',title=value('libf-title'),author=value('libf-author'),coverImage=value('libf-cover');
+  if(!title||!author){alert('Title and Author are required.');return}
+  if(coverImage&&!safeContentUrl(coverImage)){alert('Please enter a valid http or https cover image URL.');return}
+  const existing=bookEditId?findBook(bookEditId):null;
+  const book={...(existing||{}),id:existing?.id||Date.now(),title,author,language:value('libf-language'),category:value('libf-category'),publisher:value('libf-publisher'),year:value('libf-year'),isbn:value('libf-isbn'),shelf:value('libf-shelf'),coverImage,description:value('libf-description'),lendingPolicy:document.getElementById('libf-policy')?.value||'lendable',status:document.getElementById('libf-status')?.value||'available'};
+  try{
+    await window.saveFirestoreLibraryBook(book);
+    if(existing){const index=BOOKS.findIndex(item=>String(item.id)===String(existing.id));if(index>=0)BOOKS[index]=book}else BOOKS.push(book);
+    sortLibraryBooks();cancelLibraryBookForm();renderAdLibraryBooks();renderLibrary();
+  }catch(error){console.error('Book save failed:',error);alert('The book could not be saved. Please try again.')}
+}
+async function deleteLibraryBook(id){
+  const book=findBook(id);if(!book)return;
+  const active=libraryRequests.some(request=>String(request.bookId)===String(id)&&['requested','approved','borrowed'].includes(request.status));
+  if(active){alert('This book has an active request or loan. Close it before deleting the book.');return}
+  if(!confirm(`Delete “${book.title}” permanently?`))return;
+  try{await window.deleteFirestoreLibraryBook(book);BOOKS=BOOKS.filter(item=>String(item.id)!==String(id));renderAdLibraryBooks();renderLibrary()}
+  catch(error){console.error('Book deletion failed:',error);alert('The book could not be deleted. Please try again.')}
+}
+async function copyLibraryBookLink(id){
+  const url=new URL(routePath('book',id),location.origin).href;
+  try{await navigator.clipboard.writeText(url);alert('Permanent book link copied. Use this link in your QR code.')}
+  catch(error){window.prompt('Copy this permanent book link:',url)}
+}
+function renderAdLibraryRequests(){
+  const el=document.getElementById('librl');if(!el)return;
+  if(!libraryRequests.length){el.innerHTML='<div class="empty">No borrowing requests yet.</div>';return}
+  const priority={requested:0,approved:1,borrowed:2,returned:3,rejected:4};
+  const requests=[...libraryRequests].sort((a,b)=>(priority[a.status]??9)-(priority[b.status]??9)||libraryDateValue(b.requestedAt)-libraryDateValue(a.requestedAt));
+  const labels={requested:'Requested',approved:'Approved',borrowed:'Borrowed',returned:'Returned',rejected:'Rejected'};
+  el.innerHTML=requests.map(request=>{
+    const requestId=jsArg(request.firestoreId),bookId=jsArg(request.bookId),book=findBook(request.bookId),status=request.status||'requested';
+    let actions='';
+    if(status==='requested')actions=`<button class="editbtn" onclick="adminLibraryRequestAction(${requestId},'approved')">Approve</button><button class="delbtn" onclick="adminLibraryRequestAction(${requestId},'rejected')">Reject</button>`;
+    else if(status==='approved')actions=`<button class="editbtn" onclick="adminLibraryRequestAction(${requestId},'borrowed')">Issue Book</button><button class="delbtn" onclick="adminLibraryRequestAction(${requestId},'rejected')">Reject</button>`;
+    else if(status==='borrowed')actions=`<button class="editbtn" onclick="adminLibraryRequestAction(${requestId},'returned')">Mark Returned</button>`;
+    else actions=`<button class="delbtn" onclick="deleteLibraryRequest(${requestId})">Delete Record</button>`;
+    return`<div class="library-admin-request"><div class="library-admin-request__main"><div><strong>${esc(request.bookTitle||book?.title||'Unknown book')}</strong> <span class="library-admin-badge ${esc(status)}">${labels[status]||esc(status)}</span></div><p><strong>${esc(request.name||'—')}</strong> · ${esc(request.contact||'—')}</p>${request.message?`<p>${esc(request.message)}</p>`:''}<small>Requested: ${esc(libraryDate(request.requestedAt))}${request.dueDate?' · Due: '+esc(request.dueDate):''}</small></div><div class="apost-acts">${actions}<button class="editbtn" onclick="copyLibraryBookLink(${bookId})">Book Link</button></div></div>`;
+  }).join('');
+}
+async function adminLibraryRequestAction(requestId,nextStatus){
+  const request=libraryRequests.find(item=>String(item.firestoreId)===String(requestId));if(!request)return;
+  const book=findBook(request.bookId);if(!book){alert('The linked book no longer exists.');return}
+  if(nextStatus==='approved'&&libraryBookState(book).key!=='available'){alert('This book is not currently available.');return}
+  let bookStatus=null,details={};
+  if(nextStatus==='approved'){bookStatus='reserved';details.approvedAt=new Date().toISOString()}
+  else if(nextStatus==='borrowed'){
+    const suggested=new Date(Date.now()+14*86400000).toISOString().slice(0,10),dueDate=window.prompt('Return due date (YYYY-MM-DD):',suggested);if(dueDate===null)return;
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(dueDate.trim())){alert('Please enter the due date as YYYY-MM-DD.');return}
+    bookStatus='borrowed';details={loanedAt:new Date().toISOString(),dueDate:dueDate.trim()};
+  }else if(nextStatus==='returned'){bookStatus='available';details.returnedAt=new Date().toISOString()}
+  else if(nextStatus==='rejected'){bookStatus=request.status==='approved'?'available':null;details.rejectedAt=new Date().toISOString()}
+  try{
+    await window.setFirestoreLibraryRequestStatus(request.firestoreId,request.bookId,nextStatus,bookStatus,details);
+    Object.assign(request,{status:nextStatus,...details});if(bookStatus)book.status=bookStatus;renderAdLibraryRequests();renderAdLibraryBooks();renderLibrary();
+  }catch(error){console.error('Library request update failed:',error);alert('The request could not be updated. Please try again.')}
+}
+async function deleteLibraryRequest(requestId){
+  const request=libraryRequests.find(item=>String(item.firestoreId)===String(requestId));if(!request||!['returned','rejected'].includes(request.status))return;
+  if(!confirm('Delete this closed request record permanently?'))return;
+  try{await window.deleteFirestoreLibraryRequest(request.firestoreId);libraryRequests=libraryRequests.filter(item=>String(item.firestoreId)!==String(requestId));renderAdLibraryRequests()}
+  catch(error){console.error('Library request deletion failed:',error);alert('The request record could not be deleted.')}
 }
 
 // ── ADMIN: CATEGORIES ─────────────────────────────────
@@ -1471,7 +1717,7 @@ async function saveQForm(){
     await loadAll();
   }catch(e){
     console.error('Firebase refresh failed:',e);
-    POSTS=[...DP];COLLECTIONS=[];postsLoading=false;collectionsLoading=false;contentLoading=false;
+    POSTS=[...DP];COLLECTIONS=[];BOOKS=[];postsLoading=false;collectionsLoading=false;libraryLoading=false;contentLoading=false;
     openCurrentRoute();
   }
 })();
