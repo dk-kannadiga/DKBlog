@@ -1211,6 +1211,38 @@ async function copyLibraryBookLink(id){
   try{await navigator.clipboard.writeText(url);alert('Permanent book link copied. Use this link in your QR code.')}
   catch(error){window.prompt('Copy this permanent book link:',url)}
 }
+function libraryNoticeText(request){
+  const name=String(request.name||'').trim()||'ಓದುಗರೇ',title=String(request.bookTitle||findBook(request.bookId)?.title||'').trim(),dueDate=String(request.dueDate||'').trim();
+  if(request.status==='borrowed')return{
+    subject:`ಪುಸ್ತಕ ಹಿಂದಿರುಗಿಸುವ ನೆನಪು — ${title}`,
+    body:`ನಮಸ್ಕಾರ ${name},\n\nನೀವು ಎರವಲು ಪಡೆದ “${title}” ಪುಸ್ತಕವನ್ನು ${dueDate} ರಂದು ಹಿಂದಿರುಗಿಸಬೇಕಾಗಿದೆ.\n\nಧನ್ಯವಾದಗಳು,\nಡೀಕೆಯ ಪುಸ್ತಕಾಲಯ`,
+  };
+  return{
+    subject:`ಪುಸ್ತಕ ಪಡೆಯಲು ಸಿದ್ಧವಾಗಿದೆ — ${title}`,
+    body:`ನಮಸ್ಕಾರ ${name},\n\nನೀವು ವಿನಂತಿಸಿದ “${title}” ಪುಸ್ತಕ ಪಡೆದುಕೊಳ್ಳಲು ಸಿದ್ಧವಾಗಿದೆ.\nಹಿಂದಿರುಗಿಸಬೇಕಾದ ದಿನಾಂಕ: ${dueDate}\n\nಧನ್ಯವಾದಗಳು,\nಡೀಕೆಯ ಪುಸ್ತಕಾಲಯ`,
+  };
+}
+function libraryContactLinks(request){
+  if(!['approved','borrowed'].includes(request.status)||!request.dueDate)return'';
+  const contact=String(request.contact||''),notice=libraryNoticeText(request),links=[];
+  const noticeLabel=request.status==='borrowed'?'Reminder':'Ready Notice';
+  const email=contact.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)?.[0];
+  const phoneCandidate=(email?contact.replace(email,' '):contact).match(/\+?\d[\d\s().-]{7,}\d/)?.[0];
+  if(email){
+    const href=`mailto:${email}?subject=${encodeURIComponent(notice.subject)}&body=${encodeURIComponent(notice.body)}`;
+    links.push(`<a class="editbtn library-contact-link" href="${esc(href)}">✉ Email ${noticeLabel}</a>`);
+  }
+  if(phoneCandidate){
+    let phone=phoneCandidate.replace(/\D/g,'');
+    if(phone.length===10)phone='91'+phone;
+    else if(phone.length===11&&phone.startsWith('0'))phone='91'+phone.slice(1);
+    if(phone.length>=10&&phone.length<=15){
+      const href=`https://wa.me/${phone}?text=${encodeURIComponent(notice.body)}`;
+      links.push(`<a class="editbtn library-contact-link whatsapp" href="${esc(href)}" target="_blank" rel="noopener">💬 WhatsApp ${noticeLabel}</a>`);
+    }
+  }
+  return links.join('');
+}
 function renderAdLibraryRequests(){
   const el=document.getElementById('librl');if(!el)return;
   if(!libraryRequests.length){el.innerHTML='<div class="empty">No borrowing requests yet.</div>';return}
@@ -1221,10 +1253,11 @@ function renderAdLibraryRequests(){
     const requestId=jsArg(request.firestoreId),bookId=jsArg(request.bookId),book=findBook(request.bookId),status=request.status||'requested';
     let actions='';
     if(status==='requested')actions=`<button class="editbtn" onclick="adminLibraryRequestAction(${requestId},'approved')">Approve</button><button class="delbtn" onclick="adminLibraryRequestAction(${requestId},'rejected')">Reject</button>`;
-    else if(status==='approved')actions=`<button class="editbtn" onclick="adminLibraryRequestAction(${requestId},'borrowed')">Issue Book</button><button class="delbtn" onclick="adminLibraryRequestAction(${requestId},'rejected')">Reject</button>`;
+    else if(status==='approved')actions=`<button class="editbtn" onclick="adminLibraryRequestAction(${requestId},'borrowed')">Issue Book</button>${request.dueDate?'':`<button class="editbtn" onclick="setLibraryDueDate(${requestId})">Set Return Date</button>`}<button class="delbtn" onclick="adminLibraryRequestAction(${requestId},'rejected')">Reject</button>`;
     else if(status==='borrowed')actions=`<button class="editbtn" onclick="adminLibraryRequestAction(${requestId},'returned')">Mark Returned</button>`;
     else actions=`<button class="delbtn" onclick="deleteLibraryRequest(${requestId})">Delete Record</button>`;
-    return`<div class="library-admin-request"><div class="library-admin-request__main"><div><strong>${esc(request.bookTitle||book?.title||'Unknown book')}</strong> <span class="library-admin-badge ${esc(status)}">${labels[status]||esc(status)}</span></div><p><strong>${esc(request.name||'—')}</strong> · ${esc(request.contact||'—')}</p>${request.message?`<p>${esc(request.message)}</p>`:''}<small>Requested: ${esc(libraryDate(request.requestedAt))}${request.dueDate?' · Due: '+esc(request.dueDate):''}</small></div><div class="apost-acts">${actions}<button class="editbtn" onclick="copyLibraryBookLink(${bookId})">Book Link</button></div></div>`;
+    const contactLinks=libraryContactLinks(request);
+    return`<div class="library-admin-request"><div class="library-admin-request__main"><div><strong>${esc(request.bookTitle||book?.title||'Unknown book')}</strong> <span class="library-admin-badge ${esc(status)}">${labels[status]||esc(status)}</span></div><p><strong>${esc(request.name||'—')}</strong> · ${esc(request.contact||'—')}</p>${request.message?`<p>${esc(request.message)}</p>`:''}<small>Requested: ${esc(libraryDate(request.requestedAt))}${request.dueDate?' · Due: '+esc(request.dueDate):''}</small></div><div class="apost-acts">${actions}${contactLinks}<button class="editbtn" onclick="copyLibraryBookLink(${bookId})">Book Link</button></div></div>`;
   }).join('');
 }
 async function adminLibraryRequestAction(requestId,nextStatus){
@@ -1232,9 +1265,13 @@ async function adminLibraryRequestAction(requestId,nextStatus){
   const book=findBook(request.bookId);if(!book){alert('The linked book no longer exists.');return}
   if(nextStatus==='approved'&&libraryBookState(book).key!=='available'){alert('This book is not currently available.');return}
   let bookStatus=null,details={};
-  if(nextStatus==='approved'){bookStatus='reserved';details.approvedAt=new Date().toISOString()}
-  else if(nextStatus==='borrowed'){
+  if(nextStatus==='approved'){
     const suggested=new Date(Date.now()+14*86400000).toISOString().slice(0,10),dueDate=window.prompt('Return due date (YYYY-MM-DD):',suggested);if(dueDate===null)return;
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(dueDate.trim())){alert('Please enter the due date as YYYY-MM-DD.');return}
+    bookStatus='reserved';details={approvedAt:new Date().toISOString(),dueDate:dueDate.trim()};
+  }
+  else if(nextStatus==='borrowed'){
+    const suggested=request.dueDate||new Date(Date.now()+14*86400000).toISOString().slice(0,10),dueDate=window.prompt('Confirm return due date (YYYY-MM-DD):',suggested);if(dueDate===null)return;
     if(!/^\d{4}-\d{2}-\d{2}$/.test(dueDate.trim())){alert('Please enter the due date as YYYY-MM-DD.');return}
     bookStatus='borrowed';details={loanedAt:new Date().toISOString(),dueDate:dueDate.trim()};
   }else if(nextStatus==='returned'){bookStatus='available';details.returnedAt=new Date().toISOString()}
@@ -1243,6 +1280,13 @@ async function adminLibraryRequestAction(requestId,nextStatus){
     await window.setFirestoreLibraryRequestStatus(request.firestoreId,request.bookId,nextStatus,bookStatus,details);
     Object.assign(request,{status:nextStatus,...details});if(bookStatus)book.status=bookStatus;renderAdLibraryRequests();renderAdLibraryBooks();renderLibrary();
   }catch(error){console.error('Library request update failed:',error);alert('The request could not be updated. Please try again.')}
+}
+async function setLibraryDueDate(requestId){
+  const request=libraryRequests.find(item=>String(item.firestoreId)===String(requestId));if(!request)return;
+  const suggested=request.dueDate||new Date(Date.now()+14*86400000).toISOString().slice(0,10),dueDate=window.prompt('Return due date (YYYY-MM-DD):',suggested);if(dueDate===null)return;
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(dueDate.trim())){alert('Please enter the due date as YYYY-MM-DD.');return}
+  try{await window.setFirestoreLibraryRequestStatus(request.firestoreId,request.bookId,request.status,null,{dueDate:dueDate.trim()});request.dueDate=dueDate.trim();renderAdLibraryRequests()}
+  catch(error){console.error('Library due date update failed:',error);alert('The return date could not be saved. Please try again.')}
 }
 async function deleteLibraryRequest(requestId){
   const request=libraryRequests.find(item=>String(item.firestoreId)===String(requestId));if(!request||!['returned','rejected'].includes(request.status))return;
