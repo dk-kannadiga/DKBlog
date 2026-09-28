@@ -27,7 +27,7 @@
   <link rel="alternate" type="application/rss+xml" title="ಡೀಕೆಯ ಬರಹಗಳ ಆರ್‌ಎಸ್‌ಎಸ್ ಸುದ್ದಿ ಹರಿವು" href="/rss.xml">
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8227844604374941" crossorigin="anonymous"></script>
   <link href="https://fonts.googleapis.com/css2?family=Anek+Kannada:wght@400;500;700&family=Noto+Sans+Kannada:wght@400;500;700&family=Lora:ital,wght@0,400;0,600;1,400&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/main.css?v=20260928-3">
+  <link rel="stylesheet" href="/css/main.css?v=20260928-4">
   <title>ಡೀಕೆಯ ಬರಹಗಳು · ಬರಹಗಳ ಜಗತ್ತು</title>
 </head>
 <body>
@@ -100,7 +100,12 @@
 <!-- LIBRARY -->
 <div id="plib" class="page"><div class="pc">
   <h1 class="stitle">📚 ಸ್ವಾನಂದ ಗ್ರಂಥನಿಧಿ</h1>
-  <p class="ssub">ನನ್ನ ಬಳಿಯಿರುವ ಪುಸ್ತಕಗಳನ್ನು ಹುಡುಕಿ · ಲಭ್ಯವಿರುವ ಪುಸ್ತಕಗಳನ್ನು ಎರವಲು ಕೇಳಿ</p>
+  <p class="ssub">ಪುಸ್ತಕಪ್ರೇಮಿಯ ಪುಟ್ಟ ಪ್ರಪಂಚ</p>
+  <div class="library-stats" aria-label="ಗ್ರಂಥನಿಧಿಯ ಅಂಕಿಅಂಶಗಳು">
+    <div class="library-stat"><span>ಒಟ್ಟು ಪುಸ್ತಕ ಸಂಗ್ರಹ:</span><strong id="lib-stat-total">—</strong></div>
+    <div class="library-stat"><span>ಲಭ್ಯವಿರುವ ಪುಸ್ತಕಗಳು:</span><strong id="lib-stat-available">—</strong></div>
+    <div class="library-stat"><span>ಎರವಲು ಕೊಟ್ಟಿರುವ ಪುಸ್ತಕಗಳು:</span><strong id="lib-stat-borrowed">—</strong></div>
+  </div>
   <div class="library-toolbar">
     <div class="searchbar library-search">
       <input type="text" id="lib-search" placeholder="ಪುಸ್ತಕ, ಲೇಖಕ, ಭಾಷೆ ಅಥವಾ ವಿಭಾಗವನ್ನು ಹುಡುಕಿ..." oninput="librarySearch(this.value)">
@@ -237,7 +242,7 @@
   });
 </script>
 <script type="module" src="/js/firestore-loader.js?v=20260928-1"></script>
-<script src="/js/app.js?v=20260928-4"></script>
+<script src="/js/app.js?v=20260928-5"></script>
 <script>
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js"));

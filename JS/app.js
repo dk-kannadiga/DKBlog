@@ -504,10 +504,14 @@ function libraryFilter(value){libraryAvailability=value||'all';renderLibrary()}
 function renderLibrary(){
   const grid=document.getElementById('lib-grid'),count=document.getElementById('lib-count');if(!grid)return;
   if(libraryLoading){grid.innerHTML='<div class="empty">ಪುಸ್ತಕಗಳನ್ನು ತರಲಾಗುತ್ತಿದೆ...</div>';if(count)count.textContent='';return}
+  const totalStat=document.getElementById('lib-stat-total'),availableStat=document.getElementById('lib-stat-available'),borrowedStat=document.getElementById('lib-stat-borrowed');
+  if(totalStat)totalStat.textContent=BOOKS.length;
+  if(availableStat)availableStat.textContent=BOOKS.filter(book=>libraryBookState(book).key==='available').length;
+  if(borrowedStat)borrowedStat.textContent=BOOKS.filter(book=>libraryBookState(book).key==='borrowed').length;
   let books=[...BOOKS];
   if(librarySearchQ)books=books.filter(book=>[book.title,book.author,book.language,book.category,book.isbn,book.publisher].some(value=>String(value||'').toLowerCase().includes(librarySearchQ)));
   if(libraryAvailability==='available')books=books.filter(book=>libraryBookState(book).key==='available');
-  else if(libraryAvailability==='borrowed')books=books.filter(book=>['borrowed','reserved'].includes(libraryBookState(book).key));
+  else if(libraryAvailability==='borrowed')books=books.filter(book=>libraryBookState(book).key==='borrowed');
   else if(libraryAvailability==='reference')books=books.filter(book=>libraryBookState(book).key==='reference');
   books.sort((a,b)=>String(a.title||'').localeCompare(String(b.title||''),'kn'));
   if(count)count.textContent=`${books.length} ಪುಸ್ತಕ${books.length===1?'':'ಗಳು'}`;
