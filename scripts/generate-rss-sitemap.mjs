@@ -185,15 +185,19 @@ const [posts, collections, books, quizzes, activeQuizDocument] = await Promise.a
   firestoreFetch("siteSettings/activeQuiz", token).catch(() => null),
 ]);
 const activeQuiz = activeQuizDocument ? firestoreDocument(activeQuizDocument).quiz : null;
-const generatedAt = [...posts, ...collections, ...books, ...quizzes, activeQuiz]
-  .flatMap((item) => item ? [item.publishedAt, item.updatedAt, item.date] : [])
-  .map((value) => new Date(value))
-  .filter((date) => !Number.isNaN(date.valueOf()))
-  .reduce((latest, date) => date > latest ? date : latest, new Date("2024-01-01T00:00:00.000Z"));
+function latestContentDate(items) {
+  return items
+    .flatMap((item) => item ? [item.publishedAt, item.updatedAt, item.date] : [])
+    .map((value) => new Date(value))
+    .filter((date) => !Number.isNaN(date.valueOf()))
+    .reduce((latest, date) => date > latest ? date : latest, new Date("2024-01-01T00:00:00.000Z"));
+}
+const rssGeneratedAt = latestContentDate(posts);
+const sitemapGeneratedAt = latestContentDate([...posts, ...collections, ...books, ...quizzes, activeQuiz]);
 
 await Promise.all([
-  writeFile(join(ROOT, "rss.xml"), renderRss(posts, generatedAt), "utf8"),
-  writeFile(join(ROOT, "sitemap.xml"), renderSitemap({ posts, collections, books, quizzes, activeQuiz }, generatedAt), "utf8"),
+  writeFile(join(ROOT, "rss.xml"), renderRss(posts, rssGeneratedAt), "utf8"),
+  writeFile(join(ROOT, "sitemap.xml"), renderSitemap({ posts, collections, books, quizzes, activeQuiz }, sitemapGeneratedAt), "utf8"),
 ]);
 
 console.log(`Generated rss.xml with ${Math.min(posts.length, FEED_LIMIT)} posts and sitemap.xml with ${posts.length} post URLs.`);
