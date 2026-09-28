@@ -584,7 +584,7 @@ async function submitLibraryRequest(id){
 }
 function shareLibraryBook(id){
   const book=findBook(id),toast=document.getElementById('book-share-toast'),url=new URL(routePath('book',id),location.origin).href;
-  if(navigator.share)navigator.share({title:book?.title||'',text:'ಡೀಕೆಯ ಪುಸ್ತಕಾಲಯದಲ್ಲಿರುವ ಪುಸ್ತಕ',url}).catch(()=>{});
+  if(navigator.share)navigator.share({title:book?.title||'',text:'ಸ್ವಾನಂದ ಗ್ರಂಥನಿಧಿಯಲ್ಲಿರುವ ಪುಸ್ತಕ',url}).catch(()=>{});
   else{try{navigator.clipboard.writeText(url)}catch(error){}if(toast){toast.classList.add('show');setTimeout(()=>toast.classList.remove('show'),2500)}}
 }
 
@@ -1215,11 +1215,11 @@ function libraryNoticeText(request){
   const name=String(request.name||'').trim()||'ಓದುಗರೇ',title=String(request.bookTitle||findBook(request.bookId)?.title||'').trim(),dueDate=String(request.dueDate||'').trim();
   if(request.status==='borrowed')return{
     subject:`ಪುಸ್ತಕ ಹಿಂದಿರುಗಿಸುವ ನೆನಪು — ${title}`,
-    body:`ನಮಸ್ಕಾರ ${name},\n\nನೀವು ಎರವಲು ಪಡೆದ “${title}” ಪುಸ್ತಕವನ್ನು ${dueDate} ರಂದು ಹಿಂದಿರುಗಿಸಬೇಕಾಗಿದೆ.\n\nಧನ್ಯವಾದಗಳು,\nಡೀಕೆಯ ಪುಸ್ತಕಾಲಯ`,
+    body:`ನಮಸ್ಕಾರ ${name},\n\nನೀವು ಎರವಲು ಪಡೆದ “${title}” ಪುಸ್ತಕವನ್ನು ${dueDate} ರಂದು ಹಿಂದಿರುಗಿಸಬೇಕಾಗಿದೆ.\n\nಧನ್ಯವಾದಗಳು,\nಸ್ವಾನಂದ ಗ್ರಂಥನಿಧಿ`,
   };
   return{
     subject:`ಪುಸ್ತಕ ಪಡೆಯಲು ಸಿದ್ಧವಾಗಿದೆ — ${title}`,
-    body:`ನಮಸ್ಕಾರ ${name},\n\nನೀವು ವಿನಂತಿಸಿದ “${title}” ಪುಸ್ತಕ ಪಡೆದುಕೊಳ್ಳಲು ಸಿದ್ಧವಾಗಿದೆ.\nಹಿಂದಿರುಗಿಸಬೇಕಾದ ದಿನಾಂಕ: ${dueDate}\n\nಧನ್ಯವಾದಗಳು,\nಡೀಕೆಯ ಪುಸ್ತಕಾಲಯ`,
+    body:`ನಮಸ್ಕಾರ ${name},\n\nನೀವು ವಿನಂತಿಸಿದ “${title}” ಪುಸ್ತಕ ಪಡೆದುಕೊಳ್ಳಲು ಸಿದ್ಧವಾಗಿದೆ.\nಹಿಂದಿರುಗಿಸಬೇಕಾದ ದಿನಾಂಕ: ${dueDate}\n\nಧನ್ಯವಾದಗಳು,\nಸ್ವಾನಂದ ಗ್ರಂಥನಿಧಿ`,
   };
 }
 function libraryContactLinks(request){
