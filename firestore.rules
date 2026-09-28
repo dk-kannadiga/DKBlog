@@ -67,7 +67,13 @@ service cloud.firestore {
     }
 
     match /libraryRequests/{requestId} {
-      allow get: if isAdmin() || (signedIn() && resource.data.userId == request.auth.uid);
+      // The request document may not exist yet when a visitor opens a book.
+      // Authorize that lookup from the deterministic document id instead of
+      // reading resource.data, which is unavailable for a missing document.
+      allow get: if isAdmin() || (
+        signedIn()
+        && requestId.matches('^.+_' + request.auth.uid + '$')
+      );
       allow list: if isAdmin();
       allow create: if validLibraryRequest(requestId);
       allow update: if isAdmin() || (

@@ -517,7 +517,8 @@ function renderLibrary(){
     return`<article class="library-card" onclick="go('book',${argument})">
       <div class="library-cover">${cover?`<img src="${esc(cover)}" alt="${esc(book.title)} ಪುಸ್ತಕದ ಮುಖಪುಟ" loading="lazy" onerror="this.parentElement.innerHTML='📚'">`:'📚'}</div>
       <div class="library-card__body"><span class="library-status ${state.className}">${state.label}</span><h2>${esc(book.title)}</h2><p class="library-author">${esc(book.author||'ಲೇಖಕರು ತಿಳಿಸಿಲ್ಲ')}</p>
-      <p class="library-meta">${[book.language,book.category,book.year].filter(Boolean).map(esc).join(' · ')}</p>${book.description?`<p class="library-description">${esc(autoExc(book.description))}</p>`:''}</div>
+      <p class="library-meta">${[book.language,book.category,book.year].filter(Boolean).map(esc).join(' · ')}</p>${book.description?`<p class="library-description">${esc(autoExc(book.description))}</p>`:''}
+      <span class="library-card__action">${state.key==='available'?'ಎರವಲು ಕೇಳಿ':'ವಿವರ ನೋಡಿ'} →</span></div>
     </article>`;
   }).join('');
 }
