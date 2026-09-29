@@ -56,8 +56,22 @@
     ],
     "ignore": [
       "firebase.json",
+      ".firebaserc",
+      ".git/**",
+      ".firebase/**",
       "**/.*",
-      "**/node_modules/**"
+      "**/node_modules/**",
+      "backup/**",
+      "integrations/**",
+      "scripts/**",
+      "outputs/**",
+      "README.md",
+      "New Text Document.txt",
+      "firestore.rules",
+      "comment-test.html",
+      "firebase-test.html",
+      "firestore-adapter-test.html",
+      "firestore-posts.html"
     ],
     "rewrites": [
       {
