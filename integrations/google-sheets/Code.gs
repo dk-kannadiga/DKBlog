@@ -51,7 +51,6 @@ function onOpen() {
   SpreadsheetApp.getUi()
     .createMenu("Library Sync")
     .addItem("Sync from website now", "pullBooksFromFirestore")
-    .addItem("Import all new books", "importAllNewBooks")
     .addSeparator()
     .addItem("Install / repair automatic sync", "installLibrarySync")
     .addToUi();
@@ -79,10 +78,6 @@ function syncEditedBook(event) {
   const range = event.range;
   const sheet = range.getSheet();
   if (sheet.getName() !== LIBRARY_SYNC.sheetName || range.getLastRow() < 2) return;
-  if (range.getNumRows() > 20) {
-    console.warn("Large paste detected. Run Library Sync > Import all new books after pasting.");
-    return;
-  }
 
   withLibraryLock_(() => {
     const firstRow = Math.max(2, range.getRow());
@@ -162,95 +157,6 @@ function syncEditedBookRow_(sheet, row, firstColumn, lastColumn) {
   applySheetRulesSafely_(sheet, Math.max(lastBookRow + 20, 100));
   resizeNativeTableSafely_(sheet, Math.max(lastBookRow, 2));
   console.log(`Synced: ${book.title}`);
-}
-
-function importAllNewBooks() {
-  return withLibraryLock_(() => {
-    const spreadsheet = SpreadsheetApp.getActive();
-    const sheet = ensureSheetStructure_(spreadsheet);
-    const finalRow = Math.max(sheet.getLastRow(), lastBookDataRow_(sheet));
-    if (finalRow < 2) return showImportSummary_(0, []);
-
-    const rowCount = finalRow - 1;
-    const rows = readBookRows_(sheet, 2, rowCount);
-    const remoteBooks = listFirestoreBooks_();
-    const remoteById = new Map(remoteBooks.map((book) => [String(book.id), book]));
-    const usedIds = new Set(remoteById.keys());
-    rows.forEach((row) => {
-      const id = clean_(row[0]);
-      if (id) usedIds.add(id);
-    });
-
-    const seenSheetIds = new Set();
-    const candidates = [];
-    const issues = [];
-
-    rows.forEach((displayed, index) => {
-      const sheetRow = index + 2;
-      const title = clean_(displayed[1]);
-      const author = clean_(displayed[2]);
-      let id = clean_(displayed[0]);
-
-      if (!id && !title && !author) return;
-      if (!title || !author) {
-        issues.push(`Row ${sheetRow}: Title and Author are required.`);
-        return;
-      }
-
-      if (!id) {
-        id = nextAvailableSequentialId_(usedIds);
-        usedIds.add(id);
-        displayed[0] = id;
-      }
-      if (!isValidBookId_(id)) {
-        issues.push(`Row ${sheetRow}: invalid Book ID ${id}.`);
-        return;
-      }
-      if (seenSheetIds.has(id)) {
-        issues.push(`Row ${sheetRow}: duplicate Book ID ${id}.`);
-        return;
-      }
-      seenSheetIds.add(id);
-
-      displayed[13] = bookUrl_(id);
-      if (remoteById.has(id)) return;
-
-      const book = bookFromDisplayedRow_(displayed, id, new Date());
-      candidates.push({ row: sheetRow, book });
-    });
-
-    // Save generated IDs before network writes so a retry cannot create duplicates.
-    sheet.getRange(2, 1, rowCount, 1).setValues(rows.map((row) => [clean_(row[0])]));
-    sheet.getRange(2, 14, rowCount, 1).setValues(
-      rows.map((row) => [clean_(row[0]) ? bookUrl_(row[0]) : clean_(row[13])]),
-    );
-
-    if (candidates.length) {
-      patchFirestoreBooksBulk_(candidates.map((entry) => entry.book));
-      writeBookEntries_(sheet, candidates);
-    }
-
-    const lastBookRow = Math.max(sheet.getLastRow(), lastBookDataRow_(sheet));
-    applySheetRulesSafely_(sheet, Math.max(lastBookRow + 20, 100));
-    resizeNativeTableSafely_(sheet, Math.max(lastBookRow, 2));
-    console.log(`Bulk import complete: ${candidates.length} new books, ${issues.length} issues.`);
-    return showImportSummary_(candidates.length, issues);
-  });
-}
-
-function showImportSummary_(importedCount, issues) {
-  const suffix = issues.length
-    ? `\n\nSkipped rows (${issues.length}):\n${issues.slice(0, 12).join("\n")}`
-      + (issues.length > 12 ? `\n…and ${issues.length - 12} more. See the execution log.` : "")
-    : "";
-  const message = `${importedCount} new books imported.${suffix}`;
-  console.log(message);
-  try {
-    SpreadsheetApp.getUi().alert("Library import", message, SpreadsheetApp.getUi().ButtonSet.OK);
-  } catch (error) {
-    console.log("Import summary shown in the execution log.");
-  }
-  return { importedCount, issues };
 }
 
 function pullBooksFromFirestore() {
@@ -335,15 +241,6 @@ function applySheetRules_(sheet, lastValidationRow) {
   sheet.getRange(2, 15, rowCount, 1).setNumberFormat("yyyy-mm-dd hh:mm:ss");
 }
 
-function readBookRows_(sheet, startRow, rowCount) {
-  const columns = LIBRARY_SYNC.headers.map((_, index) =>
-    sheet.getRange(startRow, index + 1, rowCount, 1).getDisplayValues().map((row) => row[0]),
-  );
-  return Array.from({ length: rowCount }, (_, rowIndex) =>
-    columns.map((column) => column[rowIndex]),
-  );
-}
-
 function writeBookRow_(sheet, row, book) {
   writeBookRows_(sheet, row, [bookToRow_(book)]);
 }
@@ -355,40 +252,6 @@ function writeBookRows_(sheet, startRow, rows) {
       .getRange(startRow, column + 1, rows.length, 1)
       .setValues(rows.map((row) => [row[column]]));
   }
-}
-
-function writeBookEntries_(sheet, entries) {
-  const ordered = entries.slice().sort((a, b) => a.row - b.row);
-  let group = [];
-  const flush = () => {
-    if (!group.length) return;
-    writeBookRows_(sheet, group[0].row, group.map((entry) => bookToRow_(entry.book)));
-    group = [];
-  };
-  ordered.forEach((entry) => {
-    if (group.length && entry.row !== group[group.length - 1].row + 1) flush();
-    group.push(entry);
-  });
-  flush();
-}
-
-function bookFromDisplayedRow_(displayed, id, updatedAt) {
-  return {
-    id,
-    title: clean_(displayed[1]),
-    author: clean_(displayed[2]),
-    language: clean_(displayed[3]) || "ಕನ್ನಡ",
-    category: clean_(displayed[4]),
-    publisher: clean_(displayed[5]),
-    year: clean_(displayed[6]),
-    isbn: clean_(displayed[7]),
-    shelf: clean_(displayed[8]),
-    coverImage: clean_(displayed[9]),
-    description: clean_(displayed[10]),
-    lendingPolicy: normalizePolicy_(displayed[11]),
-    status: normalizeStatus_(displayed[12]),
-    updatedAt,
-  };
 }
 
 function bookToRow_(book) {
@@ -458,26 +321,6 @@ function patchFirestoreBook_(book, fieldNames) {
     contentType: "application/json",
     payload: JSON.stringify({ fields: selectedFields }),
   });
-}
-
-function patchFirestoreBooksBulk_(books) {
-  const fields = Object.keys(firestoreBookFields_(books[0] || {}));
-  const mask = fields.map((field) => `updateMask.fieldPaths=${encodeURIComponent(field)}`).join("&");
-  const headers = googleAuthHeaders_();
-
-  for (let offset = 0; offset < books.length; offset += 100) {
-    const batch = books.slice(offset, offset + 100);
-    const responses = UrlFetchApp.fetchAll(batch.map((book) => ({
-      url: `${firestoreCollectionUrl_()}/${encodeURIComponent(book.id)}?${mask}&currentDocument.exists=false`,
-      method: "patch",
-      contentType: "application/json",
-      headers,
-      muteHttpExceptions: true,
-      payload: JSON.stringify({ fields: firestoreBookFields_(book) }),
-    })));
-    responses.forEach((response) => parseGoogleResponse_(response));
-    console.log(`Imported ${Math.min(offset + batch.length, books.length)} of ${books.length} books.`);
-  }
 }
 
 function firestoreBookFields_(book) {

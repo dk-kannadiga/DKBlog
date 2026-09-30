@@ -4,10 +4,10 @@ This folder is the version-controlled source for the Apps Script bound to the
 `ಸ್ವಾನಂದ ಗ್ರಂಥನಿಧಿ - Books Inventory` Google Sheet.
 
 - A manual Sheet edit writes the edited book fields to Firestore immediately.
-- Pasting more than 20 rows is intentionally held for the safe bulk importer.
-- `Library Sync > Import all new books` imports hundreds of rows together,
-  preserves unique IDs supplied in the Sheet, and assigns the smallest unused
-  sequential number when Book ID is blank.
+- Complete each physical book manually in the Sheet. Once Title and Author are
+  present, the row is synced automatically.
+- Book ID may be entered manually. When it is left blank, the smallest unused
+  sequential number is assigned automatically.
 - Website/Admin changes are pulled into the Sheet every five minutes.
 - The website remains the only place to delete a book, which preserves the
   existing active-loan safety check.
