@@ -61,12 +61,13 @@ function installLibrarySync() {
   ensureSheetStructure_(spreadsheet);
   console.log("Installer: sheet structure ready");
 
-  const managedHandlers = new Set(["syncEditedBook", "pullBooksFromFirestore"]);
+  const managedHandlers = new Set(["syncEditedBook", "syncRemovedBookRows", "pullBooksFromFirestore"]);
   ScriptApp.getProjectTriggers().forEach((trigger) => {
     if (managedHandlers.has(trigger.getHandlerFunction())) ScriptApp.deleteTrigger(trigger);
   });
 
   ScriptApp.newTrigger("syncEditedBook").forSpreadsheet(spreadsheet).onEdit().create();
+  ScriptApp.newTrigger("syncRemovedBookRows").forSpreadsheet(spreadsheet).onChange().create();
   ScriptApp.newTrigger("pullBooksFromFirestore").timeBased().everyMinutes(5).create();
   console.log("Installer: triggers created");
   pullBooksFromFirestore();
@@ -153,6 +154,7 @@ function syncEditedBookRow_(sheet, row, firstColumn, lastColumn) {
 
   patchFirestoreBook_(book, fieldsToWrite);
   writeBookRow_(sheet, row, book);
+  rememberSyncedBookId_(sheet, id);
   const lastBookRow = lastBookDataRow_(sheet);
   applySheetRulesSafely_(sheet, Math.max(lastBookRow + 20, 100));
   resizeNativeTableSafely_(sheet, Math.max(lastBookRow, 2));
@@ -163,6 +165,30 @@ function pullBooksFromFirestore() {
   withLibraryLock_(() => {
     const spreadsheet = SpreadsheetApp.getActive();
     const sheet = ensureSheetStructure_(spreadsheet);
+    // Also catches a row removal whose change trigger is still waiting for the lock.
+    const snapshot = readLibrarySnapshot_();
+    if (snapshot && sheet.getMaxRows() < snapshot.maxRows) {
+      reconcileRemovedBookRows_(sheet);
+    }
+    refreshLibrarySheet_(sheet);
+  });
+}
+
+function syncRemovedBookRows(event) {
+  if (!event || event.changeType !== "REMOVE_ROW") return;
+  withLibraryLock_(() => {
+    const spreadsheet = event.source || SpreadsheetApp.getActive();
+    const sheet = spreadsheet.getSheetByName(LIBRARY_SYNC.sheetName);
+    if (!sheet) throw new Error("Books tab is missing; no website books were deleted.");
+    const snapshot = readLibrarySnapshot_();
+    // Change events cover every tab. Only a smaller Books grid proves this tab lost rows.
+    if (snapshot && sheet.getMaxRows() >= snapshot.maxRows) return;
+    reconcileRemovedBookRows_(sheet);
+    refreshLibrarySheet_(sheet);
+  });
+}
+
+function refreshLibrarySheet_(sheet) {
     console.log("Pull: sheet ready");
     const books = listFirestoreBooks_().sort((a, b) =>
       String(a.title || "").localeCompare(String(b.title || ""), "kn"),
@@ -191,8 +217,127 @@ function pullBooksFromFirestore() {
     resizeNativeTableSafely_(sheet, targetEndRow);
     console.log("Pull: table range refreshed");
     PropertiesService.getDocumentProperties().setProperty("lastLibraryPull", new Date().toISOString());
+    saveLibrarySnapshot_(sheet, books.map((book) => String(book.id)));
     console.log(`${books.length} books synced from the website.`);
-  });
+}
+
+function sheetBookIds_(sheet) {
+  if (sheet.getRange(1, 1).getDisplayValue() !== "Book ID") {
+    throw new Error("Book ID header changed; no website books were deleted.");
+  }
+  const count = Math.max(sheet.getLastRow() - 1, 0);
+  return new Set(count ? sheet.getRange(2, 1, count, 1).getDisplayValues()
+    .map((row) => clean_(row[0])).filter(Boolean) : []);
+}
+
+function readLibrarySnapshot_() {
+  const properties = PropertiesService.getDocumentProperties();
+  const raw = properties.getProperty("librarySnapshotMeta");
+  if (!raw) return null;
+  const snapshot = JSON.parse(raw);
+  snapshot.ids = [];
+  for (let chunk = 0; chunk < snapshot.chunks; chunk += 1) {
+    const part = properties.getProperty(`librarySnapshotIds${chunk}`);
+    if (!part) throw new Error("Library snapshot is incomplete; deletion sync stopped.");
+    snapshot.ids.push(...JSON.parse(part));
+  }
+  return snapshot;
+}
+
+function saveLibrarySnapshot_(sheet, ids) {
+  const properties = PropertiesService.getDocumentProperties();
+  const uniqueIds = [...new Set(ids)];
+  const chunks = Math.ceil(uniqueIds.length / 200);
+  for (let chunk = 0; chunk < chunks; chunk += 1) {
+    properties.setProperty(`librarySnapshotIds${chunk}`,
+      JSON.stringify(uniqueIds.slice(chunk * 200, (chunk + 1) * 200)));
+  }
+  properties.setProperty("librarySnapshotMeta", JSON.stringify({
+    sheetId: sheet.getSheetId(), maxRows: sheet.getMaxRows(), chunks,
+  }));
+}
+
+function rememberSyncedBookId_(sheet, id) {
+  const snapshot = readLibrarySnapshot_();
+  if (!snapshot) return; // Initial installation establishes the baseline first.
+  // Keep absent IDs until the row-removal handler processes them.
+  const previousMaxRows = snapshot.maxRows;
+  saveLibrarySnapshot_(sheet, snapshot.ids.concat(String(id)));
+  if (sheet.getMaxRows() < previousMaxRows) {
+    const properties = PropertiesService.getDocumentProperties();
+    const meta = JSON.parse(properties.getProperty("librarySnapshotMeta"));
+    meta.maxRows = previousMaxRows;
+    properties.setProperty("librarySnapshotMeta", JSON.stringify(meta));
+  }
+}
+
+function reconcileRemovedBookRows_(sheet) {
+  const snapshot = readLibrarySnapshot_();
+  if (!snapshot) {
+    console.log("No previous snapshot: deletion baseline will be established without deleting books.");
+    return;
+  }
+  if (snapshot.sheetId !== sheet.getSheetId()) {
+    throw new Error("Books tab identity changed; no website books were deleted.");
+  }
+  const present = sheetBookIds_(sheet);
+  const removed = snapshot.ids.filter((id) => !present.has(id));
+  for (const id of removed) {
+    const result = deleteFirestoreBookSafely_(id);
+    console.log(`Row removal ${id}: ${result}`);
+  }
+}
+
+function deleteFirestoreBookSafely_(id) {
+  const root = firestoreCollectionUrl_().replace(/\/[^/]+$/, "");
+  const transaction = fetchGoogleJson_(`${root}:beginTransaction`, {
+    method: "post", contentType: "application/json", payload: JSON.stringify({ options: { readWrite: {} } }),
+  }).transaction;
+  let committed = false;
+  try {
+    const response = UrlFetchApp.fetch(
+      `${firestoreCollectionUrl_()}/${encodeURIComponent(id)}?transaction=${encodeURIComponent(transaction)}`,
+      { method: "get", headers: googleAuthHeaders_(), muteHttpExceptions: true },
+    );
+    if (response.getResponseCode() === 404) return "already deleted";
+    const document = parseGoogleResponse_(response);
+    const book = firestoreDocumentToBook_(document);
+    const requests = fetchGoogleJson_(`${root}:runQuery`, {
+      method: "post", contentType: "application/json", payload: JSON.stringify({
+        transaction,
+        structuredQuery: {
+          from: [{ collectionId: "libraryRequests" }],
+          where: { fieldFilter: { field: { fieldPath: "bookId" }, op: "EQUAL", value: { stringValue: String(id) } } },
+          select: { fields: [{ fieldPath: "status" }] },
+        },
+      }),
+    });
+    const active = requests.some((row) => row.document
+      && ["requested", "approved", "borrowed"].includes(firestoreValue_(row.document.fields.status)));
+    if (active || ["borrowed", "reserved"].includes(book.status)) {
+      return "protected: active request or loan; restored to Sheet";
+    }
+    const backupName = document.name.replace(/\/libraryBooks\/[^/]+$/, `/libraryBookTrash/${id}_${Date.now()}`);
+    fetchGoogleJson_(`${root}:commit`, {
+      method: "post", contentType: "application/json", payload: JSON.stringify({
+        transaction,
+        writes: [
+          { update: { name: backupName, fields: {
+            ...document.fields,
+            deletedAt: { timestampValue: new Date().toISOString() },
+            deletionSource: { stringValue: "Google Sheets row removal" },
+          } }, currentDocument: { exists: false } },
+          { delete: document.name, currentDocument: { updateTime: document.updateTime } },
+        ],
+      }),
+    });
+    committed = true;
+    return "deleted from website (recoverable backup saved)";
+  } finally {
+    if (!committed) fetchGoogleJson_(`${root}:rollback`, {
+      method: "post", contentType: "application/json", payload: JSON.stringify({ transaction }),
+    });
+  }
 }
 
 function ensureSheetStructure_(spreadsheet) {
