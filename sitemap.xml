@@ -2,37 +2,32 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://dkblog-6c5e5.web.app/</loc>
-    <lastmod>2026-09-28</lastmod>
+    <lastmod>2026-09-30</lastmod>
     <priority>1.0</priority>
   </url>
   <url>
     <loc>https://dkblog-6c5e5.web.app/about</loc>
-    <lastmod>2026-09-28</lastmod>
+    <lastmod>2026-09-30</lastmod>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://dkblog-6c5e5.web.app/collections</loc>
-    <lastmod>2026-09-28</lastmod>
+    <lastmod>2026-09-30</lastmod>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://dkblog-6c5e5.web.app/index</loc>
-    <lastmod>2026-09-28</lastmod>
+    <lastmod>2026-09-30</lastmod>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://dkblog-6c5e5.web.app/library</loc>
-    <lastmod>2026-09-28</lastmod>
+    <lastmod>2026-09-30</lastmod>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://dkblog-6c5e5.web.app/library/book/1790595035299</loc>
-    <lastmod>2026-09-28</lastmod>
-    <priority>0.6</priority>
-  </url>
-  <url>
-    <loc>https://dkblog-6c5e5.web.app/library/book/1790598908160</loc>
-    <lastmod>2026-09-28</lastmod>
+    <loc>https://dkblog-6c5e5.web.app/library/book/SG00001</loc>
+    <lastmod>2026-09-30</lastmod>
     <priority>0.6</priority>
   </url>
   <url>
@@ -142,7 +137,7 @@
   </url>
   <url>
     <loc>https://dkblog-6c5e5.web.app/quiz</loc>
-    <lastmod>2026-09-28</lastmod>
+    <lastmod>2026-09-30</lastmod>
     <priority>0.7</priority>
   </url>
   <url>
@@ -157,72 +152,72 @@
   </url>
   <url>
     <loc>https://dkblog-6c5e5.web.app/quiz/900001</loc>
-    <lastmod>2026-09-28</lastmod>
+    <lastmod>2026-09-30</lastmod>
     <priority>0.5</priority>
   </url>
   <url>
     <loc>https://dkblog-6c5e5.web.app/quiz/900002</loc>
-    <lastmod>2026-09-28</lastmod>
+    <lastmod>2026-09-30</lastmod>
     <priority>0.5</priority>
   </url>
   <url>
     <loc>https://dkblog-6c5e5.web.app/quiz/900003</loc>
-    <lastmod>2026-09-28</lastmod>
+    <lastmod>2026-09-30</lastmod>
     <priority>0.5</priority>
   </url>
   <url>
     <loc>https://dkblog-6c5e5.web.app/quiz/900004</loc>
-    <lastmod>2026-09-28</lastmod>
+    <lastmod>2026-09-30</lastmod>
     <priority>0.5</priority>
   </url>
   <url>
     <loc>https://dkblog-6c5e5.web.app/quiz/900005</loc>
-    <lastmod>2026-09-28</lastmod>
+    <lastmod>2026-09-30</lastmod>
     <priority>0.5</priority>
   </url>
   <url>
     <loc>https://dkblog-6c5e5.web.app/quiz/900006</loc>
-    <lastmod>2026-09-28</lastmod>
+    <lastmod>2026-09-30</lastmod>
     <priority>0.5</priority>
   </url>
   <url>
     <loc>https://dkblog-6c5e5.web.app/quiz/900007</loc>
-    <lastmod>2026-09-28</lastmod>
+    <lastmod>2026-09-30</lastmod>
     <priority>0.5</priority>
   </url>
   <url>
     <loc>https://dkblog-6c5e5.web.app/quiz/900008</loc>
-    <lastmod>2026-09-28</lastmod>
+    <lastmod>2026-09-30</lastmod>
     <priority>0.5</priority>
   </url>
   <url>
     <loc>https://dkblog-6c5e5.web.app/quiz/900009</loc>
-    <lastmod>2026-09-28</lastmod>
+    <lastmod>2026-09-30</lastmod>
     <priority>0.5</priority>
   </url>
   <url>
     <loc>https://dkblog-6c5e5.web.app/quiz/900010</loc>
-    <lastmod>2026-09-28</lastmod>
+    <lastmod>2026-09-30</lastmod>
     <priority>0.5</priority>
   </url>
   <url>
     <loc>https://dkblog-6c5e5.web.app/quiz/900011</loc>
-    <lastmod>2026-09-28</lastmod>
+    <lastmod>2026-09-30</lastmod>
     <priority>0.5</priority>
   </url>
   <url>
     <loc>https://dkblog-6c5e5.web.app/quiz/900012</loc>
-    <lastmod>2026-09-28</lastmod>
+    <lastmod>2026-09-30</lastmod>
     <priority>0.5</priority>
   </url>
   <url>
     <loc>https://dkblog-6c5e5.web.app/quiz/900013</loc>
-    <lastmod>2026-09-28</lastmod>
+    <lastmod>2026-09-30</lastmod>
     <priority>0.5</priority>
   </url>
   <url>
     <loc>https://dkblog-6c5e5.web.app/quiz/900014</loc>
-    <lastmod>2026-09-28</lastmod>
+    <lastmod>2026-09-30</lastmod>
     <priority>0.5</priority>
   </url>
 </urlset>
