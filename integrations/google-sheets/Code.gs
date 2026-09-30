@@ -60,6 +60,7 @@ function onOpen() {
 function installLibrarySync() {
   const spreadsheet = SpreadsheetApp.getActive();
   ensureSheetStructure_(spreadsheet);
+  console.log("Installer: sheet structure ready");
 
   const managedHandlers = new Set(["syncEditedBook", "pullBooksFromFirestore"]);
   ScriptApp.getProjectTriggers().forEach((trigger) => {
@@ -68,8 +69,9 @@ function installLibrarySync() {
 
   ScriptApp.newTrigger("syncEditedBook").forSpreadsheet(spreadsheet).onEdit().create();
   ScriptApp.newTrigger("pullBooksFromFirestore").timeBased().everyMinutes(5).create();
+  console.log("Installer: triggers created");
   pullBooksFromFirestore();
-  spreadsheet.toast("Automatic two-way library sync is active.", "Library Sync", 6);
+  console.log("Automatic two-way library sync is active.");
 }
 
 function syncEditedBook(event) {
@@ -91,7 +93,9 @@ function syncEditedBook(event) {
 }
 
 function syncEditedBookRow_(sheet, row, firstColumn, lastColumn) {
-  const displayed = sheet.getRange(row, 1, 1, LIBRARY_SYNC.headers.length).getDisplayValues()[0];
+  const displayed = LIBRARY_SYNC.headers.map(
+    (_, index) => sheet.getRange(row, index + 1).getDisplayValue(),
+  );
   let id = String(displayed[0] || "").trim();
   const title = clean_(displayed[1]);
   const author = clean_(displayed[2]);
@@ -104,7 +108,7 @@ function syncEditedBookRow_(sheet, row, firstColumn, lastColumn) {
   const remoteDocument = getFirestoreDocument_(id);
   if (!title || !author) {
     if (remoteDocument) writeBookRow_(sheet, row, firestoreDocumentToBook_(remoteDocument));
-    sheet.getParent().toast("Title and Author are required. The incomplete edit was not synced.", "Library Sync", 8);
+    console.warn("Title and Author are required. The incomplete edit was not synced.");
     return;
   }
 
@@ -143,42 +147,72 @@ function syncEditedBookRow_(sheet, row, firstColumn, lastColumn) {
 
   patchFirestoreBook_(book, fieldsToWrite);
   writeBookRow_(sheet, row, book);
-  applySheetRules_(sheet, Math.max(sheet.getLastRow() + 20, 100));
-  resizeNativeTableSafely_(sheet, Math.max(sheet.getLastRow(), 2));
-  sheet.getParent().toast(`Synced: ${book.title}`, "Library Sync", 3);
+  const lastBookRow = lastBookDataRow_(sheet);
+  applySheetRulesSafely_(sheet, Math.max(lastBookRow + 20, 100));
+  resizeNativeTableSafely_(sheet, Math.max(lastBookRow, 2));
+  console.log(`Synced: ${book.title}`);
 }
 
 function pullBooksFromFirestore() {
   withLibraryLock_(() => {
     const spreadsheet = SpreadsheetApp.getActive();
     const sheet = ensureSheetStructure_(spreadsheet);
+    console.log("Pull: sheet ready");
     const books = listFirestoreBooks_().sort((a, b) =>
       String(a.title || "").localeCompare(String(b.title || ""), "kn"),
     );
+    console.log(`Pull: fetched ${books.length} books`);
 
-    if (sheet.getMaxRows() > 1) {
-      sheet.getRange(2, 1, sheet.getMaxRows() - 1, LIBRARY_SYNC.headers.length).clearContent();
-    }
+    const previousDataRows = Math.max(lastBookDataRow_(sheet) - 1, 0);
+    const targetEndRow = Math.max(books.length + 1, 2);
+    console.log(`Pull: ${previousDataRows} existing rows, target end row ${targetEndRow}`);
+    if (books.length > previousDataRows) resizeNativeTableSafely_(sheet, targetEndRow);
     if (books.length) {
-      sheet
-        .getRange(2, 1, books.length, LIBRARY_SYNC.headers.length)
-        .setValues(books.map((book) => bookToRow_(book)));
+      writeBookRows_(sheet, 2, books.map((book) => bookToRow_(book)));
+      console.log("Pull: book rows written");
+    }
+    if (previousDataRows > books.length) {
+      const rowsToClear = previousDataRows - books.length;
+      writeBookRows_(
+        sheet,
+        books.length + 2,
+        Array.from({ length: rowsToClear }, () => Array(LIBRARY_SYNC.headers.length).fill("")),
+      );
     }
 
-    applySheetRules_(sheet, Math.max(books.length + 21, 100));
-    resizeNativeTableSafely_(sheet, Math.max(books.length + 1, 2));
+    applySheetRulesSafely_(sheet, targetEndRow);
+    console.log("Pull: validation refreshed");
+    resizeNativeTableSafely_(sheet, targetEndRow);
+    console.log("Pull: table range refreshed");
     PropertiesService.getDocumentProperties().setProperty("lastLibraryPull", new Date().toISOString());
-    spreadsheet.toast(`${books.length} books synced from the website.`, "Library Sync", 4);
+    console.log(`${books.length} books synced from the website.`);
   });
 }
 
 function ensureSheetStructure_(spreadsheet) {
   let sheet = spreadsheet.getSheetByName(LIBRARY_SYNC.sheetName);
-  if (!sheet) sheet = spreadsheet.insertSheet(LIBRARY_SYNC.sheetName);
-  sheet.getRange(1, 1, 1, LIBRARY_SYNC.headers.length).setValues([LIBRARY_SYNC.headers]);
-  sheet.setFrozenRows(1);
-  applySheetRules_(sheet, Math.max(sheet.getLastRow() + 20, 100));
+  if (!sheet) {
+    sheet = spreadsheet.insertSheet(LIBRARY_SYNC.sheetName);
+    sheet.getRange(1, 1, 1, LIBRARY_SYNC.headers.length).setValues([LIBRARY_SYNC.headers]);
+    sheet.setFrozenRows(1);
+  }
+  applySheetRulesSafely_(sheet, Math.max(lastBookDataRow_(sheet) + 20, 100));
   return sheet;
+}
+
+function lastBookDataRow_(sheet) {
+  const table = getNativeTable_(sheet);
+  return table && table.range && table.range.endRowIndex
+    ? Math.max(table.range.endRowIndex, 1)
+    : 1;
+}
+
+function applySheetRulesSafely_(sheet, lastValidationRow) {
+  try {
+    applySheetRules_(sheet, lastValidationRow);
+  } catch (error) {
+    console.warn(`Validation refresh skipped for typed table columns: ${error.message}`);
+  }
 }
 
 function applySheetRules_(sheet, lastValidationRow) {
@@ -196,12 +230,22 @@ function applySheetRules_(sheet, lastValidationRow) {
   sheet.getRange(2, 12, rowCount, 1).setDataValidation(lendingRule);
   sheet.getRange(2, 13, rowCount, 1).setDataValidation(statusRule);
   sheet.getRange(2, 1, rowCount, 1).setNumberFormat("0");
-  sheet.getRange(2, 7, rowCount, 2).setNumberFormat("@");
+  sheet.getRange(2, 7, rowCount, 1).setNumberFormat("@");
+  sheet.getRange(2, 8, rowCount, 1).setNumberFormat("@");
   sheet.getRange(2, 16, rowCount, 1).setNumberFormat("yyyy-mm-dd hh:mm:ss");
 }
 
 function writeBookRow_(sheet, row, book) {
-  sheet.getRange(row, 1, 1, LIBRARY_SYNC.headers.length).setValues([bookToRow_(book)]);
+  writeBookRows_(sheet, row, [bookToRow_(book)]);
+}
+
+function writeBookRows_(sheet, startRow, rows) {
+  if (!rows.length) return;
+  for (let column = 0; column < LIBRARY_SYNC.headers.length; column += 1) {
+    sheet
+      .getRange(startRow, column + 1, rows.length, 1)
+      .setValues(rows.map((row) => [row[column]]));
+  }
 }
 
 function bookToRow_(book) {
@@ -322,39 +366,42 @@ function firestoreValue_(value) {
 }
 
 function resizeNativeTable_(sheet, endRowIndex) {
+  const table = getNativeTable_(sheet);
+  if (!table) return;
+  if (table.range && table.range.endRowIndex === endRowIndex) return;
   const spreadsheetId = sheet.getParent().getId();
-  const metadataUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}`
-    + "?fields=sheets(properties(sheetId,title),tables(tableId,name,range))";
-  const metadata = fetchGoogleJson_(metadataUrl, { method: "get" });
+
+  Sheets.Spreadsheets.batchUpdate({
+    requests: [{
+      updateTable: {
+        table: {
+          tableId: table.tableId,
+          range: {
+            sheetId: sheet.getSheetId(),
+            startRowIndex: 0,
+            endRowIndex,
+            startColumnIndex: 0,
+            endColumnIndex: LIBRARY_SYNC.headers.length,
+          },
+        },
+        fields: "range",
+      },
+    }],
+  }, spreadsheetId);
+}
+
+function getNativeTable_(sheet) {
+  const spreadsheetId = sheet.getParent().getId();
+  const metadata = Sheets.Spreadsheets.get(spreadsheetId, {
+    fields: "sheets(properties(sheetId,title),tables(tableId,name,range))",
+  });
   const sheetMetadata = (metadata.sheets || []).find(
     (item) => item.properties && item.properties.sheetId === sheet.getSheetId(),
   );
   const table = (sheetMetadata && sheetMetadata.tables || []).find(
     (item) => item.name === LIBRARY_SYNC.tableName,
   );
-  if (!table) return;
-
-  fetchGoogleJson_(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}:batchUpdate`, {
-    method: "post",
-    contentType: "application/json",
-    payload: JSON.stringify({
-      requests: [{
-        updateTable: {
-          table: {
-            tableId: table.tableId,
-            range: {
-              sheetId: sheet.getSheetId(),
-              startRowIndex: 0,
-              endRowIndex,
-              startColumnIndex: 0,
-              endColumnIndex: LIBRARY_SYNC.headers.length,
-            },
-          },
-          fields: "range",
-        },
-      }],
-    }),
-  });
+  return table || null;
 }
 
 function resizeNativeTableSafely_(sheet, endRowIndex) {
@@ -408,7 +455,7 @@ function clean_(value) {
 }
 
 function withLibraryLock_(callback) {
-  const lock = LockService.getDocumentLock();
+  const lock = LockService.getScriptLock();
   lock.waitLock(30000);
   try {
     return callback();
