@@ -2,8 +2,8 @@
  * Two-way library inventory sync for the bound Google Sheet.
  *
  * Sheet edits are written to Firestore immediately through an installable
- * on-edit trigger. Website/admin changes are pulled into the sheet every five
- * minutes. Borrower details remain only in Firestore and are never copied here.
+ * on-edit trigger. Website/admin changes are pulled into the sheet daily around
+ * 07:00 IST. Borrower details remain only in Firestore and are never copied here.
  */
 
 const LIBRARY_SYNC = Object.freeze({
@@ -68,10 +68,21 @@ function installLibrarySync() {
 
   ScriptApp.newTrigger("syncEditedBook").forSpreadsheet(spreadsheet).onEdit().create();
   ScriptApp.newTrigger("syncRemovedBookRows").forSpreadsheet(spreadsheet).onChange().create();
-  ScriptApp.newTrigger("pullBooksFromFirestore").timeBased().everyMinutes(5).create();
+  scheduleDailyLibraryPull();
   console.log("Installer: triggers created");
   pullBooksFromFirestore();
   console.log("Automatic two-way library sync is active.");
+}
+
+// Safe schedule migration: leave edit/change triggers and all Sheet data alone.
+function scheduleDailyLibraryPull() {
+  const previous = ScriptApp.getProjectTriggers()
+    .filter(trigger => trigger.getHandlerFunction() === "pullBooksFromFirestore");
+  // Create first so a scheduling error cannot remove the existing automation.
+  ScriptApp.newTrigger("pullBooksFromFirestore").timeBased()
+    .atHour(7).nearMinute(0).everyDays(1).inTimezone("Asia/Kolkata").create();
+  previous.forEach(trigger => ScriptApp.deleteTrigger(trigger));
+  console.log("Website-to-Sheet sync scheduled daily around 07:00 IST; Sheet edit/change triggers preserved.");
 }
 
 function syncEditedBook(event) {

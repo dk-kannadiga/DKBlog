@@ -98,4 +98,39 @@ for (const status of ['reserved', 'borrowed']) {
 }
 assert(transactionTest('available', null, true).calls.some(c => c.url.endsWith(':rollback')));
 assert(transactionTest('available', null, false, true).calls.some(c => c.url.endsWith(':rollback')));
+{
+  const ctx = runtime();
+  const edit = { getHandlerFunction: () => 'syncEditedBook' };
+  const change = { getHandlerFunction: () => 'syncRemovedBookRows' };
+  const unrelated = { getHandlerFunction: () => 'unrelatedJob' };
+  const triggers = [edit, change, unrelated, { getHandlerFunction: () => 'pullBooksFromFirestore', minutes: 5 }];
+  let failCreate = false;
+  ctx.ScriptApp = {
+    getProjectTriggers: () => [...triggers],
+    deleteTrigger: trigger => triggers.splice(triggers.indexOf(trigger), 1),
+    newTrigger: handler => {
+      const schedule = {};
+      const builder = { timeBased: () => builder,
+        atHour: value => { schedule.hour = value; return builder; },
+        nearMinute: value => { schedule.minute = value; return builder; },
+        everyDays: value => { schedule.days = value; return builder; },
+        inTimezone: value => { schedule.timezone = value; return builder; },
+        create: () => {
+          if (failCreate) throw new Error('Cannot create trigger');
+          triggers.push({ getHandlerFunction: () => handler, ...schedule });
+        },
+      };
+      return builder;
+    },
+  };
+  ctx.scheduleDailyLibraryPull(); ctx.scheduleDailyLibraryPull();
+  assert(triggers.includes(edit) && triggers.includes(change) && triggers.includes(unrelated));
+  const daily = triggers.filter(t => t.getHandlerFunction() === 'pullBooksFromFirestore');
+  assert.equal(daily.length, 1);
+  assert.deepEqual({ hour: daily[0].hour, minute: daily[0].minute, days: daily[0].days, timezone: daily[0].timezone },
+    { hour: 7, minute: 0, days: 1, timezone: 'Asia/Kolkata' });
+  failCreate = true;
+  assert.throws(() => ctx.scheduleDailyLibraryPull(), /Cannot create/);
+  assert(triggers.includes(daily[0]), 'creation failure must preserve the previous timer');
+}
 console.log('Library Sheet sync safety tests passed.');

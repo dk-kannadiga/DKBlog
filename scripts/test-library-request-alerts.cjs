@@ -25,10 +25,19 @@ function runtime(documents = [], initial = { startedAt: baseline, cursor: null }
     }) },
     LockService: { getScriptLock: () => ({ tryLock: () => !control.locked,
       releaseLock: () => { control.releases += 1; } }) },
-    ScriptApp: { getOAuthToken: () => 'mock-token', getProjectTriggers: () => triggers,
-      newTrigger: handler => ({ timeBased: () => ({ everyMinutes: minutes => ({
-        create: () => triggers.push({ getHandlerFunction: () => handler, minutes }),
-      }) }) }) },
+    ScriptApp: { getOAuthToken: () => 'mock-token', getProjectTriggers: () => [...triggers],
+      deleteTrigger: trigger => triggers.splice(triggers.indexOf(trigger), 1),
+      newTrigger: handler => {
+        const schedule = {};
+        const builder = { timeBased: () => builder,
+          atHour: value => { schedule.hour = value; return builder; },
+          nearMinute: value => { schedule.minute = value; return builder; },
+          everyDays: value => { schedule.days = value; return builder; },
+          inTimezone: value => { schedule.timezone = value; return builder; },
+          create: () => triggers.push({ getHandlerFunction: () => handler, ...schedule }),
+        };
+        return builder;
+      } },
     MailApp: { getRemainingDailyQuota: () => control.quota, sendEmail: mail => {
       if (control.failSend) throw new Error('Simulated mail failure');
       mails.push(mail); control.quota -= 1;
@@ -115,8 +124,31 @@ function runtime(documents = [], initial = { startedAt: baseline, cursor: null }
   r.ctx.installLibraryRequestAlerts();
   assert.equal(r.properties.get(key), state, 'repair must preserve the initial boundary');
   assert.equal(r.triggers.length, 1);
-  assert.equal(r.triggers[0].minutes, 5);
+  assert.equal(r.triggers[0].hour, 7);
+  assert.equal(r.triggers[0].minute, 0);
+  assert.equal(r.triggers[0].days, 1);
+  assert.equal(r.triggers[0].timezone, 'Asia/Kolkata');
   assert.equal(r.mails.length, 1, 'initial test is not resent by repair');
+}
+{
+  const r = runtime([], { startedAt: baseline, cursor: { requestedAt: baseline, name: root + 'sent' } });
+  r.properties.set('libraryRequestAlertTestSentAt', baseline);
+  const unrelated = { getHandlerFunction: () => 'unrelatedJob' };
+  r.triggers.push({ getHandlerFunction: () => 'pollLibraryRequestAlerts', minutes: 5 }, unrelated);
+  const previousState = r.properties.get(key);
+  r.ctx.installLibraryRequestAlerts();
+  assert.equal(r.properties.get(key), previousState, 'schedule migration must not lose pending checkpoint');
+  assert(r.triggers.includes(unrelated));
+  assert.equal(r.triggers.filter(t => t.getHandlerFunction() === 'pollLibraryRequestAlerts').length, 1);
+  assert.equal(r.mails.length, 0, 'migration must not resend the setup email');
+}
+{
+  const r = runtime(Array.from({ length: 101 }, (_, i) => request(String(i).padStart(3, '0'), baseline)));
+  r.ctx.pollLibraryRequestAlerts();
+  assert.equal(r.mails.length, 100, 'daily check should handle up to the consumer daily mail quota');
+  r.control.quota = 100;
+  r.ctx.pollLibraryRequestAlerts();
+  assert.equal(r.mails.length, 101, 'overflow remains for the next daily check');
 }
 {
   const r = runtime([], null);

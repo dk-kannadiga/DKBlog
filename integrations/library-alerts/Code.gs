@@ -3,7 +3,7 @@ const REQUEST_ALERTS = Object.freeze({
   projectId: 'dkblog-6c5e5',
   siteRoot: 'https://dkblog-6c5e5.web.app',
   stateProperty: 'libraryRequestAlertState',
-  batchSize: 20,
+  batchSize: 100,
 });
 
 function installLibraryRequestAlerts() {
@@ -18,14 +18,16 @@ function installLibraryRequestAlerts() {
     saveRequestAlertState_(state);
     const triggers = ScriptApp.getProjectTriggers()
       .filter(trigger => trigger.getHandlerFunction() === 'pollLibraryRequestAlerts');
-    // Keep an existing timer: repeated installation cannot add duplicate timers.
-    if (!triggers.length) ScriptApp.newTrigger('pollLibraryRequestAlerts')
-      .timeBased().everyMinutes(5).create();
+    // Replace only our timer, preserving the recipient and delivery checkpoint.
+    // Create first: if scheduling fails, the previous timer remains available.
+    ScriptApp.newTrigger('pollLibraryRequestAlerts').timeBased()
+      .atHour(7).nearMinute(0).everyDays(1).inTimezone('Asia/Kolkata').create();
+    triggers.forEach(trigger => ScriptApp.deleteTrigger(trigger));
     if (!properties.getProperty('libraryRequestAlertTestSentAt') && quota > 0) {
       sendLibraryRequestAlertTest();
       properties.setProperty('libraryRequestAlertTestSentAt', new Date().toISOString());
     }
-    console.log('Book-request alerts active; five-minute timer installed.');
+    console.log('Book-request alerts active; daily timer around 07:00 IST installed.');
   });
 }
 
@@ -36,7 +38,7 @@ function sendLibraryRequestAlertTest() {
     name: 'ಸ್ವಾನಂದ ಗ್ರಂಥನಿಧಿ',
     subject: 'ಸ್ವಾನಂದ ಗ್ರಂಥನಿಧಿ — ಪುಸ್ತಕ ಕೋರಿಕೆಯ ಮಿಂಚಂಚೆ ಸೂಚನೆ ಸಿದ್ಧವಾಗಿದೆ',
     body: 'ನಮಸ್ಕಾರ ದರ್ಶನ,\n\nಇದು ಪರೀಕ್ಷಾ ಮಿಂಚಂಚೆ. ಹೊಸ ಪುಸ್ತಕ ಎರವಲು ಕೋರಿಕೆ ಬಂದಾಗ ನಿಮಗೆ ಮಿಂಚಂಚೆ ಸೂಚನೆ ಬರಲಿದೆ.\n\n'
-      + 'ಕೋರಿಕೆಗಳನ್ನು ಪ್ರತಿ ಐದು ನಿಮಿಷಕ್ಕೊಮ್ಮೆ ಪರಿಶೀಲಿಸಲಾಗುತ್ತದೆ. ಹಿಂದಿನ ಕೋರಿಕೆಗಳಿಗೆ ಸೂಚನೆ ಕಳುಹಿಸುವುದಿಲ್ಲ.\n\n'
+      + 'ಕೋರಿಕೆಗಳನ್ನು ಪ್ರತಿದಿನ ಬೆಳಿಗ್ಗೆ ಸುಮಾರು ೭ ಗಂಟೆಗೆ (ಭಾರತೀಯ ಸಮಯ) ಪರಿಶೀಲಿಸಲಾಗುತ್ತದೆ. ಹಿಂದಿನ ಕೋರಿಕೆಗಳಿಗೆ ಸೂಚನೆ ಕಳುಹಿಸುವುದಿಲ್ಲ.\n\n'
       + `ನಿರ್ವಹಣಾ ಪುಟ: ${REQUEST_ALERTS.siteRoot}/admin\n\nಸ್ವಾನಂದ ಗ್ರಂಥನಿಧಿ`,
   });
   console.log('Test email submitted to Google MailApp.');

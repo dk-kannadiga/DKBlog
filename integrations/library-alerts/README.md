@@ -14,7 +14,10 @@ against production Firestore. Existing inventory automation was not modified.
   published in the website or this repository.
 - The alert contains the book, requester name/contact, request time in India,
   and the authenticated `/admin` link. It does not forward the free-text note.
-- Polls Firestore every five minutes, up to 20 new requests per check. It reads
+- Polls Firestore daily around 07:00 IST, up to 100 new requests per check,
+  subject to the sender's remaining email quota. No email is sent on days
+  without new requests. Google clock triggers are approximate (normally within
+  about 15 minutes). It reads
   only the fields needed for the alert, with no Sheet or Firestore writes.
 - First installation starts from that moment; historical requests are excluded.
   Reinstalling preserves the checkpoint and does not create duplicate timers.
@@ -34,3 +37,6 @@ script property in Project settings. Run `installLibraryRequestAlerts`,
 authorize the listed permissions, and confirm the test email. The installer
 checks Firestore access before installing a timer and sends one initial test.
 `pollLibraryRequestAlerts` can also be run manually for verification.
+Reinstalling replaces only the alert timer; the recipient and delivery
+checkpoint remain unchanged, so pending requests are not discarded.
+The live timer was migrated from five-minute checks on 1 October 2026.
