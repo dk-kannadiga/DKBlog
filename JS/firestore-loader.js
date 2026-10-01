@@ -1,3 +1,3 @@
-import "./firestore-data.js?v=20260928-1";
+import "./firestore-data.js?v=20261001-1";
 
 window.resolveFirebaseReady();

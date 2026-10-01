@@ -87,52 +87,38 @@ service cloud.firestore {
 
     match /siteSettings/{setting} {
       allow read: if true;
-      allow create, update, delete: if isAdmin();
+      allow create, update: if isAdmin() && (
+        setting != 'activeQuiz' || request.resource.data.quiz == null || request.resource.data.quiz.securityVersion == 2
+      );
+      allow delete: if isAdmin();
     }
 
     match /quizzes/{quizId} {
       allow read: if true;
-      allow create, update, delete: if isAdmin();
+      allow create, update: if isAdmin() && request.resource.data.state == 'archived';
+      allow delete: if isAdmin();
+    }
+
+    match /quizKeys/{quizId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /quizReceipts/{receiptId} {
+      allow get: if isAdmin() || isOwnQuizSubmission(receiptId);
+      allow list, write: if false;
     }
 
     match /quizSubmissions/{submissionId} {
       allow get: if isAdmin() || isOwnQuizSubmission(submissionId);
       allow list: if isAdmin();
-      allow create: if signedIn()
-        && request.resource.data.keys().hasOnly(['quizId', 'userId', 'answers', 'participantName', 'submittedAt'])
-        && request.resource.data.quizId is string
-        && request.resource.data.quizId.size() >= 1
-        && request.resource.data.quizId.size() <= 64
-        && request.resource.data.userId == request.auth.uid
-        && submissionId == request.resource.data.quizId + '_' + request.auth.uid
-        && request.resource.data.answers is list
-        && request.resource.data.answers.size() >= 1
-        && request.resource.data.answers.size() <= 100
-        && request.resource.data.answers.toSet().hasOnly([-1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19])
-        && request.resource.data.participantName is string
-        && request.resource.data.participantName.size() >= 1
-        && request.resource.data.participantName.size() <= 80
-        && request.resource.data.submittedAt == request.time;
-      allow update, delete: if isAdmin();
+      // Only the trusted grading service (owner OAuth/IAM) may create results.
+      // Even owner-browser edits cannot rewrite recorded scores.
+      allow create, update, delete: if false;
     }
 
     match /prizeQuizEntries/{entryId} {
       allow get, list: if isAdmin();
-      allow create: if signedIn()
-        && request.resource.data.keys().hasOnly(['quizId', 'userId', 'name', 'contact', 'submittedAt'])
-        && request.resource.data.quizId is string
-        && request.resource.data.quizId.size() >= 1
-        && request.resource.data.quizId.size() <= 64
-        && request.resource.data.userId == request.auth.uid
-        && entryId == request.resource.data.quizId + '_' + request.auth.uid
-        && request.resource.data.name is string
-        && request.resource.data.name.size() >= 2
-        && request.resource.data.name.size() <= 80
-        && request.resource.data.contact is string
-        && request.resource.data.contact.size() >= 3
-        && request.resource.data.contact.size() <= 100
-        && request.resource.data.submittedAt == request.time;
-      allow update, delete: if isAdmin();
+      allow create, update, delete: if false;
     }
 
     match /comments/{commentId} {

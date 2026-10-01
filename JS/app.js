@@ -6,7 +6,7 @@ const LC={'ಕನ್ನಡ':'kn','English':'en','Mixed':'mixed'};
 // Always wait for the current Firestore result before showing published content.
 // The bundled sample posts are only used if Firestore is unavailable.
 let POSTS=[],COLLECTIONS=[],BOOKS=[],postsLoading=true,collectionsLoading=true,libraryLoading=true,contentLoading=true,CATS=JSON.parse(JSON.stringify(DC)),likes={},likedMe=new Set();
-let Q=null,QA=[...DQA],qDraft=[],editQId=false,certDraft=null,qSubmitted=false,qSubmissionQuizId=null,qSubmissionCheckInFlight=false,qSubmitting=false;
+let Q=null,QA=[...DQA],qDraft=[],editQId=false,certDraft=null,qSubmitted=false,qSubmissionQuizId=null,qSubmissionCheckInFlight=false,qSubmitting=false,qSavedResult=null;
 let adminAuth=false,editId=null,collectionEditId=null,bookEditId=null,catF='all',searchQ='',librarySearchQ='',libraryAvailability='all',libraryRequests=[],libraryAdminLoading=false,participantStatus=null,participantSort={field:'score',direction:'desc'};
 const HOME_PAGE_SIZE=12;
 let postsFullyLoaded=false,homeHasMore=false,homeLoadingMore=false,homeVisibleCount=0,allPostsPromise=null;
@@ -639,10 +639,11 @@ function renderQuizPlay(id){
     if(qSubmissionQuizId!==quizId){
       qSubmissionQuizId=quizId;
       qSubmitted=false;
-      if(window.hasFirestoreQuizSubmission){
+      qSavedResult=null;
+      if(window.getMyFirestoreQuizSubmission){
         qSubmissionCheckInFlight=true;
-        window.hasFirestoreQuizSubmission(Q.id)
-          .then(submitted=>{if(Q&&String(Q.id)===quizId)qSubmitted=submitted})
+        window.getMyFirestoreQuizSubmission(Q.id)
+          .then(result=>{if(Q&&String(Q.id)===quizId){qSubmitted=!!result;qSavedResult=result?.gradingVersion===2?result:null}})
           .catch(error=>console.error('Quiz submission check failed:',error))
           .finally(()=>{if(Q&&String(Q.id)===quizId){qSubmissionCheckInFlight=false;renderQuizPlay(Q.id)}});
       }
@@ -650,6 +651,7 @@ function renderQuizPlay(id){
     if(qSubmissionCheckInFlight){
       cur.innerHTML='<div class="empty">ನಿಮ್ಮ ಕ್ವಿಜ಼್ ಉತ್ತರ ಸಲ್ಲಿಕೆಯನ್ನು ಪರಿಶೀಲಿಸಲಾಗುತ್ತಿದೆ…</div>';
     }else if(qSubmitted){
+      if(qSavedResult){showResults(Q,qSavedResult.answers,qSavedResult.participantName,qSavedResult.score,qSavedResult.submittedAt);return}
       cur.innerHTML=`<div style="text-align:center;padding:40px"><p style="color:var(--il);font-style:italic">ನೀವು ಈ ಕ್ವಿಜ಼್‌ಗೆ ಈಗಾಗಲೇ ಉತ್ತರಗಳನ್ನು ಸಲ್ಲಿಸಿದ್ದೀರಿ. ಭಾಗವಹಿಸಿದ್ದಕ್ಕೆ ಧನ್ಯವಾದಗಳು! 🙏</p></div>`;
     }else{
       renderLiveQuiz(cur);
@@ -694,8 +696,8 @@ async function submitQuiz(){
   });
   const ua=answers.filter(a=>a===-1).length;
   if(ua>0&&!confirm(`${ua} ಪ್ರಶ್ನೆಗಳಿಗೆ ಉತ್ತರಿಸಿಲ್ಲ. ಆದರೂ ಸಲ್ಲಿಸಬೇಕೇ?`))return;
-  let score=0;
-  Q.questions.forEach((q,i)=>{if(answers[i]===q.ans)score++});
+  const submittedQuiz=Q;
+  let saved;
   const con=Q.type==='prize'?document.getElementById('q-con')?.value.trim()||'':'';
   if(Q.type==='prize'&&con.length<3){alert('ಬಹುಮಾನದ ಕುರಿತು ಸಂಪರ್ಕಿಸಲು ದಯವಿಟ್ಟು ಮಿಂಚಂಚೆ ವಿಳಾಸ ಅಥವಾ ವಾಟ್ಸಾಪ್ ಸಂಖ್ಯೆಯನ್ನು ನಮೂದಿಸಿ.');return}
   if(!window.saveFirestoreQuizSubmission){
@@ -706,7 +708,7 @@ async function submitQuiz(){
   const submitButton=document.querySelector('.qsubmit');
   if(submitButton){submitButton.disabled=true;submitButton.textContent='ಉತ್ತರಗಳನ್ನು ಉಳಿಸಲಾಗುತ್ತಿದೆ…'}
   try{
-    await window.saveFirestoreQuizSubmission(Q.id,answers,name,Q.type==='prize'?{name,contact:con}:null);
+    saved=await window.saveFirestoreQuizSubmission(submittedQuiz.id,answers,name,submittedQuiz.type==='prize'?{name,contact:con}:null);
   }catch(error){
     console.error('Quiz submission save failed:',error);
     alert('ನಿಮ್ಮ ಉತ್ತರಗಳನ್ನು ಉಳಿಸಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ. ಈ ಬ್ರೌಸರ್‌ನಿಂದ ಈಗಾಗಲೇ ಸಲ್ಲಿಸಿರಬಹುದು. ಪರಿಶೀಲಿಸಲು ಪುಟವನ್ನು ಮರುಲೋಡ್ ಮಾಡಿ.');
@@ -714,20 +716,15 @@ async function submitQuiz(){
     qSubmitting=false;
     return;
   }
-  if(!Q.stats)Q.stats={total:0,qs:{}};
-  Q.stats.total=(Q.stats.total||0)+1;
-  Q.questions.forEach((q,i)=>{
-    if(!Q.stats.qs[i])Q.stats.qs[i]={c:0,w:0};
-    if(answers[i]===q.ans)Q.stats.qs[i].c++;else Q.stats.qs[i].w++
-  });
   qSubmitted=true;
+  qSavedResult=saved;
   qSubmitting=false;
-  showResults(Q,answers,name,score)
+  showResults(submittedQuiz,saved.answers,saved.participantName,saved.score,saved.submittedAt)
 }
-function showResults(q,answers,name,score){
+function showResults(q,answers,name,score,submittedAt){
   const total=q.questions.length,pct=Math.round(score/total*100);
   const cur=document.getElementById('qpc')||document.getElementById('qcur');
-  certData={name,title:q.title,score,total,date:todayStr(),template:q.certificateTemplate};
+  certData={name,title:q.title,score,total,date:submittedAt?.toDate?submittedAt.toDate().toISOString().slice(0,10):todayStr(),template:q.certificateTemplate};
   let h=`<div class="qscore-box">
     <div style="font-size:1.8rem;margin-bottom:8px">${score===total?'🏆':score>=total*.7?'🎉':score>=total*.5?'👍':'📚'}</div>
     <div class="qscore">${score} / ${total}</div>
@@ -735,6 +732,11 @@ function showResults(q,answers,name,score){
     ${q.type==='certificate'?`<br><button class="certbtn" onclick="genCert()">📜 ಪ್ರಮಾಣಪತ್ರ ಡೌನ್‌ಲೋಡ್ ಮಾಡಿ</button>`:''}
     ${q.type==='prize'?`<p style="color:var(--il);font-size:.88rem;font-style:italic;margin-top:14px">ಧನ್ಯವಾದಗಳು ${esc(name)}! ನೀವು ವಿಜೇತರಲ್ಲಿ ಒಬ್ಬರಾಗಿದ್ದರೆ, ಶೀಘ್ರದಲ್ಲೇ ನಿಮ್ಮನ್ನು ಸಂಪರ್ಕಿಸುತ್ತೇವೆ. 🎁</p>`:''}
   </div><div class="qform-wrap">`;
+  // Never render answer feedback from an owner's private quiz while it is active.
+  if(q.state!=='archived'){
+    h+='<p class="qname-note">ಸರಿಯಾದ ಉತ್ತರಗಳು ಮತ್ತು ವಿವರಣೆಗಳು ಕ್ವಿಜ಼್ ಅನ್ನು ಸಂಗ್ರಹಕ್ಕೆ ಸೇರಿಸಿದ ಬಳಿಕ ಲಭ್ಯವಾಗುತ್ತವೆ.</p>';
+    h+='</div>';cur.innerHTML=h;return;
+  }
   q.questions.forEach((qu,i)=>{
     const ua=answers[i],ok=ua===qu.ans;
     h+=`<div class="qcard" style="border-left-color:${ok?'#2d6a2d':'#c0392b'}">
@@ -852,6 +854,7 @@ async function aLogin(){
     await window.signInAdmin();
     adminAuth=window.isFirebaseOwner();
     if(!adminAuth)throw new Error('This account is not authorized to administer the site.');
+    qSubmissionQuizId=null;qSubmitted=false;qSavedResult=null;
     error.textContent='';go('admin');
   }catch(e){
     console.error('Admin sign-in failed:',e);
@@ -859,7 +862,7 @@ async function aLogin(){
     error.textContent=e.message||'Sign-in was not completed. Please try again.';
   }
 }
-async function aLogout(){adminAuth=false;await window.signOutAdmin();go('home')}
+async function aLogout(){adminAuth=false;qSubmissionQuizId=null;qSubmitted=false;qSavedResult=null;await window.signOutAdmin();Q=await window.getFirestoreActiveQuiz();go('home')}
 async function aTab(btn,tab){
   document.querySelectorAll('.adtab').forEach(b=>b.classList.remove('on'));
   document.querySelectorAll('.adtabc').forEach(c=>c.classList.remove('on'));
@@ -873,7 +876,10 @@ async function aTab(btn,tab){
   else if(tab==='collections')renderAdCollections();
   else if(tab==='library')loadAdminLibrary();
   else if(tab==='cats')renderAdCats();
-  else if(tab==='quiz')renderAdQuiz()
+  else if(tab==='quiz'){
+    try{Q=await window.getFirestoreAdminQuiz();renderAdQuiz()}
+    catch(error){console.error('Private quiz load failed:',error);document.getElementById('atab-quiz').innerHTML='<div class="empty">Private quiz data could not be loaded. Refresh and try again.</div>'}
+  }
 }
 async function renderAdmin(){
   document.querySelectorAll('.adtab').forEach((b,i)=>b.classList.toggle('on',i===0));
@@ -1534,7 +1540,7 @@ async function viewQuizSubmissions(quizId){
     const prizeNames=new Map(entries.map(entry=>[entry.userId,entry.name]));
     const participants=submissions.map(submission=>({
       name:submission.participantName||prizeNames.get(submission.userId)||'Name not recorded',
-      score:quizSubmissionScore(quiz,submission.answers),
+      score:submission.gradingVersion===2?submission.score:quizSubmissionScore(quiz,submission.answers),
       submittedAt:submission.submittedAt,
     }));
     if(participants.length){
@@ -1562,13 +1568,13 @@ async function viewPrizeEntries(quizId){
       window.getFirestorePrizeQuizEntries(quizId),
       window.getFirestoreQuizSubmissions(quizId),
     ]);
-    const answersByUser=new Map(submissions.map(submission=>[submission.userId,submission.answers]));
+    const submissionsByUser=new Map(submissions.map(submission=>[submission.userId,submission]));
     entries.sort((a,b)=>(b.submittedAt?.seconds||0)-(a.submittedAt?.seconds||0));
     el.innerHTML=entries.length?`<div style="display:flex;justify-content:space-between;align-items:center;margin:16px 0 8px">
       <h4 style="font-family:'Playfair Display',serif;color:var(--ac);font-size:1rem">Prize Entries (${entries.length})</h4>
     </div><div class="subslist">${entries.map(entry=>{
-      const answers=Array.isArray(answersByUser.get(entry.userId))?answersByUser.get(entry.userId):[];
-      const score=quiz.questions.reduce((total,question,index)=>total+(answers[index]===question.ans?1:0),0);
+      const submission=submissionsByUser.get(entry.userId);
+      const score=submission?.gradingVersion===2?submission.score:quizSubmissionScore(quiz,submission?.answers);
       const when=entry.submittedAt?.toDate?entry.submittedAt.toDate().toLocaleString():'—';
       return`<div class="subrow"><strong>${esc(entry.name||'—')}</strong> · ${esc(entry.contact||'—')} · Score: <strong>${score}/${quiz.questions.length}</strong> · ${esc(when)}</div>`
     }).join('')}</div>`:'<p style="color:var(--gd);font-style:italic;padding:12px 0;font-size:.88rem">No prize entries yet.</p>';
@@ -1584,6 +1590,7 @@ async function delArcQ(id){
 function repeatArchivedQuiz(id){
   const archived=findQuiz(id);
   if(!archived)return;
+  if(!confirm('Archived answers are already public. Use a repeat for practice, or replace its questions before running a competitive/prize quiz. Create a new draft?'))return;
   if(Q){
     alert('Close and archive the current quiz before creating a repeat.');
     return;
@@ -1746,6 +1753,7 @@ async function saveQForm(){
     if(qDraft[i].opts.filter(o=>o).length<2){alert(`Question ${i+1} needs at least 2 options.`);return}
   }
   const type=document.getElementById('qf-type')?.value||'certificate';
+  const previousQuiz=Q;
   Q={
     id:editQId&&Q?Q.id:Date.now(),
     title,description:document.getElementById('qf-d')?.value.trim()||'',
@@ -1756,7 +1764,7 @@ async function saveQForm(){
     prize:document.getElementById('qf-pr')?.value.trim()||'',
     questions:qDraft,stats:editQId&&Q?Q.stats:{total:0,qs:{}},certificateTemplate:type==='certificate'?readCertificateDesigner():null
   };
-  try{await svQ();cancelQF();renderAdQuiz()}catch(e){console.error('Quiz save failed:',e);alert('The quiz could not be saved. Please try again.')}
+  try{await svQ();cancelQF();renderAdQuiz()}catch(e){Q=previousQuiz;console.error('Quiz save failed:',e);alert(e.message||'The quiz could not be saved. Please try again.')}
 }
 
 (async()=>{

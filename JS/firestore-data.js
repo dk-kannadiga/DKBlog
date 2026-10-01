@@ -10,6 +10,7 @@ import {
   limit,
   orderBy,
   query,
+  runTransaction,
   serverTimestamp,
   setDoc,
   startAfter,
@@ -308,8 +309,42 @@ window.getFirestoreActiveQuiz = async function () {
   const active = await getDoc(doc(db, "siteSettings", "activeQuiz"));
   return active.exists() ? active.data().quiz || null : null;
 };
+window.getFirestoreAdminQuiz = async function () {
+  await authReady;
+  if (!owner) throw new Error("Owner authentication required.");
+  const quiz = await window.getFirestoreActiveQuiz();
+  if (!quiz) return null;
+  const key = await getDoc(doc(db, "quizKeys", String(quiz.id)));
+  if (!key.exists()) throw new Error("Private quiz key is missing. Do not publish this quiz.");
+  return { ...quiz, questions: key.data().questions };
+};
 window.saveFirestoreActiveQuiz = async function (quiz) {
-  await setDoc(doc(db, "siteSettings", "activeQuiz"), { quiz: quiz || null, updatedAt: serverTimestamp() });
+  await authReady;
+  if (!owner) throw new Error("Owner authentication required.");
+  const activeRef = doc(db, "siteSettings", "activeQuiz");
+  if (!quiz) {
+    await setDoc(activeRef, { quiz: null, updatedAt: serverTimestamp() });
+    return;
+  }
+  const version = crypto.randomUUID();
+  const publicQuiz = window.DKQuizSecurity.publicQuiz(quiz, version);
+  if (quiz.state === 'live') {
+    const service = await getDoc(doc(db, 'siteSettings', 'quizService'));
+    if (!service.exists() || !/^https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_-]+\/exec$/.test(service.data().url || '')) throw new Error('Secure grading must be activated before this quiz can go live.');
+  }
+  const keyRef = doc(db, "quizKeys", String(quiz.id));
+  await runTransaction(db, async transaction => {
+    const current = await transaction.get(keyRef);
+    // Keep questions fixed for a quiz ID once it has gone live, including after closure.
+    const old = current.exists() ? current.data() : null;
+    if (old?.locked && JSON.stringify(old.questions) !== JSON.stringify(quiz.questions)) {
+      throw new Error("Questions cannot change after publication. Close/archive this quiz and create a repeat with a new ID.");
+    }
+    transaction.set(keyRef, { questions: quiz.questions, version, locked: !!old?.locked || quiz.state === 'live', updatedAt: serverTimestamp() });
+    transaction.set(activeRef, { quiz: publicQuiz, updatedAt: serverTimestamp() });
+  });
+  quiz.version = version;
+  quiz.securityVersion = 2;
 };
 function quizSubmissionId(quizId, userId) {
   return `${String(quizId)}_${userId}`;
@@ -318,30 +353,37 @@ window.hasFirestoreQuizSubmission = async function (quizId) {
   const user = await requireUser();
   return (await getDoc(doc(db, "quizSubmissions", quizSubmissionId(quizId, user.uid)))).exists();
 };
+window.getMyFirestoreQuizSubmission = async function (quizId) {
+  const user = await requireUser();
+  const saved = await getDoc(doc(db, "quizSubmissions", quizSubmissionId(quizId, user.uid)));
+  return saved.exists() ? saved.data() : null;
+};
 window.saveFirestoreQuizSubmission = async function (quizId, answers, participantName, prizeEntry = null) {
   const user = await requireUser();
-  const cleanAnswers = answers.map((answer) => Number.isInteger(answer) ? answer : -1);
-  const cleanParticipantName = String(participantName || "").trim().slice(0, 80);
-  if (!cleanParticipantName) throw new Error("Please enter your name.");
-  const id = quizSubmissionId(quizId, user.uid);
-  const batch = writeBatch(db);
-  batch.set(doc(db, "quizSubmissions", id), {
-    quizId: String(quizId),
-    userId: user.uid,
-    answers: cleanAnswers,
-    participantName: cleanParticipantName,
-    submittedAt: serverTimestamp(),
-  });
-  if (prizeEntry) {
-    batch.set(doc(db, "prizeQuizEntries", id), {
-      quizId: String(quizId),
-      userId: user.uid,
-      name: prizeEntry.name.trim(),
-      contact: prizeEntry.contact.trim(),
-      submittedAt: serverTimestamp(),
-    });
+  const config = await getDoc(doc(db, "siteSettings", "quizService"));
+  const url = config.exists() ? config.data().url : '';
+  if (!/^https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_-]+\/exec$/.test(url)) throw new Error("Secure grading is not configured.");
+  const requestId = crypto.randomUUID();
+  // Apps Script's cross-origin response is opaque. Read the server-owned receipt instead.
+  await fetch(url, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify({
+    idToken: await user.getIdToken(), requestId, quizId: String(quizId), answers,
+    participantName: String(participantName || '').trim(), contact: prizeEntry?.contact || '',
+  }) });
+  const receiptRef = doc(db, "quizReceipts", `${requestId}_${user.uid}`);
+  for (let attempt = 0; attempt < 45; attempt++) {
+    const receipt = await getDoc(receiptRef);
+    if (receipt.exists()) {
+      if (receipt.data().status !== 'ok') throw new Error(receipt.data().code || 'Quiz submission rejected.');
+      const result = await window.getMyFirestoreQuizSubmission(quizId);
+      if (!result || result.gradingVersion !== 2 || !Number.isInteger(result.score)) throw new Error('Trusted result unavailable.');
+      return result;
+    }
+    await new Promise(resolve => setTimeout(resolve, 1000));
   }
-  await batch.commit();
+  // A lost receipt must never produce a locally fabricated score.
+  const saved = await window.getMyFirestoreQuizSubmission(quizId);
+  if (saved?.gradingVersion === 2) return saved;
+  throw new Error('Secure grading timed out. Please retry.');
 };
 window.getFirestoreQuizSubmissions = async function (quizId) {
   const snapshot = await getDocs(
