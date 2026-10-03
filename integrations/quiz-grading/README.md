@@ -18,7 +18,7 @@ This is independent of the library sheet and email automation. No Firebase paid-
 2. Deploy a Web app, executing as the website owner, with access for Anyone. Obtain explicit owner approval before granting OAuth/database access and publishing this endpoint. The service authorizes requests itself using Firebase ID tokens; public endpoint access does not imply public database/key access.
 3. Set `siteSettings/quizService` to `{url: "https://script.google.com/macros/s/DEPLOYMENT_ID/exec"}` using owner credentials.
 4. Deploy Firestore rules and hosting. Keep the web app at a versioned `/exec` URL, not the editor-only `/dev` URL.
-5. Run `node scripts/test-quiz-security.cjs` and `node scripts/verify-quiz-security-live.mjs`.
+5. Run `node scripts/configure-quiz-grading.mjs "https://script.google.com/macros/s/DEPLOYMENT_ID/exec"`, followed by `node scripts/test-quiz-security.cjs` and `node scripts/verify-quiz-security-live.mjs`.
 
 Tokens are sent in POST bodies, not query strings. Firebase validates signatures through `accounts:lookup`; the service additionally checks project, issuer, UID, expiry and account status. Owner OAuth credentials never leave the service. Live-state/key reads and immutable submission/contact writes share a Firestore transaction, so concurrent closure or duplicate submissions cannot slip through. Score/UID fields from callers are ignored. Active answer feedback is withheld until archiving, including for certificate quizzes.
 
