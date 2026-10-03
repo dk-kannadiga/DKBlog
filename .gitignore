@@ -19,6 +19,7 @@ firebase-debug.*.log*
 
 # Runtime data
 pids
+backup/
 *.pid
 *.seed
 *.pid.lock
