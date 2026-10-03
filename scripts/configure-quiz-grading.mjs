@@ -10,8 +10,13 @@ assert.equal(healthResponse.status,200,'Grading service is not publicly reachabl
 const health=await healthResponse.json();
 assert.equal(health.service,'DK secure quiz grading');
 assert.equal(health.version,2);
-const credentials=JSON.parse(await readFile(join(homedir(),'.config','configstore','firebase-tools.json'),'utf8'));
-const headers={Authorization:`Bearer ${credentials.tokens.access_token}`,'Content-Type':'application/json'};
+const credentialPaths=[join(homedir(),'.config','configstore','firebase-tools.json'),join(process.env.APPDATA||'', 'configstore','firebase-tools.json')];
+let accessToken='';
+for(const path of credentialPaths){
+  try { accessToken=JSON.parse(await readFile(path,'utf8')).tokens?.access_token||''; if(accessToken)break; } catch {}
+}
+assert.ok(accessToken,'Firebase CLI credentials are unavailable. Run firebase login, then retry.');
+const headers={Authorization:`Bearer ${accessToken}`,'Content-Type':'application/json'};
 const base='https://firestore.googleapis.com/v1/projects/dkblog-6c5e5/databases/(default)/documents';
 const existing=await fetch(`${base}/siteSettings/quizService`,{headers});
 assert.ok(existing.status===200||existing.status===404,'Cannot inspect the current grading configuration.');
