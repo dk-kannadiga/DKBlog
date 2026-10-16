@@ -1720,7 +1720,7 @@ function buildQForm(){
       </div>
       <div id="qbuilder"></div>
     </div>
-    <div class="fbts"><button class="savebtn" onclick="saveQForm()">💾 Save Quiz</button><button class="cancelbtn" onclick="cancelQF()">Cancel</button></div>
+    <div class="fbts"><button class="savebtn" onclick="saveQForm()">💾 Save Quiz</button><button type="button" class="editbtn" onclick="addQ()">+ Add Question</button><button class="cancelbtn" onclick="cancelQF()">Cancel</button></div>
   </div>`
 }
 function startCreateQuiz(){
