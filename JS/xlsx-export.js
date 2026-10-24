@@ -32,19 +32,31 @@
   function worksheetXml(rows){
     return`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>${rows.map((cells,row)=>`<row r="${row+1}">${cells.map((value,column)=>cellXml(value,row,column)).join('')}</row>`).join('')}</sheetData></worksheet>`;
   }
-  function xlsxBytes(rows,sheetName='Sheet 1'){
-    if(!Array.isArray(rows)||!rows.length)throw new Error('Excel export needs at least one row.');
-    const safeSheet=xmlEscape(String(sheetName).replace(/[\\/*?:\[\]]/g,' ').trim().slice(0,31)||'Sheet 1');
+  function normalizedSheets(sheets){
+    if(!Array.isArray(sheets)||!sheets.length)throw new Error('Excel export needs at least one sheet.');
+    const used=new Set();
+    return sheets.map((sheet,index)=>{
+      if(!sheet||!Array.isArray(sheet.rows)||!sheet.rows.length)throw new Error('Every Excel sheet needs at least one row.');
+      let name=String(sheet.name||`Sheet ${index+1}`).replace(/[\\/*?:\[\]]/g,' ').trim().slice(0,31)||`Sheet ${index+1}`;
+      const base=name;let suffix=2;while(used.has(name)){name=`${base.slice(0,31-String(suffix).length-1)} ${suffix++}`}
+      used.add(name);return{name,rows:sheet.rows};
+    });
+  }
+  function xlsxBytesFromSheets(sheets){
+    const cleanSheets=normalizedSheets(sheets),sheetOverrides=cleanSheets.map((_,index)=>`<Override PartName="/xl/worksheets/sheet${index+1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('');
+    const workbookSheets=cleanSheets.map((sheet,index)=>`<sheet name="${xmlEscape(sheet.name)}" sheetId="${index+1}" r:id="rId${index+1}"/>`).join('');
+    const relations=cleanSheets.map((_,index)=>`<Relationship Id="rId${index+1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${index+1}.xml"/>`).join('');
     return zipStore([
-      {name:'[Content_Types].xml',text:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>'},
+      {name:'[Content_Types].xml',text:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>${sheetOverrides}<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>`},
       {name:'_rels/.rels',text:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>'},
-      {name:'xl/workbook.xml',text:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="${safeSheet}" sheetId="1" r:id="rId1"/></sheets></workbook>`},
-      {name:'xl/_rels/workbook.xml.rels',text:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>'},
+      {name:'xl/workbook.xml',text:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>${workbookSheets}</sheets></workbook>`},
+      {name:'xl/_rels/workbook.xml.rels',text:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${relations}<Relationship Id="rId${cleanSheets.length+1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`},
       {name:'xl/styles.xml',text:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="1"><font><sz val="11"/><name val="Calibri"/></font></fonts><fills count="1"><fill><patternFill patternType="none"/></fill></fills><borders count="1"><border/></borders><cellStyleXfs count="1"><xf/></cellStyleXfs><cellXfs count="1"><xf xfId="0"/></cellXfs></styleSheet>'},
-      {name:'xl/worksheets/sheet1.xml',text:worksheetXml(rows)},
+      ...cleanSheets.map((sheet,index)=>({name:`xl/worksheets/sheet${index+1}.xml`,text:worksheetXml(sheet.rows)})),
     ]);
   }
-  const api={xlsxBytes,xmlEscape,columnLabel};
+  const xlsxBytes=(rows,sheetName='Sheet 1')=>xlsxBytesFromSheets([{name:sheetName,rows}]);
+  const api={xlsxBytes,xlsxBytesFromSheets,xmlEscape,columnLabel};
   if(typeof module!=='undefined')module.exports=api;
   else root.DKXlsx=api;
 })(typeof window==='undefined'?globalThis:window);

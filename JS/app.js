@@ -1516,7 +1516,7 @@ function renderParticipantStatus(){
     return participantSort.field==='score'?participantTimestamp(b)-participantTimestamp(a):b.score-a.score;
   });
   const arrow=field=>participantSort.field===field?(participantSort.direction==='desc'?'↓':'↑'):'↕';
-  el.innerHTML=`<div class="participant-status-head"><h4>Participant Status (${participants.length})</h4><span>Click Score or Submitted to sort.</span></div>
+  el.innerHTML=`<div class="participant-status-head"><h4>Participant Status (${participants.length})</h4><span>Click Score or Submitted to sort.</span><button type="button" class="editbtn" onclick="downloadParticipantStatusExcel()">⬇ Download Excel</button></div>
     <div class="participant-table"><div class="participant-table__header"><span>Name</span><button class="participant-sort" onclick="setParticipantSort('score')">Score ${arrow('score')}</button><button class="participant-sort" onclick="setParticipantSort('submitted')">Submitted ${arrow('submitted')}</button></div>
     ${sorted.map(participant=>{
       const when=participant.submittedAt?.toDate?participant.submittedAt.toDate().toLocaleString():'—';
@@ -1544,7 +1544,7 @@ async function viewQuizSubmissions(quizId){
       submittedAt:submission.submittedAt,
     }));
     if(participants.length){
-      participantStatus={quiz,participants};
+      participantStatus={quiz,participants,submissions};
       participantSort={field:'score',direction:'desc'};
       renderParticipantStatus();
     }else{
@@ -1554,6 +1554,32 @@ async function viewQuizSubmissions(quizId){
     console.error('Participant status load failed:',error);
     el.innerHTML='<p style="color:#b23b35;padding:12px 0;font-size:.88rem">Participant status could not be loaded. Please try again.</p>';
   }
+}
+function downloadParticipantStatusExcel(){
+  if(!participantStatus||!window.DKXlsx){alert('Participant data is not ready. Open Participant Status and try again.');return}
+  const {quiz,submissions}=participantStatus,questions=Array.isArray(quiz.questions)?quiz.questions:[];
+  const headers=['Quiz title','Quiz ID','Participant name','Score','Total questions','Percentage','Submitted at'];
+  questions.forEach((question,index)=>headers.push(`Q${index+1} answer`, `Q${index+1} correct answer`));
+  const ordered=[...(submissions||[])].sort((a,b)=>participantTimestamp(b)-participantTimestamp(a));
+  const participantRows=ordered.map(submission=>{
+    const score=submission.gradingVersion===2?submission.score:quizSubmissionScore(quiz,submission.answers);
+    const total=questions.length,answers=Array.isArray(submission.answers)?submission.answers:[];
+    const row=[quiz.title||'',String(quiz.id||''),submission.participantName||'',score,total,total?Math.round(score/total*100):0,prizeEntryTime(null,submission)];
+    questions.forEach((question,index)=>{
+      const selected=answers[index];
+      row.push(selected===-1?'Not answered':question.opts?.[selected]??'—',question.opts?.[question.ans]??'—');
+    });
+    return row;
+  });
+  const analysisRows=[['Question no.','Question','Correct answer','Correct answers','Wrong / not answered','Total responses','Correct percentage'],...questions.map((question,index)=>{
+    const correct=ordered.reduce((total,submission)=>total+(Array.isArray(submission.answers)&&submission.answers[index]===question.ans?1:0),0),total=ordered.length;
+    return[index+1,question.q||'',question.opts?.[question.ans]??'—',correct,total-correct,total,total?Math.round(correct/total*100):0];
+  })];
+  try{
+    const blob=new Blob([window.DKXlsx.xlsxBytesFromSheets([{name:'Participants',rows:[headers,...participantRows]},{name:'Question Analysis',rows:analysisRows}])],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+    const link=document.createElement('a'),url=URL.createObjectURL(blob),safeId=String(quiz.id||'quiz').replace(/[^A-Za-z0-9_-]/g,'-');
+    link.href=url;link.download=`participant-status-${safeId}.xlsx`;document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+  }catch(error){console.error('Participant Excel export failed:',error);alert('Excel download could not be created. Please try again.');}
 }
 async function viewPrizeEntries(quizId){
   const el=document.getElementById('qsubs');
