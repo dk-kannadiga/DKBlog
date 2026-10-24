@@ -6,7 +6,7 @@ const LC={'ಕನ್ನಡ':'kn','English':'en','Mixed':'mixed'};
 // Always wait for the current Firestore result before showing published content.
 // The bundled sample posts are only used if Firestore is unavailable.
 let POSTS=[],COLLECTIONS=[],BOOKS=[],postsLoading=true,collectionsLoading=true,libraryLoading=true,contentLoading=true,CATS=JSON.parse(JSON.stringify(DC)),likes={},likedMe=new Set();
-let Q=null,QA=[...DQA],qDraft=[],editQId=false,certDraft=null,qSubmitted=false,qSubmissionQuizId=null,qSubmissionCheckInFlight=false,qSubmitting=false,qSavedResult=null;
+let Q=null,QA=[...DQA],qDraft=[],editQId=false,certDraft=null,qSubmitted=false,qSubmissionQuizId=null,qSubmissionCheckInFlight=false,qSubmitting=false,qSavedResult=null,prizeExportData=null;
 let adminAuth=false,editId=null,collectionEditId=null,bookEditId=null,catF='all',searchQ='',librarySearchQ='',libraryAvailability='all',libraryRequests=[],libraryAdminLoading=false,participantStatus=null,participantSort={field:'score',direction:'desc'};
 const HOME_PAGE_SIZE=12;
 let postsFullyLoaded=false,homeHasMore=false,homeLoadingMore=false,homeVisibleCount=0,allPostsPromise=null;
@@ -1562,6 +1562,7 @@ async function viewPrizeEntries(quizId){
     el.innerHTML='<p style="color:var(--gd);font-style:italic;padding:12px 0;font-size:.88rem">Prize entries are not available.</p>';
     return;
   }
+  prizeExportData=null;
   el.innerHTML='<p style="color:var(--gd);font-style:italic;padding:12px 0;font-size:.88rem">Loading prize entries…</p>';
   try{
     const [entries,submissions]=await Promise.all([
@@ -1570,8 +1571,10 @@ async function viewPrizeEntries(quizId){
     ]);
     const submissionsByUser=new Map(submissions.map(submission=>[submission.userId,submission]));
     entries.sort((a,b)=>(b.submittedAt?.seconds||0)-(a.submittedAt?.seconds||0));
-    el.innerHTML=entries.length?`<div style="display:flex;justify-content:space-between;align-items:center;margin:16px 0 8px">
+    prizeExportData=entries.length?{quiz,entries,submissionsByUser}:null;
+    el.innerHTML=entries.length?`<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin:16px 0 8px">
       <h4 style="font-family:'Playfair Display',serif;color:var(--ac);font-size:1rem">Prize Entries (${entries.length})</h4>
+      <button type="button" class="editbtn" onclick="downloadPrizeEntriesExcel()">⬇ Download Excel</button>
     </div><div class="subslist">${entries.map(entry=>{
       const submission=submissionsByUser.get(entry.userId);
       const score=submission?.gradingVersion===2?submission.score:quizSubmissionScore(quiz,submission?.answers);
@@ -1582,6 +1585,32 @@ async function viewPrizeEntries(quizId){
     console.error('Prize entries load failed:',error);
     el.innerHTML='<p style="color:#b23b35;padding:12px 0;font-size:.88rem">Prize entries could not be loaded. Please try again.</p>';
   }
+}
+function prizeEntryTime(entry,submission){
+  const timestamp=entry?.submittedAt||submission?.submittedAt;
+  return timestamp?.toDate?timestamp.toDate().toLocaleString('en-IN'):'—';
+}
+function downloadPrizeEntriesExcel(){
+  if(!prizeExportData||!window.DKXlsx){alert('Prize entry data is not ready. Open Prize Entries and try again.');return}
+  const {quiz,entries,submissionsByUser}=prizeExportData,questions=Array.isArray(quiz.questions)?quiz.questions:[];
+  const headers=['Quiz title','Quiz ID','Participant name','Contact','Score','Total questions','Percentage','Submitted at'];
+  questions.forEach((question,index)=>headers.push(`Q${index+1} answer`, `Q${index+1} correct answer`));
+  const rows=[headers,...entries.map(entry=>{
+    const submission=submissionsByUser.get(entry.userId);
+    const score=submission?.gradingVersion===2?submission.score:quizSubmissionScore(quiz,submission?.answers);
+    const total=questions.length,answers=Array.isArray(submission?.answers)?submission.answers:[];
+    const row=[quiz.title||'',String(quiz.id||''),entry.name||submission?.participantName||'',entry.contact||'',score,total,total?Math.round(score/total*100):0,prizeEntryTime(entry,submission)];
+    questions.forEach((question,index)=>{
+      const selected=answers[index];
+      row.push(selected===-1?'Not answered':question.opts?.[selected]??'—',question.opts?.[question.ans]??'—');
+    });
+    return row;
+  })];
+  try{
+    const blob=new Blob([window.DKXlsx.xlsxBytes(rows,'Prize Entries')],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+    const link=document.createElement('a'),url=URL.createObjectURL(blob),safeId=String(quiz.id||'quiz').replace(/[^A-Za-z0-9_-]/g,'-');
+    link.href=url;link.download=`prize-entries-${safeId}.xlsx`;document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+  }catch(error){console.error('Prize entry Excel export failed:',error);alert('Excel download could not be created. Please try again.');}
 }
 async function delArcQ(id){
   try{await window.deleteFirestoreQuizArchive(id);QA=QA.filter(q=>q.id!==id);renderAdQuiz()}
