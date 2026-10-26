@@ -2,7 +2,6 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebas
 import {
   addDoc,
   collection,
-  countFromServer,
   deleteDoc,
   doc,
   getDoc,
@@ -45,10 +44,8 @@ const auth = getAuth(app);
 let currentUser = null;
 let owner = false;
 const POST_PAGE_SIZE = 12;
-const LIBRARY_PAGE_SIZE = 24;
 let postPageCursor = null;
 let postPageHasMore = true;
-let libraryPageCursor = null;
 let resolveAuthReady;
 const authReady = new Promise((resolve) => {
   resolveAuthReady = resolve;
@@ -198,26 +195,6 @@ window.getFirestoreLibraryBooks = async function () {
     .map((item) => ({ ...item.data(), firestoreId: item.id, id: item.data().id || item.id }))
     .sort((a, b) => String(a.title || "").localeCompare(String(b.title || ""), "kn"));
 };
-window.getFirestoreLibraryBooksPage = async function (reset = false) {
-  if (reset) libraryPageCursor = null;
-  const constraints = [orderBy("title"), limit(LIBRARY_PAGE_SIZE)];
-  if (libraryPageCursor) constraints.splice(1, 0, startAfter(libraryPageCursor));
-  const snapshot = await getDocs(query(collection(db, "libraryBooks"), ...constraints));
-  libraryPageCursor = snapshot.docs.length ? snapshot.docs[snapshot.docs.length - 1] : libraryPageCursor;
-  return {
-    books: snapshot.docs.map((item) => ({ ...item.data(), firestoreId: item.id, id: item.data().id || item.id })),
-    hasMore: snapshot.docs.length === LIBRARY_PAGE_SIZE,
-  };
-};
-window.getFirestoreLibraryStats = async function () {
-  const books = collection(db, "libraryBooks");
-  const [total, available, borrowed] = await Promise.all([
-    getCountFromServer(books),
-    getCountFromServer(query(books, where("status", "==", "available"))),
-    getCountFromServer(query(books, where("status", "==", "borrowed"))),
-  ]);
-  return { total: total.data().count, available: available.data().count, borrowed: borrowed.data().count };
-};
 window.getFirestoreLibraryBookById = async function (bookId) {
   const snapshot = await getDoc(doc(db, "libraryBooks", String(bookId)));
   return snapshot.exists()
@@ -240,103 +217,42 @@ function libraryRequestId(bookId, userId) {
 }
 window.getMyFirestoreLibraryRequest = async function (bookId) {
   const user = await requireUser();
-  const pointer = await getDoc(doc(db, "libraryRequestPointers", libraryRequestId(bookId, user.uid)));
-  const activeRequestId = pointer.exists() ? pointer.data().activeRequestId : null;
-  if (activeRequestId) {
-    const activeRequest = await getDoc(doc(db, "libraryRequests", String(activeRequestId)));
-    return activeRequest.exists() ? { ...activeRequest.data(), firestoreId: activeRequest.id } : null;
-  }
-  // Supports requests made before permanent-history tracking was introduced.
-  const legacy = await getDoc(doc(db, "libraryRequests", libraryRequestId(bookId, user.uid)));
-  return legacy.exists() ? { ...legacy.data(), firestoreId: legacy.id } : null;
+  const snapshot = await getDoc(doc(db, "libraryRequests", libraryRequestId(bookId, user.uid)));
+  return snapshot.exists() ? { ...snapshot.data(), firestoreId: snapshot.id } : null;
 };
 window.saveFirestoreLibraryRequest = async function (book, request) {
   const user = await requireUser();
   const bookId = String(book.id);
-  const pointerRef = doc(db, "libraryRequestPointers", libraryRequestId(bookId, user.uid));
-  const requestRef = doc(collection(db, "libraryRequests"));
-  await runTransaction(db, async (transaction) => {
-    const pointer = await transaction.get(pointerRef);
-    if (pointer.exists() && pointer.data().activeRequestId) throw new Error("You already have an active request for this book.");
-    transaction.set(requestRef, {
-      bookId,
-      bookTitle: String(book.title || "").trim().slice(0, 160),
-      userId: user.uid,
-      name: String(request.name || "").trim().slice(0, 80),
-      contact: String(request.contact || "").trim().slice(0, 120),
-      message: String(request.message || "").trim().slice(0, 500),
-      status: "requested",
-      requestedAt: serverTimestamp(),
-    });
-    transaction.set(pointerRef, {
-      bookId,
-      userId: user.uid,
-      activeRequestId: requestRef.id,
-      status: "requested",
-      updatedAt: serverTimestamp(),
-    });
+  await setDoc(doc(db, "libraryRequests", libraryRequestId(bookId, user.uid)), {
+    bookId,
+    bookTitle: String(book.title || "").trim().slice(0, 160),
+    userId: user.uid,
+    name: String(request.name || "").trim().slice(0, 80),
+    contact: String(request.contact || "").trim().slice(0, 120),
+    message: String(request.message || "").trim().slice(0, 500),
+    status: "requested",
+    requestedAt: serverTimestamp(),
   });
 };
 window.getFirestoreLibraryRequests = async function () {
   const snapshot = await getDocs(collection(db, "libraryRequests"));
   return snapshot.docs.map((item) => ({ ...item.data(), firestoreId: item.id }));
 };
-window.transitionFirestoreLibraryRequest = async function (requestId, nextStatus, details = {}) {
-  await requireUser();
-  return runTransaction(db, async (transaction) => {
-    const requestRef = doc(db, "libraryRequests", String(requestId));
-    const requestSnapshot = await transaction.get(requestRef);
-    if (!requestSnapshot.exists()) throw new Error("This borrowing request no longer exists.");
-    const request = requestSnapshot.data();
-    const bookRef = doc(db, "libraryBooks", String(request.bookId));
-    const bookSnapshot = await transaction.get(bookRef);
-    if (!bookSnapshot.exists()) throw new Error("The linked book no longer exists.");
-    const book = bookSnapshot.data(), currentStatus = request.status || "requested", bookStatus = book.status || "available";
-    let nextBookStatus = null;
-    if (nextStatus === "approved") {
-      if (currentStatus !== "requested") throw new Error("This request was already handled in another admin tab.");
-      if (book.lendingPolicy !== "lendable" || bookStatus !== "available") throw new Error("This book is no longer available for approval.");
-      nextBookStatus = "reserved";
-    } else if (nextStatus === "borrowed") {
-      if (currentStatus !== "approved") throw new Error("This request is no longer approved.");
-      if (bookStatus !== "reserved") throw new Error("This book is no longer reserved for this request.");
-      nextBookStatus = "borrowed";
-    } else if (nextStatus === "returned") {
-      if (currentStatus !== "borrowed") throw new Error("This loan was already closed in another admin tab.");
-      if (bookStatus !== "borrowed") throw new Error("This book is not marked as borrowed.");
-      nextBookStatus = "available";
-    } else if (nextStatus === "rejected") {
-      if (!['requested', 'approved'].includes(currentStatus)) throw new Error("This request can no longer be rejected.");
-      if (currentStatus === "approved") {
-        if (bookStatus !== "reserved") throw new Error("This book is no longer reserved for this request.");
-        nextBookStatus = "available";
-      }
-    } else {
-      throw new Error("Unsupported borrowing status.");
-    }
-    transaction.update(requestRef, { status: nextStatus, ...details, updatedAt: serverTimestamp() });
-    if (nextBookStatus) transaction.update(bookRef, { status: nextBookStatus, updatedAt: serverTimestamp() });
-    transaction.set(doc(db, "libraryRequestPointers", libraryRequestId(request.bookId, request.userId)), {
-      bookId: String(request.bookId),
-      userId: String(request.userId),
-      activeRequestId: ['returned', 'rejected'].includes(nextStatus) ? null : String(requestId),
-      status: nextStatus,
-      updatedAt: serverTimestamp(),
-    }, { merge: true });
-    return { request: { ...request, status: nextStatus, ...details }, bookStatus: nextBookStatus };
-  });
-};
-window.updateFirestoreLibraryRequestDueDate = async function (requestId, dueDate) {
-  await requireUser();
-  return runTransaction(db, async (transaction) => {
-    const requestRef = doc(db, "libraryRequests", String(requestId));
-    const snapshot = await transaction.get(requestRef);
-    if (!snapshot.exists()) throw new Error("This borrowing request no longer exists.");
-    const request = snapshot.data();
-    if (!['approved', 'borrowed'].includes(request.status)) throw new Error("Only an active loan can have a return date.");
-    transaction.update(requestRef, { dueDate, updatedAt: serverTimestamp() });
-    return { ...request, dueDate };
-  });
+window.setFirestoreLibraryRequestStatus = async function (requestId, bookId, status, bookStatus, details = {}) {
+  const batch = writeBatch(db);
+  batch.set(
+    doc(db, "libraryRequests", String(requestId)),
+    { status, ...details, updatedAt: serverTimestamp() },
+    { merge: true },
+  );
+  if (bookStatus) {
+    batch.set(
+      doc(db, "libraryBooks", String(bookId)),
+      { status: bookStatus, updatedAt: serverTimestamp() },
+      { merge: true },
+    );
+  }
+  await batch.commit();
 };
 window.deleteFirestoreLibraryRequest = async function (requestId) {
   await deleteDoc(doc(db, "libraryRequests", String(requestId)));

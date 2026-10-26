@@ -5,7 +5,7 @@ const LC={'ಕನ್ನಡ':'kn','English':'en','Mixed':'mixed'};
 
 // Always wait for the current Firestore result before showing published content.
 // The bundled sample posts are only used if Firestore is unavailable.
-let POSTS=[],COLLECTIONS=[],BOOKS=[],postsLoading=true,collectionsLoading=true,libraryLoading=false,libraryLoaded=false,libraryHasMore=true,libraryLoadingMore=false,libraryLoadPromise=null,libraryStats=null,libraryStatsLoading=false,contentLoading=true,CATS=JSON.parse(JSON.stringify(DC)),likes={},likedMe=new Set();
+let POSTS=[],COLLECTIONS=[],BOOKS=[],postsLoading=true,collectionsLoading=true,libraryLoading=true,contentLoading=true,CATS=JSON.parse(JSON.stringify(DC)),likes={},likedMe=new Set();
 let Q=null,QA=[...DQA],qDraft=[],editQId=false,certDraft=null,qSubmitted=false,qSubmissionQuizId=null,qSubmissionCheckInFlight=false,qSubmitting=false,qSavedResult=null,prizeExportData=null,qQuizStartedId=null;
 let adminAuth=false,editId=null,collectionEditId=null,bookEditId=null,catF='all',searchQ='',librarySearchQ='',libraryAvailability='all',libraryRequests=[],libraryAdminLoading=false,participantStatus=null,participantSort={field:'score',direction:'desc'},commentCache=new Map();
 const HOME_PAGE_SIZE=12;
@@ -26,12 +26,13 @@ function clearSearch(){
 }
 
 async function loadAll(){
-  const [posts,categories,activeQuiz,archive,collections] = await Promise.allSettled([
+  const [posts,categories,activeQuiz,archive,collections,libraryBooks] = await Promise.allSettled([
     window.getFirestorePostsPage?window.getFirestorePostsPage(true):window.getFirestorePosts?window.getFirestorePosts():Promise.resolve([...DP]),
     window.getFirestoreCategories?window.getFirestoreCategories():Promise.resolve(JSON.parse(JSON.stringify(DC))),
     window.getFirestoreActiveQuiz?window.getFirestoreActiveQuiz():Promise.resolve(null),
     window.getFirestoreQuizzes?window.getFirestoreQuizzes():Promise.resolve([...DQA]),
-    window.getFirestoreCollections?window.getFirestoreCollections():Promise.resolve([])
+    window.getFirestoreCollections?window.getFirestoreCollections():Promise.resolve([]),
+    window.getFirestoreLibraryBooks?window.getFirestoreLibraryBooks():Promise.resolve([])
   ]);
 
   if(posts.status==='fulfilled'){
@@ -64,6 +65,10 @@ async function loadAll(){
   if(collections.status==='fulfilled'){COLLECTIONS=collections.value}
   else console.error('Collections load failed:',collections.reason);
   collectionsLoading=false;
+  if(libraryBooks.status==='fulfilled')BOOKS=libraryBooks.value;
+  else console.error('Library load failed:',libraryBooks.reason);
+  libraryLoading=false;
+
   // Show the Firestore content as soon as it arrives. Likes are deliberately
   // loaded afterward because they require the anonymous visitor session.
   openCurrentRoute();
@@ -525,7 +530,6 @@ function libraryBookState(book){
 function librarySearch(value){
   librarySearchQ=String(value||'').trim().toLowerCase();
   const clear=document.getElementById('lib-search-clear');if(clear)clear.style.display=librarySearchQ?'':'none';
-  if(librarySearchQ&&libraryHasMore&&!libraryLoadingMore)loadRemainingLibraryBooks().catch(error=>console.error('Library search load failed:',error));
   renderLibrary();
 }
 function clearLibrarySearch(){
@@ -533,58 +537,20 @@ function clearLibrarySearch(){
   const clear=document.getElementById('lib-search-clear');if(clear)clear.style.display='none';renderLibrary();
 }
 function libraryFilter(value){libraryAvailability=value||'all';renderLibrary()}
-function mergeLibraryBooks(items){
-  const known=new Map(BOOKS.map(book=>[String(book.id),book]));
-  items.forEach(book=>known.set(String(book.id),book));BOOKS=[...known.values()];sortLibraryBooks();
-}
-async function loadLibraryStats(){
-  if(libraryStatsLoading||libraryStats||!window.getFirestoreLibraryStats)return;
-  libraryStatsLoading=true;
-  try{libraryStats=await window.getFirestoreLibraryStats()}catch(error){console.error('Library statistics load failed:',error)}
-  finally{libraryStatsLoading=false;renderLibrary()}
-}
-async function loadLibraryBooks(reset=false){
-  if(libraryLoadingMore)return libraryLoadPromise;
-  if(!reset&&!libraryHasMore)return;
-  if(reset){BOOKS=[];libraryHasMore=true;libraryLoaded=false;libraryStats=null}
-  libraryLoading=true;libraryLoadingMore=true;
-  libraryLoadPromise=(async()=>{
-    const result=window.getFirestoreLibraryBooksPage
-      ?await window.getFirestoreLibraryBooksPage(reset)
-      :{books:await window.getFirestoreLibraryBooks(),hasMore:false};
-    mergeLibraryBooks(result.books||[]);libraryHasMore=Boolean(result.hasMore);libraryLoaded=true;
-    if(reset)loadLibraryStats();
-  })();
-  try{return await libraryLoadPromise}
-  finally{libraryLoading=false;libraryLoadingMore=false;libraryLoadPromise=null}
-}
-async function loadMoreLibraryBooks(){
-  if(libraryLoadingMore||!libraryHasMore)return;
-  try{await loadLibraryBooks();renderLibrary()}catch(error){console.error('More library books load failed:',error);renderLibrary()}
-}
-async function loadRemainingLibraryBooks(){
-  while(libraryHasMore){await loadLibraryBooks();if(!librarySearchQ)break}
-  renderLibrary();
-}
 function renderLibrary(){
   const grid=document.getElementById('lib-grid'),count=document.getElementById('lib-count');if(!grid)return;
-  if(!libraryLoaded){
-    grid.innerHTML='<div class="empty">ಪುಸ್ತಕಗಳನ್ನು ತರಲಾಗುತ್ತಿದೆ...</div>';if(count)count.textContent='';
-    if(!libraryLoading)loadLibraryBooks(true).then(()=>renderLibrary()).catch(error=>{console.error('Library load failed:',error);grid.innerHTML='<div class="empty">ಪುಸ್ತಕಗಳನ್ನು ತರಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ.</div>'});
-    return;
-  }
-  loadLibraryStats();
+  if(libraryLoading){grid.innerHTML='<div class="empty">ಪುಸ್ತಕಗಳನ್ನು ತರಲಾಗುತ್ತಿದೆ...</div>';if(count)count.textContent='';return}
   const totalStat=document.getElementById('lib-stat-total'),availableStat=document.getElementById('lib-stat-available'),borrowedStat=document.getElementById('lib-stat-borrowed');
-  if(totalStat)totalStat.textContent=libraryStats?.total??'—';
-  if(availableStat)availableStat.textContent=libraryStats?.available??'—';
-  if(borrowedStat)borrowedStat.textContent=libraryStats?.borrowed??'—';
+  if(totalStat)totalStat.textContent=BOOKS.length;
+  if(availableStat)availableStat.textContent=BOOKS.filter(book=>libraryBookState(book).key==='available').length;
+  if(borrowedStat)borrowedStat.textContent=BOOKS.filter(book=>libraryBookState(book).key==='borrowed').length;
   let books=[...BOOKS];
   if(librarySearchQ)books=books.filter(book=>[book.title,book.author,book.language,book.category,book.isbn,book.publisher].some(value=>String(value||'').toLowerCase().includes(librarySearchQ)));
   if(libraryAvailability==='available')books=books.filter(book=>libraryBookState(book).key==='available');
   else if(libraryAvailability==='borrowed')books=books.filter(book=>libraryBookState(book).key==='borrowed');
   else if(libraryAvailability==='reference')books=books.filter(book=>libraryBookState(book).key==='reference');
   books.sort((a,b)=>String(a.title||'').localeCompare(String(b.title||''),'kn'));
-  if(count)count.textContent=`${books.length} ಪುಸ್ತಕ${books.length===1?'':'ಗಳು'}${libraryHasMore?' · ಇನ್ನಷ್ಟು ಪುಸ್ತಕಗಳಿವೆ':''}`;
+  if(count)count.textContent=`${books.length} ಪುಸ್ತಕ${books.length===1?'':'ಗಳು'}`;
   if(!books.length){grid.innerHTML='<div class="empty">ಹೊಂದಿಕೆಯಾಗುವ ಪುಸ್ತಕಗಳು ಸಿಗಲಿಲ್ಲ.</div>';return}
   grid.innerHTML=books.map(book=>{
     const cover=safeContentUrl(book.coverImage),state=libraryBookState(book),argument=jsArg(book.id);
@@ -594,7 +560,7 @@ function renderLibrary(){
       <p class="library-meta">${[book.language,book.category,book.year].filter(Boolean).map(esc).join(' · ')}</p>${book.description?`<p class="library-description">${esc(autoExc(book.description))}</p>`:''}
       <span class="library-card__action">${state.key==='available'?'ಎರವಲು ಕೇಳಿ':'ವಿವರ ನೋಡಿ'} →</span></div>
     </article>`;
-  }).join('')+(libraryHasMore?`<div class="loadmore"><button class="loadmore-btn" onclick="loadMoreLibraryBooks()"${libraryLoadingMore?' disabled':''}>${libraryLoadingMore?'ಪುಸ್ತಕಗಳನ್ನು ತರಲಾಗುತ್ತಿದೆ…':'ಇನ್ನಷ್ಟು ಪುಸ್ತಕಗಳನ್ನು ತೋರಿಸಿ'}</button></div>`:'');
+  }).join('');
 }
 async function renderLibraryBook(id){
   const el=document.getElementById('book-view');if(!el)return;
@@ -1258,7 +1224,7 @@ async function loadAdminLibrary(){
       window.getFirestoreLibraryBooks?window.getFirestoreLibraryBooks():Promise.resolve(BOOKS),
       window.getFirestoreLibraryRequests?window.getFirestoreLibraryRequests():Promise.resolve([]),
     ]);
-    BOOKS=freshBooks;libraryRequests=freshRequests;libraryLoading=false;libraryLoaded=true;libraryHasMore=false;libraryStats=null;sortLibraryBooks();renderAdLibraryBooks();renderAdLibraryRequests();
+    BOOKS=freshBooks;libraryRequests=freshRequests;libraryLoading=false;sortLibraryBooks();renderAdLibraryBooks();renderAdLibraryRequests();
   }catch(error){console.error('Admin library load failed:',error);if(books)books.innerHTML='<div class="empty">Library data could not be loaded.</div>';if(requests)requests.innerHTML=''}
   finally{libraryAdminLoading=false}
 }
@@ -1302,7 +1268,7 @@ async function saveLibraryBook(){
   try{
     await window.saveFirestoreLibraryBook(book);
     if(existing){const index=BOOKS.findIndex(item=>String(item.id)===String(existing.id));if(index>=0)BOOKS[index]=book}else BOOKS.push(book);
-    libraryStats=null;sortLibraryBooks();cancelLibraryBookForm();renderAdLibraryBooks();renderLibrary();
+    sortLibraryBooks();cancelLibraryBookForm();renderAdLibraryBooks();renderLibrary();
   }catch(error){console.error('Book save failed:',error);alert('The book could not be saved. Please try again.')}
 }
 async function deleteLibraryBook(id){
@@ -1310,7 +1276,7 @@ async function deleteLibraryBook(id){
   const active=libraryRequests.some(request=>String(request.bookId)===String(id)&&['requested','approved','borrowed'].includes(request.status));
   if(active){alert('This book has an active request or loan. Close it before deleting the book.');return}
   if(!confirm(`Delete “${book.title}” permanently?`))return;
-  try{await window.deleteFirestoreLibraryBook(book);BOOKS=BOOKS.filter(item=>String(item.id)!==String(id));libraryStats=null;renderAdLibraryBooks();renderLibrary()}
+  try{await window.deleteFirestoreLibraryBook(book);BOOKS=BOOKS.filter(item=>String(item.id)!==String(id));renderAdLibraryBooks();renderLibrary()}
   catch(error){console.error('Book deletion failed:',error);alert('The book could not be deleted. Please try again.')}
 }
 async function copyLibraryBookLink(id){
@@ -1362,7 +1328,7 @@ function renderAdLibraryRequests(){
     if(status==='requested')actions=`<button class="editbtn" onclick="adminLibraryRequestAction(${requestId},'approved')">Approve</button><button class="delbtn" onclick="adminLibraryRequestAction(${requestId},'rejected')">Reject</button>`;
     else if(status==='approved')actions=`<button class="editbtn" onclick="adminLibraryRequestAction(${requestId},'borrowed')">Issue Book</button>${request.dueDate?'':`<button class="editbtn" onclick="setLibraryDueDate(${requestId})">Set Return Date</button>`}<button class="delbtn" onclick="adminLibraryRequestAction(${requestId},'rejected')">Reject</button>`;
     else if(status==='borrowed')actions=`<button class="editbtn" onclick="adminLibraryRequestAction(${requestId},'returned')">Mark Returned</button>`;
-    else if(status==='rejected')actions=`<button class="delbtn" onclick="deleteLibraryRequest(${requestId})">Delete Record</button>`;
+    else actions=`<button class="delbtn" onclick="deleteLibraryRequest(${requestId})">Delete Record</button>`;
     const contactLinks=libraryContactLinks(request);
     return`<div class="library-admin-request"><div class="library-admin-request__main"><div><strong>${esc(request.bookTitle||book?.title||'Unknown book')}</strong> <span class="library-admin-badge ${esc(status)}">${labels[status]||esc(status)}</span></div><p><strong>${esc(request.name||'—')}</strong> · ${esc(request.contact||'—')}</p>${request.message?`<p>${esc(request.message)}</p>`:''}<small>Requested: ${esc(libraryDate(request.requestedAt))}${request.dueDate?' · Due: '+esc(request.dueDate):''}</small></div><div class="apost-acts">${actions}${contactLinks}<button class="editbtn" onclick="copyLibraryBookLink(${bookId})">Book Link</button></div></div>`;
   }).join('');
@@ -1384,15 +1350,15 @@ async function adminLibraryRequestAction(requestId,nextStatus){
   }else if(nextStatus==='returned'){bookStatus='available';details.returnedAt=new Date().toISOString()}
   else if(nextStatus==='rejected'){bookStatus=request.status==='approved'?'available':null;details.rejectedAt=new Date().toISOString()}
   try{
-    const changed=await window.transitionFirestoreLibraryRequest(request.firestoreId,nextStatus,details);
-    Object.assign(request,changed.request);if(changed.bookStatus)book.status=changed.bookStatus;libraryStats=null;renderAdLibraryRequests();renderAdLibraryBooks();renderLibrary();
-  }catch(error){console.error('Library request update failed:',error);alert(error.message||'The request could not be updated. Please refresh and try again.')}
+    await window.setFirestoreLibraryRequestStatus(request.firestoreId,request.bookId,nextStatus,bookStatus,details);
+    Object.assign(request,{status:nextStatus,...details});if(bookStatus)book.status=bookStatus;renderAdLibraryRequests();renderAdLibraryBooks();renderLibrary();
+  }catch(error){console.error('Library request update failed:',error);alert('The request could not be updated. Please try again.')}
 }
 async function setLibraryDueDate(requestId){
   const request=libraryRequests.find(item=>String(item.firestoreId)===String(requestId));if(!request)return;
   const suggested=request.dueDate||new Date(Date.now()+14*86400000).toISOString().slice(0,10),dueDate=window.prompt('Return due date (YYYY-MM-DD):',suggested);if(dueDate===null)return;
   if(!/^\d{4}-\d{2}-\d{2}$/.test(dueDate.trim())){alert('Please enter the due date as YYYY-MM-DD.');return}
-  try{await window.updateFirestoreLibraryRequestDueDate(request.firestoreId,dueDate.trim());request.dueDate=dueDate.trim();renderAdLibraryRequests()}
+  try{await window.setFirestoreLibraryRequestStatus(request.firestoreId,request.bookId,request.status,null,{dueDate:dueDate.trim()});request.dueDate=dueDate.trim();renderAdLibraryRequests()}
   catch(error){console.error('Library due date update failed:',error);alert('The return date could not be saved. Please try again.')}
 }
 async function deleteLibraryRequest(requestId){
