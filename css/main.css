@@ -72,6 +72,7 @@ nav .admin-door{display:inline-flex;align-items:center;color:var(--gl);border:1p
 .cauth{font-weight:600;color:var(--ac);font-size:.88rem}
 .cdate{font-size:.76rem;color:var(--gd);font-style:italic}
 .ctxt{color:var(--ink);font-size:.9rem;line-height:1.6}
+.comment-actions{display:flex;gap:8px;margin-top:10px}.comment-actions button{appearance:none;border:0;background:transparent;padding:0;color:var(--ac);font:600 .78rem 'Lora','Noto Sans Kannada',serif;cursor:pointer}.comment-actions button:last-child{color:#a63a32}.comment-actions button:hover{text-decoration:underline}
 .noc,.empty{text-align:center;color:var(--gd);font-style:italic;padding:22px}
 .icat{margin-bottom:36px}
 .icat h3{font-family:'Playfair Display',serif;color:var(--ac);font-size:1.2rem;margin-bottom:12px;padding-bottom:7px;border-bottom:1px solid var(--gl);display:flex;align-items:center;gap:8px}

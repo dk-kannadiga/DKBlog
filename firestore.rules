@@ -136,8 +136,20 @@ service cloud.firestore {
         && request.resource.data.date.size() <= 32
         && request.resource.data.userId == request.auth.uid
         && request.resource.data.createdAt == request.time;
-      allow update: if false;
-      allow delete: if isAdmin();
+      allow update: if signedIn()
+        && resource.data.userId == request.auth.uid
+        && request.resource.data.userId == resource.data.userId
+        && request.resource.data.postId == resource.data.postId
+        && request.resource.data.date == resource.data.date
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'txt'])
+        && request.resource.data.name is string
+        && request.resource.data.name.size() >= 2
+        && request.resource.data.name.size() <= 60
+        && request.resource.data.txt is string
+        && request.resource.data.txt.size() >= 1
+        && request.resource.data.txt.size() <= 2000;
+      allow delete: if signedIn() && (resource.data.userId == request.auth.uid || isAdmin());
     }
 
     match /likes/{likeId} {

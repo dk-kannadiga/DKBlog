@@ -7,7 +7,7 @@ const LC={'ಕನ್ನಡ':'kn','English':'en','Mixed':'mixed'};
 // The bundled sample posts are only used if Firestore is unavailable.
 let POSTS=[],COLLECTIONS=[],BOOKS=[],postsLoading=true,collectionsLoading=true,libraryLoading=true,contentLoading=true,CATS=JSON.parse(JSON.stringify(DC)),likes={},likedMe=new Set();
 let Q=null,QA=[...DQA],qDraft=[],editQId=false,certDraft=null,qSubmitted=false,qSubmissionQuizId=null,qSubmissionCheckInFlight=false,qSubmitting=false,qSavedResult=null,prizeExportData=null,qQuizStartedId=null;
-let adminAuth=false,editId=null,collectionEditId=null,bookEditId=null,catF='all',searchQ='',librarySearchQ='',libraryAvailability='all',libraryRequests=[],libraryAdminLoading=false,participantStatus=null,participantSort={field:'score',direction:'desc'};
+let adminAuth=false,editId=null,collectionEditId=null,bookEditId=null,catF='all',searchQ='',librarySearchQ='',libraryAvailability='all',libraryRequests=[],libraryAdminLoading=false,participantStatus=null,participantSort={field:'score',direction:'desc'},commentCache=new Map();
 const HOME_PAGE_SIZE=12;
 let postsFullyLoaded=false,homeHasMore=false,homeLoadingMore=false,homeVisibleCount=0,allPostsPromise=null;
 
@@ -173,6 +173,41 @@ async function ldCmt(id){
 async function svCmt(id,c){
   await window.saveFirestoreComment(id,c);
   return await ldCmt(id);
+}
+function commentMarkup(comment,postId){
+  if(comment?.id)commentCache.set(String(comment.id),comment);
+  const me=window.getCurrentFirebaseUser?.()?.uid;
+  const mine=Boolean(me&&comment?.userId&&me===comment.userId&&comment.id);
+  return`<div class="ci"><div class="chdr"><span class="cauth">${esc(comment.name||'ಅನಾಮಧೇಯ')}</span><span class="cdate">${esc(comment.date||'')}</span></div><p class="ctxt">${esc(comment.txt||'')}</p>${mine?`<div class="comment-actions"><button type="button" onclick="editCmt(${jsArg(postId)},${jsArg(comment.id)})">ತಿದ್ದು</button><button type="button" onclick="deleteCmt(${jsArg(postId)},${jsArg(comment.id)})">ಅಳಿಸಿ</button></div>`:''}</div>`;
+}
+function commentListMarkup(comments,postId){
+  return comments.length?comments.map(comment=>commentMarkup(comment,postId)).join(''):'<div class="noc">ಮೊದಲ ಪ್ರತಿಕ್ರಿಯೆ ನಿಮ್ಮದಾಗಲಿ...</div>';
+}
+async function refreshCommentList(postId){
+  const comments=await ldCmt(postId),list=document.getElementById('cl'+postId);
+  if(list)list.innerHTML=commentListMarkup(comments,postId);
+}
+async function editCmt(postId,commentId){
+  const comment=commentCache.get(String(commentId));
+  if(!comment)return;
+  const text=prompt('ನಿಮ್ಮ ಪ್ರತಿಕ್ರಿಯೆಯನ್ನು ತಿದ್ದಿ:',comment.txt||'');
+  if(text===null)return;
+  const trimmed=text.trim();
+  if(!trimmed){alert('ಪ್ರತಿಕ್ರಿಯೆ ಖಾಲಿಯಾಗಿರಬಾರದು.');return}
+  if(trimmed.length>2000){alert('ದಯವಿಟ್ಟು ಪ್ರತಿಕ್ರಿಯೆಯನ್ನು 2,000 ಅಕ್ಷರಗಳೊಳಗೆ ಬರೆಯಿರಿ.');return}
+  if(trimmed===comment.txt)return;
+  try{
+    await window.updateFirestoreComment(commentId,{name:comment.name||'ಅನಾಮಧೇಯ',txt:trimmed});
+    await refreshCommentList(postId);
+  }catch(error){console.error('Comment update failed:',error);alert('ನಿಮ್ಮ ಪ್ರತಿಕ್ರಿಯೆಯನ್ನು ತಿದ್ದಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ. ದಯವಿಟ್ಟು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.')}
+}
+async function deleteCmt(postId,commentId){
+  if(!confirm('ಈ ಪ್ರತಿಕ್ರಿಯೆಯನ್ನು ಅಳಿಸಬೇಕೆ?'))return;
+  try{
+    await window.deleteFirestoreComment(commentId);
+    commentCache.delete(String(commentId));
+    await refreshCommentList(postId);
+  }catch(error){console.error('Comment deletion failed:',error);alert('ನಿಮ್ಮ ಪ್ರತಿಕ್ರಿಯೆಯನ್ನು ಅಳಿಸಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ. ದಯವಿಟ್ಟು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.')}
 }
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
 function autoExc(b){if(!b)return'';if(b.length<=160)return b;const t=b.substring(0,160);const i=Math.max(t.lastIndexOf(' '),t.lastIndexOf('\n'));return t.substring(0,i>80?i:140)+'...'}
@@ -355,7 +390,7 @@ async function renderPost(id){
     try{await loadPostReactions([p])}catch(e){console.error('Writing reactions load failed:',e)}
   }
   const lc=likes[p.id]||0,il=likedMe.has(p.id),cmts=await ldCmt(p.id),collectionNavigation=collectionReadingNav(p);
-  const ch=cmts.length?cmts.map(c=>`<div class="ci"><div class="chdr"><span class="cauth">${esc(c.name||'ಅನಾಮಧೇಯ')}</span><span class="cdate">${c.date}</span></div><p class="ctxt">${esc(c.txt)}</p></div>`).join(''):'<div class="noc">ಮೊದಲ ಪ್ರತಿಕ್ರಿಯೆ ನಿಮ್ಮದಾಗಲಿ...</div>';
+  const ch=commentListMarkup(cmts,p.id);
   el.innerHTML=`<div class="pvh">
     ${postTags(p)}
     <h1>${esc(p.title)}</h1><p class="pmeta">ಬರೆದ ದಿನ: ${p.date}</p></div>
@@ -411,7 +446,7 @@ async function addCmt(id){
   try{arr=await svCmt(id,c)}catch(e){console.error('Comment save failed:',e);alert('ನಿಮ್ಮ ಪ್ರತಿಕ್ರಿಯೆಯನ್ನು ಪ್ರಕಟಿಸಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ. ದಯವಿಟ್ಟು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.');return}
   n.value='';t.value='';
   const cl=document.getElementById('cl'+id);
-  if(cl)cl.innerHTML=arr.map(x=>`<div class="ci"><div class="chdr"><span class="cauth">${esc(x.name||'ಅನಾಮಧೇಯ')}</span><span class="cdate">${x.date}</span></div><p class="ctxt">${esc(x.txt)}</p></div>`).join('')
+  if(cl)cl.innerHTML=commentListMarkup(arr,id)
 }
 async function renderIdx(){
   const el=document.getElementById('idxc');

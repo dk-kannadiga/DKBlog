@@ -14,6 +14,7 @@ import {
   serverTimestamp,
   setDoc,
   startAfter,
+  updateDoc,
   writeBatch,
   where,
 } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
@@ -268,7 +269,7 @@ window.saveFirestoreCategories = async function (items) {
 window.getFirestoreComments = async function (postId) {
   const snapshot = await getDocs(query(collection(db, "comments"), where("postId", "==", postId)));
   return snapshot.docs
-    .map((comment) => comment.data())
+    .map((comment) => ({ id: comment.id, ...comment.data() }))
     .sort((a, b) => String(a.date || "").localeCompare(String(b.date || "")));
 };
 window.saveFirestoreComment = async function (postId, comment) {
@@ -281,6 +282,17 @@ window.saveFirestoreComment = async function (postId, comment) {
     userId: user.uid,
     createdAt: serverTimestamp(),
   });
+};
+window.updateFirestoreComment = async function (commentId, comment) {
+  await requireUser();
+  await updateDoc(doc(db, "comments", String(commentId)), {
+    name: comment.name.trim(),
+    txt: comment.txt.trim(),
+  });
+};
+window.deleteFirestoreComment = async function (commentId) {
+  await requireUser();
+  await deleteDoc(doc(db, "comments", String(commentId)));
 };
 
 window.getFirestoreLikes = async function (postId) {
