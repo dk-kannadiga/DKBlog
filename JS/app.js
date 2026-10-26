@@ -1461,7 +1461,7 @@ function renderAdQuiz(){
     `<div style="margin-top:28px"><h4 style="font-family:'Playfair Display',serif;color:var(--ac);margin-bottom:14px;font-size:1rem">Archive (${QA.length})</h4>
     ${QA.length?QA.map(q=>`<div class="apost">
       <div class="apost-info"><div class="apost-title">${esc(q.title)}</div><div class="apost-meta">${q.date} · ${q.total} participants</div></div>
-      <div class="apost-acts"><button type="button" class="editbtn" onclick="openAdminQuizShare(${q.id})">↗ Share</button>${q.type==='prize'?`<button class="editbtn" onclick="viewPrizeEntries(${q.id})">Entries</button>`:''}<button class="editbtn" onclick="repeatArchivedQuiz(${q.id})">↻ Repeat</button><button class="delbtn" onclick="delArcQ(${q.id})">Delete</button></div>
+      <div class="apost-acts"><button type="button" class="editbtn" onclick="openAdminQuizShare(${q.id})">↗ Share</button><button class="editbtn" onclick="viewQuizSubmissions(${q.id})">👥 Participation</button>${q.type==='prize'?`<button class="editbtn" onclick="viewPrizeEntries(${q.id})">📋 Prize Entries</button>`:''}<button class="editbtn" onclick="repeatArchivedQuiz(${q.id})">↻ Repeat</button><button class="delbtn" onclick="delArcQ(${q.id})">Delete</button></div>
     </div>`).join(''):'<div class="empty" style="padding:14px">No archived quizzes yet.</div>'}
     </div>`;
   if(Q?.state==='live')loadLiveQuizCount(Q.id)
