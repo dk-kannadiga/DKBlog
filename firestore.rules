@@ -17,7 +17,7 @@ service cloud.firestore {
         && submissionId.matches('^.+_' + request.auth.uid + '$');
     }
 
-    function validLibraryRequest(requestId) {
+    function validLibraryRequest() {
       return signedIn()
         && request.resource.data.keys().hasOnly([
           'bookId', 'bookTitle', 'userId', 'name', 'contact', 'message', 'status', 'requestedAt'
@@ -29,7 +29,6 @@ service cloud.firestore {
         && request.resource.data.bookTitle.size() >= 1
         && request.resource.data.bookTitle.size() <= 160
         && request.resource.data.userId == request.auth.uid
-        && requestId == request.resource.data.bookId + '_' + request.auth.uid
         && request.resource.data.name is string
         && request.resource.data.name.size() >= 2
         && request.resource.data.name.size() <= 80
@@ -70,19 +69,32 @@ service cloud.firestore {
       // The request document may not exist yet when a visitor opens a book.
       // Authorize that lookup from the deterministic document id instead of
       // reading resource.data, which is unavailable for a missing document.
-      allow get: if isAdmin() || (
-        signedIn()
-        && requestId.matches('^.+_' + request.auth.uid + '$')
-      );
+      allow get: if isAdmin() || (signedIn() && resource.data.userId == request.auth.uid);
       allow list: if isAdmin();
-      allow create: if validLibraryRequest(requestId);
+      allow create: if validLibraryRequest();
       allow update: if isAdmin() || (
         signedIn()
         && resource.data.userId == request.auth.uid
         && resource.data.status in ['returned', 'rejected']
-        && validLibraryRequest(requestId)
+        && validLibraryRequest()
       );
-      allow delete: if isAdmin();
+      allow delete: if isAdmin() && resource.data.status == 'rejected';
+    }
+
+    match /libraryRequestPointers/{pointerId} {
+      allow get: if isAdmin() || (signedIn() && resource.data.userId == request.auth.uid);
+      allow list: if isAdmin();
+      allow create, update: if isAdmin() || (
+        signedIn()
+        && request.resource.data.keys().hasOnly(['bookId', 'userId', 'activeRequestId', 'status', 'updatedAt'])
+        && request.resource.data.bookId is string
+        && request.resource.data.userId == request.auth.uid
+        && pointerId == request.resource.data.bookId + '_' + request.auth.uid
+        && request.resource.data.activeRequestId is string
+        && request.resource.data.status == 'requested'
+        && request.resource.data.updatedAt == request.time
+      );
+      allow delete: if false;
     }
 
     match /siteSettings/{setting} {
