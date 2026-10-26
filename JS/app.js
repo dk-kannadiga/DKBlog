@@ -6,7 +6,7 @@ const LC={'ಕನ್ನಡ':'kn','English':'en','Mixed':'mixed'};
 // Always wait for the current Firestore result before showing published content.
 // The bundled sample posts are only used if Firestore is unavailable.
 let POSTS=[],COLLECTIONS=[],BOOKS=[],postsLoading=true,collectionsLoading=true,libraryLoading=true,contentLoading=true,CATS=JSON.parse(JSON.stringify(DC)),likes={},likedMe=new Set();
-let Q=null,QA=[...DQA],qDraft=[],editQId=false,certDraft=null,qSubmitted=false,qSubmissionQuizId=null,qSubmissionCheckInFlight=false,qSubmitting=false,qSavedResult=null,prizeExportData=null;
+let Q=null,QA=[...DQA],qDraft=[],editQId=false,certDraft=null,qSubmitted=false,qSubmissionQuizId=null,qSubmissionCheckInFlight=false,qSubmitting=false,qSavedResult=null,prizeExportData=null,qQuizStartedId=null;
 let adminAuth=false,editId=null,collectionEditId=null,bookEditId=null,catF='all',searchQ='',librarySearchQ='',libraryAvailability='all',libraryRequests=[],libraryAdminLoading=false,participantStatus=null,participantSort={field:'score',direction:'desc'};
 const HOME_PAGE_SIZE=12;
 let postsFullyLoaded=false,homeHasMore=false,homeLoadingMore=false,homeVisibleCount=0,allPostsPromise=null;
@@ -272,6 +272,7 @@ function collectionPosts(id){
 function go(page,id,{sync=true,replace=false}={}){
   if(page==='admin'&&!adminAuth){go('adminlogin',null,{sync,replace});return}
   if(page==='qdetail'&&Q&&String(Q.id)===String(id))page='qplay';
+  if(page!=='qplay')qQuizStartedId=null;
   if(sync)syncRoute(page,id,replace);
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
   document.querySelectorAll('nav a').forEach(a=>a.classList.remove('on'));
@@ -653,12 +654,39 @@ function renderQuizPlay(id){
     }else if(qSubmitted){
       if(qSavedResult){showResults(Q,qSavedResult.answers,qSavedResult.participantName,qSavedResult.score,qSavedResult.submittedAt);return}
       cur.innerHTML=`<div style="text-align:center;padding:40px"><p style="color:var(--il);font-style:italic">ನೀವು ಈ ಕ್ವಿಜ಼್‌ಗೆ ಈಗಾಗಲೇ ಉತ್ತರಗಳನ್ನು ಸಲ್ಲಿಸಿದ್ದೀರಿ. ಭಾಗವಹಿಸಿದ್ದಕ್ಕೆ ಧನ್ಯವಾದಗಳು! 🙏</p></div>`;
+    }else if(qQuizStartedId!==quizId){
+      renderQuizIntroduction(cur);
     }else{
       renderLiveQuiz(cur);
     }
   }else{
     cur.innerHTML=`<div style="text-align:center;padding:60px 20px"><div style="font-size:2rem;margin-bottom:14px">🔒</div><h3 style="font-family:'Playfair Display',serif;color:var(--ac);margin-bottom:10px">ಕ್ವಿಜ಼್ ಮುಕ್ತಾಯವಾಗಿದೆ</h3><p style="color:var(--il);font-style:italic">ಈ ಕ್ವಿಜ಼್ ಮುಗಿದಿದೆ. ಫಲಿತಾಂಶಗಳನ್ನು ಶೀಘ್ರದಲ್ಲೇ ಪ್ರಕಟಿಸಲಾಗುವುದು.</p></div>`;
   }
+}
+function renderQuizIntroduction(el){
+  el.innerHTML=`<div class="qposter">
+    <div style="font-size:2.5rem;margin-bottom:14px">🏆</div>
+    <h3>${esc(Q.title)}</h3>
+    <div class="qpos-sub">${Q.date?'📅 '+esc(Q.date):''}</div>
+    ${Q.description?`<p class="qpos-desc">${esc(Q.description)}</p>`:''}
+    ${Q.prize?`<div class="qpos-prize">🎁 ಬಹುಮಾನ: ${esc(Q.prize)}</div>`:''}
+    ${Q.deadline?`<div class="qpos-dl">⏰ ಕೊನೆಯ ಸಮಯ: ${esc(Q.deadline)}</div>`:''}
+    <div style="text-align:left;background:rgba(255,255,255,.58);border:1px solid var(--gl);border-radius:10px;padding:16px 18px;margin:20px 0">
+      <h4 style="font-family:'Playfair Display',serif;color:var(--ac);margin:0 0 9px">ಭಾಗವಹಿಸುವ ಮುನ್ನ ತಿಳಿಯಿರಿ</h4>
+      <ul style="margin:0;padding-left:20px;color:var(--il);line-height:1.75;font-size:.9rem">
+        <li>ಎಲ್ಲ ಪ್ರಶ್ನೆಗಳನ್ನು ಓದಿ ನಿಮ್ಮ ಉತ್ತರವನ್ನು ಆಯ್ಕೆಮಾಡಿ.</li>
+        <li>ಉತ್ತರಿಸದ ಪ್ರಶ್ನೆಗಳನ್ನು ತಪ್ಪು ಉತ್ತರವೆಂದು ಪರಿಗಣಿಸಲಾಗುತ್ತದೆ.</li>
+        <li>ಒಮ್ಮೆ ಸಲ್ಲಿಸಿದ ಬಳಿಕ ಅದೇ ಖಾತೆಯಿಂದ ಮತ್ತೆ ಸಲ್ಲಿಸಲು ಸಾಧ್ಯವಿಲ್ಲ.</li>
+        <li>ಸರಿಯಾದ ಉತ್ತರಗಳು ಮತ್ತು ವಿವರಣೆಗಳು ಕ್ವಿಜ಼್ ಅನ್ನು ಸಂಗ್ರಹಕ್ಕೆ ಸೇರಿಸಿದ ಬಳಿಕ ಲಭ್ಯವಾಗುತ್ತವೆ.</li>
+        ${Q.type==='prize'?'<li>ಬಹುಮಾನದ ಕುರಿತು ಸಂಪರ್ಕಿಸಲು ನಿಮ್ಮ ಸಂಪರ್ಕ ವಿವರಗಳನ್ನು ಸರಿಯಾಗಿ ನಮೂದಿಸಿ.</li>':'<li>ಸಲ್ಲಿಸಿದ ಬಳಿಕ ನಿಮ್ಮ ಫಲಿತಾಂಶ ಮತ್ತು ಪ್ರಮಾಣಪತ್ರವನ್ನು ಪಡೆಯಬಹುದು.</li>'}
+      </ul>
+    </div>
+    <button class="qsubmit" onclick="beginQuizParticipation(${jsArg(Q.id)})">ಕ್ವಿಜ಼್ ಆರಂಭಿಸಿ →</button>
+  </div>`;
+}
+function beginQuizParticipation(id){
+  if(!Q||String(Q.id)!==String(id))return;
+  qQuizStartedId=String(id);renderQuizPlay(id);
 }
 function renderLiveQuiz(el){
   el.innerHTML=`<div class="qform-wrap">
