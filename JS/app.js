@@ -5,7 +5,7 @@ const LC={'ಕನ್ನಡ':'kn','English':'en','Mixed':'mixed'};
 
 // Always wait for the current Firestore result before showing published content.
 // The bundled sample posts are only used if Firestore is unavailable.
-let POSTS=[],COLLECTIONS=[],BOOKS=[],postsLoading=true,collectionsLoading=true,libraryLoading=true,contentLoading=true,CATS=JSON.parse(JSON.stringify(DC)),likes={},likedMe=new Set();
+let POSTS=[],COLLECTIONS=[],BOOKS=[],postsLoading=true,collectionsLoading=true,libraryLoading=false,libraryLoaded=false,contentLoading=true,CATS=JSON.parse(JSON.stringify(DC)),likes={},likedMe=new Set();
 let Q=null,QA=[...DQA],qDraft=[],editQId=false,certDraft=null,qSubmitted=false,qSubmissionQuizId=null,qSubmissionCheckInFlight=false,qSubmitting=false,qSavedResult=null,prizeExportData=null,qQuizStartedId=null;
 let adminAuth=false,editId=null,collectionEditId=null,bookEditId=null,catF='all',searchQ='',librarySearchQ='',libraryAvailability='all',libraryRequests=[],libraryAdminLoading=false,participantStatus=null,participantSort={field:'score',direction:'desc'},commentCache=new Map();
 const HOME_PAGE_SIZE=12;
@@ -26,13 +26,12 @@ function clearSearch(){
 }
 
 async function loadAll(){
-  const [posts,categories,activeQuiz,archive,collections,libraryBooks] = await Promise.allSettled([
+  const [posts,categories,activeQuiz,archive,collections] = await Promise.allSettled([
     window.getFirestorePostsPage?window.getFirestorePostsPage(true):window.getFirestorePosts?window.getFirestorePosts():Promise.resolve([...DP]),
     window.getFirestoreCategories?window.getFirestoreCategories():Promise.resolve(JSON.parse(JSON.stringify(DC))),
     window.getFirestoreActiveQuiz?window.getFirestoreActiveQuiz():Promise.resolve(null),
     window.getFirestoreQuizzes?window.getFirestoreQuizzes():Promise.resolve([...DQA]),
-    window.getFirestoreCollections?window.getFirestoreCollections():Promise.resolve([]),
-    window.getFirestoreLibraryBooks?window.getFirestoreLibraryBooks():Promise.resolve([])
+    window.getFirestoreCollections?window.getFirestoreCollections():Promise.resolve([])
   ]);
 
   if(posts.status==='fulfilled'){
@@ -65,10 +64,6 @@ async function loadAll(){
   if(collections.status==='fulfilled'){COLLECTIONS=collections.value}
   else console.error('Collections load failed:',collections.reason);
   collectionsLoading=false;
-  if(libraryBooks.status==='fulfilled')BOOKS=libraryBooks.value;
-  else console.error('Library load failed:',libraryBooks.reason);
-  libraryLoading=false;
-
   // Show the Firestore content as soon as it arrives. Likes are deliberately
   // loaded afterward because they require the anonymous visitor session.
   openCurrentRoute();
@@ -539,6 +534,13 @@ function clearLibrarySearch(){
 function libraryFilter(value){libraryAvailability=value||'all';renderLibrary()}
 function renderLibrary(){
   const grid=document.getElementById('lib-grid'),count=document.getElementById('lib-count');if(!grid)return;
+  if(!libraryLoaded&&!libraryLoading){
+    libraryLoading=true;grid.innerHTML='<div class="empty">ಪುಸ್ತಕಗಳನ್ನು ತರಲಾಗುತ್ತಿದೆ...</div>';if(count)count.textContent='';
+    (window.getFirestoreLibraryBooks?window.getFirestoreLibraryBooks():Promise.resolve([]))
+      .then(books=>{BOOKS=books;libraryLoaded=true;libraryLoading=false;renderLibrary()})
+      .catch(error=>{console.error('Library load failed:',error);libraryLoading=false;grid.innerHTML='<div class="empty">ಪುಸ್ತಕಗಳನ್ನು ತರಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ.</div>'});
+    return;
+  }
   if(libraryLoading){grid.innerHTML='<div class="empty">ಪುಸ್ತಕಗಳನ್ನು ತರಲಾಗುತ್ತಿದೆ...</div>';if(count)count.textContent='';return}
   const totalStat=document.getElementById('lib-stat-total'),availableStat=document.getElementById('lib-stat-available'),borrowedStat=document.getElementById('lib-stat-borrowed');
   if(totalStat)totalStat.textContent=BOOKS.length;
@@ -1224,7 +1226,7 @@ async function loadAdminLibrary(){
       window.getFirestoreLibraryBooks?window.getFirestoreLibraryBooks():Promise.resolve(BOOKS),
       window.getFirestoreLibraryRequests?window.getFirestoreLibraryRequests():Promise.resolve([]),
     ]);
-    BOOKS=freshBooks;libraryRequests=freshRequests;libraryLoading=false;sortLibraryBooks();renderAdLibraryBooks();renderAdLibraryRequests();
+    BOOKS=freshBooks;libraryRequests=freshRequests;libraryLoading=false;libraryLoaded=true;sortLibraryBooks();renderAdLibraryBooks();renderAdLibraryRequests();
   }catch(error){console.error('Admin library load failed:',error);if(books)books.innerHTML='<div class="empty">Library data could not be loaded.</div>';if(requests)requests.innerHTML=''}
   finally{libraryAdminLoading=false}
 }
