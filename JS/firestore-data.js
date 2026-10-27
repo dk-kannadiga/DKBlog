@@ -2,6 +2,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebas
 import {
   addDoc,
   collection,
+  countFromServer,
   deleteDoc,
   doc,
   getDoc,
@@ -44,8 +45,10 @@ const auth = getAuth(app);
 let currentUser = null;
 let owner = false;
 const POST_PAGE_SIZE = 12;
+const LIBRARY_PAGE_SIZE = 24;
 let postPageCursor = null;
 let postPageHasMore = true;
+let libraryBookCursor = null;
 let resolveAuthReady;
 const authReady = new Promise((resolve) => {
   resolveAuthReady = resolve;
@@ -194,6 +197,26 @@ window.getFirestoreLibraryBooks = async function () {
   return snapshot.docs
     .map((item) => ({ ...item.data(), firestoreId: item.id, id: item.data().id || item.id }))
     .sort((a, b) => String(a.title || "").localeCompare(String(b.title || ""), "kn"));
+};
+window.getFirestoreLibraryBooksPage = async function (reset = false) {
+  if (reset) libraryBookCursor = null;
+  const constraints = [orderBy("title"), limit(LIBRARY_PAGE_SIZE)];
+  if (libraryBookCursor) constraints.splice(1, 0, startAfter(libraryBookCursor));
+  const snapshot = await getDocs(query(collection(db, "libraryBooks"), ...constraints));
+  if (snapshot.docs.length) libraryBookCursor = snapshot.docs[snapshot.docs.length - 1];
+  return {
+    books: snapshot.docs.map((item) => ({ ...item.data(), firestoreId: item.id, id: item.data().id || item.id })),
+    hasMore: snapshot.docs.length === LIBRARY_PAGE_SIZE,
+  };
+};
+window.getFirestoreLibraryStats = async function () {
+  const books = collection(db, "libraryBooks");
+  const [total, available, borrowed] = await Promise.all([
+    countFromServer(books),
+    countFromServer(query(books, where("status", "==", "available"))),
+    countFromServer(query(books, where("status", "==", "borrowed"))),
+  ]);
+  return { total: total.data().count, available: available.data().count, borrowed: borrowed.data().count };
 };
 window.getFirestoreLibraryBookById = async function (bookId) {
   const snapshot = await getDoc(doc(db, "libraryBooks", String(bookId)));

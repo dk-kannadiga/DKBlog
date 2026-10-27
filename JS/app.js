@@ -5,7 +5,7 @@ const LC={'ಕನ್ನಡ':'kn','English':'en','Mixed':'mixed'};
 
 // Always wait for the current Firestore result before showing published content.
 // The bundled sample posts are only used if Firestore is unavailable.
-let POSTS=[],COLLECTIONS=[],BOOKS=[],postsLoading=true,collectionsLoading=true,libraryLoading=false,libraryLoaded=false,contentLoading=true,CATS=JSON.parse(JSON.stringify(DC)),likes={},likedMe=new Set();
+let POSTS=[],COLLECTIONS=[],BOOKS=[],postsLoading=true,collectionsLoading=true,libraryLoading=false,libraryLoaded=false,libraryHasMore=true,libraryLoadingMore=false,libraryPagePromise=null,libraryStats=null,libraryStatsLoading=false,contentLoading=true,CATS=JSON.parse(JSON.stringify(DC)),likes={},likedMe=new Set();
 let Q=null,QA=[...DQA],qDraft=[],editQId=false,certDraft=null,qSubmitted=false,qSubmissionQuizId=null,qSubmissionCheckInFlight=false,qSubmitting=false,qSavedResult=null,prizeExportData=null,qQuizStartedId=null;
 let adminAuth=false,editId=null,collectionEditId=null,bookEditId=null,catF='all',searchQ='',librarySearchQ='',libraryAvailability='all',libraryRequests=[],libraryAdminLoading=false,participantStatus=null,participantSort={field:'score',direction:'desc'},commentCache=new Map();
 const HOME_PAGE_SIZE=12;
@@ -525,6 +525,7 @@ function libraryBookState(book){
 function librarySearch(value){
   librarySearchQ=String(value||'').trim().toLowerCase();
   const clear=document.getElementById('lib-search-clear');if(clear)clear.style.display=librarySearchQ?'':'none';
+  if(librarySearchQ&&libraryHasMore)loadRemainingLibraryBooks().catch(error=>console.error('Library search load failed:',error));
   renderLibrary();
 }
 function clearLibrarySearch(){
@@ -532,28 +533,60 @@ function clearLibrarySearch(){
   const clear=document.getElementById('lib-search-clear');if(clear)clear.style.display='none';renderLibrary();
 }
 function libraryFilter(value){libraryAvailability=value||'all';renderLibrary()}
+function mergeLibraryBooks(items){
+  const known=new Map(BOOKS.map(book=>[String(book.id),book]));
+  items.forEach(book=>known.set(String(book.id),book));BOOKS=[...known.values()];sortLibraryBooks();
+}
+function loadLibraryStats(){
+  if(libraryStatsLoading||libraryStats||!window.getFirestoreLibraryStats)return;
+  libraryStatsLoading=true;
+  window.getFirestoreLibraryStats()
+    .then(stats=>{libraryStats=stats;renderLibrary()})
+    .catch(error=>console.error('Library statistics load failed:',error))
+    .finally(()=>{libraryStatsLoading=false});
+}
+async function loadLibraryPage(reset=false){
+  if(libraryLoadingMore)return libraryPagePromise;
+  if(!reset&&!libraryHasMore)return;
+  if(reset){BOOKS=[];libraryLoaded=false;libraryHasMore=true;libraryStats=null}
+  libraryLoading=true;libraryLoadingMore=true;
+  libraryPagePromise=(async()=>{
+    const result=window.getFirestoreLibraryBooksPage
+      ?await window.getFirestoreLibraryBooksPage(reset)
+      :{books:await window.getFirestoreLibraryBooks(),hasMore:false};
+    mergeLibraryBooks(result.books||[]);libraryHasMore=Boolean(result.hasMore);libraryLoaded=true;loadLibraryStats();
+  })();
+  try{return await libraryPagePromise}
+  finally{libraryLoading=false;libraryLoadingMore=false;libraryPagePromise=null}
+}
+async function loadMoreLibraryBooks(){
+  try{await loadLibraryPage();renderLibrary()}catch(error){console.error('More library books load failed:',error);renderLibrary()}
+}
+async function loadRemainingLibraryBooks(){
+  while(librarySearchQ&&libraryHasMore){await loadLibraryPage()}
+  renderLibrary();
+}
 function renderLibrary(){
   const grid=document.getElementById('lib-grid'),count=document.getElementById('lib-count');if(!grid)return;
   if(!libraryLoaded&&!libraryLoading){
-    libraryLoading=true;grid.innerHTML='<div class="empty">ಪುಸ್ತಕಗಳನ್ನು ತರಲಾಗುತ್ತಿದೆ...</div>';if(count)count.textContent='';
-    (window.getFirestoreLibraryBooks?window.getFirestoreLibraryBooks():Promise.resolve([]))
-      .then(books=>{BOOKS=books;libraryLoaded=true;libraryLoading=false;renderLibrary()})
-      .catch(error=>{console.error('Library load failed:',error);libraryLoading=false;grid.innerHTML='<div class="empty">ಪುಸ್ತಕಗಳನ್ನು ತರಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ.</div>'});
+    grid.innerHTML='<div class="empty">ಪುಸ್ತಕಗಳನ್ನು ತರಲಾಗುತ್ತಿದೆ...</div>';if(count)count.textContent='';
+    loadLibraryPage(true).then(()=>renderLibrary()).catch(error=>{console.error('Library load failed:',error);grid.innerHTML='<div class="empty">ಪುಸ್ತಕಗಳನ್ನು ತರಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ.</div>'});
     return;
   }
   if(libraryLoading){grid.innerHTML='<div class="empty">ಪುಸ್ತಕಗಳನ್ನು ತರಲಾಗುತ್ತಿದೆ...</div>';if(count)count.textContent='';return}
   const totalStat=document.getElementById('lib-stat-total'),availableStat=document.getElementById('lib-stat-available'),borrowedStat=document.getElementById('lib-stat-borrowed');
-  if(totalStat)totalStat.textContent=BOOKS.length;
-  if(availableStat)availableStat.textContent=BOOKS.filter(book=>libraryBookState(book).key==='available').length;
-  if(borrowedStat)borrowedStat.textContent=BOOKS.filter(book=>libraryBookState(book).key==='borrowed').length;
+  loadLibraryStats();
+  if(totalStat)totalStat.textContent=libraryStats?.total??'—';
+  if(availableStat)availableStat.textContent=libraryStats?.available??'—';
+  if(borrowedStat)borrowedStat.textContent=libraryStats?.borrowed??'—';
   let books=[...BOOKS];
   if(librarySearchQ)books=books.filter(book=>[book.title,book.author,book.language,book.category,book.isbn,book.publisher].some(value=>String(value||'').toLowerCase().includes(librarySearchQ)));
   if(libraryAvailability==='available')books=books.filter(book=>libraryBookState(book).key==='available');
   else if(libraryAvailability==='borrowed')books=books.filter(book=>libraryBookState(book).key==='borrowed');
   else if(libraryAvailability==='reference')books=books.filter(book=>libraryBookState(book).key==='reference');
   books.sort((a,b)=>String(a.title||'').localeCompare(String(b.title||''),'kn'));
-  if(count)count.textContent=`${books.length} ಪುಸ್ತಕ${books.length===1?'':'ಗಳು'}`;
-  if(!books.length){grid.innerHTML='<div class="empty">ಹೊಂದಿಕೆಯಾಗುವ ಪುಸ್ತಕಗಳು ಸಿಗಲಿಲ್ಲ.</div>';return}
+  if(count)count.textContent=`${books.length} ಪುಸ್ತಕ${books.length===1?'':'ಗಳು'}${libraryHasMore?' · ಇನ್ನಷ್ಟು ಪುಸ್ತಕಗಳಿವೆ':''}`;
+  if(!books.length){grid.innerHTML=`<div class="empty">ಹೊಂದಿಕೆಯಾಗುವ ಪುಸ್ತಕಗಳು ಸಿಗಲಿಲ್ಲ.${libraryHasMore?'<br><button class="loadmore-btn" onclick="loadMoreLibraryBooks()">ಇನ್ನಷ್ಟು ಪುಸ್ತಕಗಳನ್ನು ತೋರಿಸಿ</button>':''}</div>`;return}
   grid.innerHTML=books.map(book=>{
     const cover=safeContentUrl(book.coverImage),state=libraryBookState(book),argument=jsArg(book.id);
     return`<article class="library-card" onclick="go('book',${argument})">
@@ -562,7 +595,7 @@ function renderLibrary(){
       <p class="library-meta">${[book.language,book.category,book.year].filter(Boolean).map(esc).join(' · ')}</p>${book.description?`<p class="library-description">${esc(autoExc(book.description))}</p>`:''}
       <span class="library-card__action">${state.key==='available'?'ಎರವಲು ಕೇಳಿ':'ವಿವರ ನೋಡಿ'} →</span></div>
     </article>`;
-  }).join('');
+  }).join('')+(libraryHasMore?`<div class="loadmore"><button class="loadmore-btn" onclick="loadMoreLibraryBooks()"${libraryLoadingMore?' disabled':''}>${libraryLoadingMore?'ಪುಸ್ತಕಗಳನ್ನು ತರಲಾಗುತ್ತಿದೆ…':'ಇನ್ನಷ್ಟು ಪುಸ್ತಕಗಳನ್ನು ತೋರಿಸಿ'}</button></div>`:'');
 }
 async function renderLibraryBook(id){
   const el=document.getElementById('book-view');if(!el)return;
@@ -1226,7 +1259,7 @@ async function loadAdminLibrary(){
       window.getFirestoreLibraryBooks?window.getFirestoreLibraryBooks():Promise.resolve(BOOKS),
       window.getFirestoreLibraryRequests?window.getFirestoreLibraryRequests():Promise.resolve([]),
     ]);
-    BOOKS=freshBooks;libraryRequests=freshRequests;libraryLoading=false;libraryLoaded=true;sortLibraryBooks();renderAdLibraryBooks();renderAdLibraryRequests();
+    BOOKS=freshBooks;libraryRequests=freshRequests;libraryLoading=false;libraryLoaded=true;libraryHasMore=false;libraryStats=null;sortLibraryBooks();renderAdLibraryBooks();renderAdLibraryRequests();
   }catch(error){console.error('Admin library load failed:',error);if(books)books.innerHTML='<div class="empty">Library data could not be loaded.</div>';if(requests)requests.innerHTML=''}
   finally{libraryAdminLoading=false}
 }
@@ -1270,7 +1303,7 @@ async function saveLibraryBook(){
   try{
     await window.saveFirestoreLibraryBook(book);
     if(existing){const index=BOOKS.findIndex(item=>String(item.id)===String(existing.id));if(index>=0)BOOKS[index]=book}else BOOKS.push(book);
-    sortLibraryBooks();cancelLibraryBookForm();renderAdLibraryBooks();renderLibrary();
+    libraryStats=null;sortLibraryBooks();cancelLibraryBookForm();renderAdLibraryBooks();renderLibrary();
   }catch(error){console.error('Book save failed:',error);alert('The book could not be saved. Please try again.')}
 }
 async function deleteLibraryBook(id){
@@ -1278,7 +1311,7 @@ async function deleteLibraryBook(id){
   const active=libraryRequests.some(request=>String(request.bookId)===String(id)&&['requested','approved','borrowed'].includes(request.status));
   if(active){alert('This book has an active request or loan. Close it before deleting the book.');return}
   if(!confirm(`Delete “${book.title}” permanently?`))return;
-  try{await window.deleteFirestoreLibraryBook(book);BOOKS=BOOKS.filter(item=>String(item.id)!==String(id));renderAdLibraryBooks();renderLibrary()}
+  try{await window.deleteFirestoreLibraryBook(book);BOOKS=BOOKS.filter(item=>String(item.id)!==String(id));libraryStats=null;renderAdLibraryBooks();renderLibrary()}
   catch(error){console.error('Book deletion failed:',error);alert('The book could not be deleted. Please try again.')}
 }
 async function copyLibraryBookLink(id){
