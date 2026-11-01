@@ -330,6 +330,27 @@ window.getFirestoreAdminQuiz = async function () {
   if (!key.exists()) throw new Error("Private quiz key is missing. Do not publish this quiz.");
   return { ...quiz, questions: key.data().questions };
 };
+// Closing changes only the stored state; it never republishes or rewrites answer keys.
+window.closeFirestoreQuiz = async function (quizId) {
+  await authReady;
+  if (!owner) throw new Error("Owner authentication required. Sign in again with your admin account.");
+  const activeRef = doc(db, "siteSettings", "activeQuiz");
+  await runTransaction(db, async transaction => {
+    const snapshot = await transaction.get(activeRef);
+    const active = snapshot.exists() ? snapshot.data().quiz : null;
+    if (!active || String(active.id) !== String(quizId)) {
+      throw new Error("The active quiz has changed. Refresh the admin page before closing it.");
+    }
+    if (active.securityVersion !== 2) {
+      throw new Error("This quiz needs a security migration before its state can be saved.");
+    }
+    if (!['live', 'closed'].includes(active.state)) {
+      throw new Error("Only a live quiz can be closed. Refresh the admin page.");
+    }
+    if (active.state === 'closed') return;
+    transaction.update(activeRef, { "quiz.state": "closed", updatedAt: serverTimestamp() });
+  });
+};
 window.saveFirestoreActiveQuiz = async function (quiz) {
   await authReady;
   if (!owner) throw new Error("Owner authentication required.");
