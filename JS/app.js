@@ -1516,8 +1516,22 @@ async function loadLiveQuizCount(quizId){
 }
 async function setQState(s){
   if(!Q)return;
-  const old=Q.state;Q.state=s;
-  try{await svQ();renderAdQuiz()}catch(e){Q.state=old;console.error('Quiz save failed:',e);alert('The quiz state could not be saved. Please try again.')}
+  const quiz=Q,old=quiz.state;
+  try{
+    if(s==='closed'){
+      await window.closeFirestoreQuiz(quiz.id);
+      quiz.state='closed';
+    }else{
+      quiz.state=s;
+      await svQ();
+    }
+    renderAdQuiz();
+  }catch(e){
+    quiz.state=old;
+    console.error('Quiz save failed:',e);
+    const detail=[e?.code,e?.message].filter(Boolean).join(': ')||'Unknown error';
+    alert('The quiz state could not be saved.\n\n'+detail);
+  }
 }
 async function doArchive(){
   if(!Q||Q.state!=='closed')return;
