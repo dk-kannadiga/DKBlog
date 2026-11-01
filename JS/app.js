@@ -1516,6 +1516,7 @@ async function loadLiveQuizCount(quizId){
 }
 async function setQState(s){
   if(!Q)return;
+  if(s==='closed' && Q.state==='live' && !confirm('Close this quiz now? Participants will no longer be able to access it from the active quiz list.'))return;
   const old=Q.state;Q.state=s;
   try{await svQ();renderAdQuiz()}catch(e){Q.state=old;console.error('Quiz save failed:',e);alert('The quiz state could not be saved. Please try again.')}
 }
