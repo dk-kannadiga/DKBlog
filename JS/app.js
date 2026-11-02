@@ -7,7 +7,7 @@ const LC={'ಕನ್ನಡ':'kn','English':'en','Mixed':'mixed'};
 // The bundled sample posts are only used if Firestore is unavailable.
 let POSTS=[],COLLECTIONS=[],BOOKS=[],postsLoading=true,collectionsLoading=true,libraryLoading=false,libraryLoaded=false,contentLoading=true,CATS=JSON.parse(JSON.stringify(DC)),likes={},likedMe=new Set();
 let Q=null,QA=[...DQA],qDraft=[],editQId=false,certDraft=null,qSubmitted=false,qSubmissionQuizId=null,qSubmissionCheckInFlight=false,qSubmitting=false,qSavedResult=null,prizeExportData=null,qQuizStartedId=null;
-let adminAuth=false,editId=null,collectionEditId=null,bookEditId=null,catF='all',searchQ='',librarySearchQ='',libraryAvailability='all',libraryRequests=[],libraryAdminLoading=false,participantStatus=null,participantSort={field:'score',direction:'desc'},commentCache=new Map();
+let adminAuth=false,editId=null,collectionEditId=null,bookEditId=null,catF='all',searchQ='',librarySearchQ='',libraryAvailability='all',librarySort='bookIdAsc',libraryRequests=[],libraryAdminLoading=false,participantStatus=null,participantSort={field:'score',direction:'desc'},commentCache=new Map();
 const HOME_PAGE_SIZE=12;
 let postsFullyLoaded=false,homeHasMore=false,homeLoadingMore=false,homeVisibleCount=0,allPostsPromise=null;
 
@@ -532,6 +532,10 @@ function clearLibrarySearch(){
   const clear=document.getElementById('lib-search-clear');if(clear)clear.style.display='none';renderLibrary();
 }
 function libraryFilter(value){libraryAvailability=value||'all';renderLibrary()}
+function librarySortBy(value){librarySort=value||'bookIdAsc';renderLibrary()}
+function compareLibraryBookIds(a,b){
+  return String(a.id||a.bookId||'').localeCompare(String(b.id||b.bookId||''),undefined,{numeric:true,sensitivity:'base'});
+}
 function renderLibrary(){
   const grid=document.getElementById('lib-grid'),count=document.getElementById('lib-count');if(!grid)return;
   if(!libraryLoaded&&!libraryLoading){
@@ -551,7 +555,12 @@ function renderLibrary(){
   if(libraryAvailability==='available')books=books.filter(book=>libraryBookState(book).key==='available');
   else if(libraryAvailability==='borrowed')books=books.filter(book=>libraryBookState(book).key==='borrowed');
   else if(libraryAvailability==='reference')books=books.filter(book=>libraryBookState(book).key==='reference');
-  books.sort((a,b)=>String(a.title||'').localeCompare(String(b.title||''),'kn'));
+  books.sort((a,b)=>{
+    if(librarySort==='bookIdDesc')return compareLibraryBookIds(b,a);
+    if(librarySort==='title')return String(a.title||'').localeCompare(String(b.title||''),'kn',{sensitivity:'base'});
+    if(librarySort==='author')return String(a.author||'').localeCompare(String(b.author||''),'kn',{sensitivity:'base'});
+    return compareLibraryBookIds(a,b);
+  });
   if(count)count.textContent=`${books.length} ಪುಸ್ತಕ${books.length===1?'':'ಗಳು'}`;
   if(!books.length){grid.innerHTML='<div class="empty">ಹೊಂದಿಕೆಯಾಗುವ ಪುಸ್ತಕಗಳು ಸಿಗಲಿಲ್ಲ.</div>';return}
   grid.innerHTML=books.map(book=>{

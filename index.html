@@ -127,6 +127,12 @@
       <option value="borrowed">ಎರವಲು ನೀಡಿದ ಪುಸ್ತಕಗಳು</option>
       <option value="reference">ಎರವಲಿಗೆ ಇಲ್ಲದ ಪುಸ್ತಕಗಳು</option>
     </select>
+    <select id="lib-sort" class="library-filter" onchange="librarySortBy(this.value)" aria-label="ಪುಸ್ತಕಗಳನ್ನು ವಿಂಗಡಿಸಿ">
+      <option value="bookIdAsc">ಪುಸ್ತಕ ಐಡಿ: ಕಡಿಮೆಯಿಂದ ಹೆಚ್ಚಿಗೆ</option>
+      <option value="bookIdDesc">ಪುಸ್ತಕ ಐಡಿ: ಹೆಚ್ಚಿಗೆಯಿಂದ ಕಡಿಮೆಗೆ</option>
+      <option value="title">ಶೀರ್ಷಿಕೆ: ಅ ರಿಂದ ಹ</option>
+      <option value="author">ಲೇಖಕರು: ಅ ರಿಂದ ಹ</option>
+    </select>
   </div>
   <div id="lib-count" class="sres"></div>
   <div id="lib-grid" class="library-grid"><div class="empty">ಪುಸ್ತಕಗಳನ್ನು ತರಲಾಗುತ್ತಿದೆ...</div></div>
