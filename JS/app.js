@@ -881,8 +881,8 @@ function renderQArcList(){
   el.innerHTML='<h3 style="font-family:\'Playfair Display\',serif;color:var(--ac);margin-bottom:16px">ಹಳೆಯ ಕ್ವಿಜ಼್‌ಗಳು</h3>'+
   QA.map(q=>`<div class="aqcard" onclick="go('qdetail',${q.id})">
     <div><div class="aqcard-title">${esc(q.title)}</div>
-    <div class="aqcard-meta">${q.date} · ${q.total} ಭಾಗವಹಿಸಿದವರು · ${(q.questions||[]).length} ಪ್ರಶ್ನೆಗಳು</div></div>
-    <span class="tsub" style="font-size:.74rem">${q.type==='prize'?'🎁 ಬಹುಮಾನ':'📜 ಪ್ರಮಾಣಪತ್ರ'}</span>
+    <div class="aqcard-meta">${q.date} · ${q.statisticsAvailable===false?'ಭಾಗವಹಿಸುವಿಕೆಯ ಮಾಹಿತಿ ಲಭ್ಯವಿಲ್ಲ':q.total+' ಭಾಗವಹಿಸಿದವರು'} · ${(q.questions||[]).length} ಪ್ರಶ್ನೆಗಳು</div></div>
+    <span class="tsub" style="font-size:.74rem">${q.quizTypeUnconfirmed?'':q.type==='prize'?'🎁 ಬಹುಮಾನ':'📜 ಪ್ರಮಾಣಪತ್ರ'}</span>
   </div>`).join('')
 }
 function renderQDetail(id){
@@ -898,9 +898,9 @@ function renderQDetail(id){
   el.innerHTML=`
     <h1 class="stitle">${esc(q.title)}</h1>
     <button class="sbtn" onclick="downloadArchivedQuizPdf(${q.id})">↓ PDF ಉಳಿಸಿ / ಮುದ್ರಿಸಿ</button>
-    <p class="ssub">${q.date} · ${q.type==='certificate'?'ಪ್ರಮಾಣಪತ್ರದ ಕ್ವಿಜ಼್':'ಬಹುಮಾನದ ಕ್ವಿಜ಼್'}</p>
+    <p class="ssub">${q.date}${q.quizTypeUnconfirmed?'':' · '+(q.type==='certificate'?'ಪ್ರಮಾಣಪತ್ರದ ಕ್ವಿಜ಼್':'ಬಹುಮಾನದ ಕ್ವಿಜ಼್')}</p>
     <div class="aqstats">
-      <div class="aqstat"><div class="aqstat-n">${q.total}</div><div class="aqstat-l">ಭಾಗವಹಿಸಿದವರು</div></div>
+      <div class="aqstat"><div class="aqstat-n">${q.statisticsAvailable===false?'—':q.total}</div><div class="aqstat-l">ಭಾಗವಹಿಸಿದವರು</div></div>
       <div class="aqstat"><div class="aqstat-n">${q.questions.length}</div><div class="aqstat-l">ಪ್ರಶ್ನೆಗಳು</div></div>
       <div class="aqstat"><div class="aqstat-n">${tot?Math.round(cor/tot*100)+'%':'—'}</div><div class="aqstat-l">ಸರಿಯಾದ ಉತ್ತರಗಳ ಸರಾಸರಿ</div></div>
     </div>
