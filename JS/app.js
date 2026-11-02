@@ -897,6 +897,7 @@ function renderQDetail(id){
   const cor=q.questions.reduce((s,qu)=>s+(qu.stats?.c||0),0);
   el.innerHTML=`
     <h1 class="stitle">${esc(q.title)}</h1>
+    <button class="sbtn" onclick="downloadArchivedQuizPdf(${q.id})">↓ PDF ಉಳಿಸಿ / ಮುದ್ರಿಸಿ</button>
     <p class="ssub">${q.date} · ${q.type==='certificate'?'ಪ್ರಮಾಣಪತ್ರದ ಕ್ವಿಜ಼್':'ಬಹುಮಾನದ ಕ್ವಿಜ಼್'}</p>
     <div class="aqstats">
       <div class="aqstat"><div class="aqstat-n">${q.total}</div><div class="aqstat-l">ಭಾಗವಹಿಸಿದವರು</div></div>
@@ -913,6 +914,15 @@ function renderQDetail(id){
       </div>`}).join('')}
     <div class="div" style="margin-top:32px">✦</div>
     <div class="pnav"><button class="back" onclick="go('quiz')">← ಕ್ವಿಜ಼್‌ಗೆ ಹಿಂತಿರುಗಿ</button><button class="sbtn" onclick="shrQ(${q.id})">↗ ಕ್ವಿಜ಼್ ಹಂಚಿಕೊಳ್ಳಿ</button><span class="stoast" id="qst${q.id}">ಕೊಂಡಿಯನ್ನು ನಕಲಿಸಲಾಗಿದೆ!</span></div>`
+}
+async function downloadArchivedQuizPdf(id){
+  const q=QA.find(quiz=>String(quiz.id)===String(id));if(!q)return;
+  const popup=window.open('','_blank');
+  if(!popup){alert('PDF ತೆರೆಯಲು ಪಾಪ್‌ಅಪ್‌ಗೆ ಅನುಮತಿ ನೀಡಿ.');return}
+  popup.document.write(`<!doctype html><html lang="kn"><head><meta charset="utf-8"><title>${esc(q.title)}</title><style>body{font-family:'Noto Sans Kannada',sans-serif;line-height:1.8;color:#111;max-width:780px;margin:32px auto;padding:0 24px}h1{font-size:24px}section{break-inside:avoid;margin:24px 0}h2{font-size:17px;white-space:pre-wrap}.option{padding:4px 12px;white-space:pre-wrap}.correct{font-weight:bold;border:1px solid #555} @page{size:A4;margin:18mm}@media print{body{margin:0;padding:0}.print-help{display:none}}</style></head><body><p class="print-help">ಮುದ್ರಣ ಆಯ್ಕೆಗಳಲ್ಲಿ “Save as PDF” ಆಯ್ಕೆಮಾಡಿ.</p><h1>${esc(q.title)}</h1>${(q.questions||[]).map((question,i)=>`<section><h2>${i+1}. ${esc(question.q)}</h2>${(question.opts||[]).map((option,j)=>`<div class="option${j===question.ans?' correct':''}">${String.fromCharCode(65+j)}. ${esc(option)}${j===question.ans?' — ✓ ಸರಿಯಾದ ಉತ್ತರ':''}</div>`).join('')}</section>`).join('')}</body></html>`);
+  popup.document.close();
+  await popup.document.fonts.ready;
+  popup.focus();popup.print();
 }
 function shrQ(id){
   const q=findQuiz(id),t=document.getElementById('qst'+id),url=new URL(routePath('qdetail',id),location.origin).href;
