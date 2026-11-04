@@ -1534,6 +1534,7 @@ async function sendAdminQuizShare(){
   }finally{button.disabled=false}
 }
 function renderAdQuiz(){
+  document.getElementById('archive-admin-tools')?.replaceChildren();
   const el=document.getElementById('atab-quiz');
   const badge=Q?({upcoming:'<span class="badge bup">Upcoming</span>',live:'<span class="badge blive">Live</span>',closed:'<span class="badge bcl">Closed</span>'}[Q.state]||''):'<span class="badge bno">No active quiz</span>';
   let statusHtml=`<div class="qstatus">
