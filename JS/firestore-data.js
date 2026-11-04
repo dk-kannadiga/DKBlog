@@ -7,6 +7,7 @@ import {
   getDoc,
   getDocs,
   getFirestore,
+  getCountFromServer,
   limit,
   orderBy,
   query,
@@ -194,6 +195,26 @@ window.getFirestoreLibraryBooks = async function () {
   return snapshot.docs
     .map((item) => ({ ...item.data(), firestoreId: item.id, id: item.data().id || item.id }))
     .sort((a, b) => String(a.title || "").localeCompare(String(b.title || ""), "kn"));
+};
+const cataloguePages={books:{cursor:null,more:true},quizzes:{cursor:null,more:true}};
+window.getCataloguePage=async function(kind,reset=false){
+  const state=cataloguePages[kind];if(reset){state.cursor=null;state.more=true}
+  if(!state.more)return{items:[],more:false};
+  const size=kind==='books'?25:5,name=kind==='books'?'libraryBooks':'quizzes';
+  const constraints=[orderBy('id',kind==='books'?'asc':'desc')];
+  if(state.cursor)constraints.push(startAfter(state.cursor));constraints.push(limit(size+1));
+  const snapshot=await getDocs(query(collection(db,name),...constraints)),page=snapshot.docs.slice(0,size);
+  state.cursor=page.at(-1)||state.cursor;state.more=snapshot.docs.length>size;
+  return{items:page.map(d=>({...d.data(),firestoreId:d.id})),more:state.more};
+};
+window.getLibraryCounts=async function(){
+  const books=collection(db,'libraryBooks');
+  const counts=await Promise.all([getCountFromServer(books),getCountFromServer(query(books,where('status','==','available'),where('lendingPolicy','==','lendable'))),getCountFromServer(query(books,where('status','==','borrowed')))]);
+  return counts.map(s=>s.data().count);
+};
+window.getArchivedQuizById=async function(id){
+  const s=await getDocs(query(collection(db,'quizzes'),where('id','==',Number(id)),limit(1)));
+  return s.docs[0]?.data()||null;
 };
 window.getFirestoreLibraryBookById = async function (bookId) {
   const snapshot = await getDoc(doc(db, "libraryBooks", String(bookId)));

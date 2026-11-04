@@ -6,9 +6,22 @@ const LC={'ಕನ್ನಡ':'kn','English':'en','Mixed':'mixed'};
 // Always wait for the current Firestore result before showing published content.
 // The bundled sample posts are only used if Firestore is unavailable.
 let POSTS=[],COLLECTIONS=[],BOOKS=[],postsLoading=true,collectionsLoading=true,libraryLoading=false,libraryLoaded=false,contentLoading=true,CATS=JSON.parse(JSON.stringify(DC)),likes={},likedMe=new Set();
-let Q=null,QA=[...DQA],qDraft=[],editQId=false,certDraft=null,qSubmitted=false,qSubmissionQuizId=null,qSubmissionCheckInFlight=false,qSubmitting=false,qSavedResult=null,prizeExportData=null,qQuizStartedId=null;
+let Q=null,QA=[],qDraft=[],editQId=false,certDraft=null,qSubmitted=false,qSubmissionQuizId=null,qSubmissionCheckInFlight=false,qSubmitting=false,qSavedResult=null,prizeExportData=null,qQuizStartedId=null;
 let adminAuth=false,editId=null,collectionEditId=null,bookEditId=null,catF='all',searchQ='',librarySearchQ='',libraryAvailability='all',librarySort='bookIdAsc',libraryRequests=[],libraryAdminLoading=false,participantStatus=null,participantSort={field:'score',direction:'desc'},commentCache=new Map();
 const HOME_PAGE_SIZE=12;
+let archiveMore=true,archiveBusy=false,libraryMore=true,libraryCounts=null;
+async function loadMoreArchivedQuizzes(){
+  if(archiveBusy||!archiveMore)return;archiveBusy=true;
+  try{const page=await window.getCataloguePage('quizzes');QA=[...new Map([...QA,...page.items].map(q=>[String(q.id),q])).values()];archiveMore=page.more}
+  catch(e){archiveMore=false;console.error(e);alert('ಕ್ವಿಜ಼್‌ಗಳನ್ನು ತರಲಾಗಲಿಲ್ಲ. ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.')}
+  finally{archiveBusy=false;renderQArcList()}
+}
+async function loadMoreLibraryBooks(){
+  if(libraryLoading||!libraryMore)return;libraryLoading=true;
+  try{const page=await window.getCataloguePage('books');BOOKS=[...new Map([...BOOKS,...page.items].map(b=>[String(b.id),b])).values()];libraryMore=page.more}
+  catch(e){console.error(e);alert('ಪುಸ್ತಕಗಳನ್ನು ತರಲಾಗಲಿಲ್ಲ. ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.')}
+  finally{libraryLoading=false;renderLibrary()}
+}
 let postsFullyLoaded=false,homeHasMore=false,homeLoadingMore=false,homeVisibleCount=0,allPostsPromise=null;
 
 function hSearch(v){
@@ -27,10 +40,10 @@ function clearSearch(){
 
 async function loadAll(){
   const [posts,categories,activeQuiz,archive,collections] = await Promise.allSettled([
-    window.getFirestorePostsPage?window.getFirestorePostsPage(true):window.getFirestorePosts?window.getFirestorePosts():Promise.resolve([...DP]),
+    window.getFirestorePostsPage?window.getFirestorePostsPage(true):window.getFirestorePosts?window.getFirestorePosts():Promise.reject(new Error('Posts service unavailable')),
     window.getFirestoreCategories?window.getFirestoreCategories():Promise.resolve(JSON.parse(JSON.stringify(DC))),
     window.getFirestoreActiveQuiz?window.getFirestoreActiveQuiz():Promise.resolve(null),
-    window.getFirestoreQuizzes?window.getFirestoreQuizzes():Promise.resolve([...DQA]),
+    Promise.resolve([]),
     window.getFirestoreCollections?window.getFirestoreCollections():Promise.resolve([])
   ]);
 
@@ -48,7 +61,7 @@ async function loadAll(){
     homeVisibleCount=POSTS.length;
   }else{
     console.error('Posts load failed:',posts.reason);
-    if(!POSTS.length)POSTS=[...DP];
+    POSTS=[];
     postsFullyLoaded=true;
     homeHasMore=false;
     homeVisibleCount=POSTS.length;
@@ -540,16 +553,16 @@ function renderLibrary(){
   const grid=document.getElementById('lib-grid'),count=document.getElementById('lib-count');if(!grid)return;
   if(!libraryLoaded&&!libraryLoading){
     libraryLoading=true;grid.innerHTML='<div class="empty">ಪುಸ್ತಕಗಳನ್ನು ತರಲಾಗುತ್ತಿದೆ...</div>';if(count)count.textContent='';
-    (window.getFirestoreLibraryBooks?window.getFirestoreLibraryBooks():Promise.resolve([]))
-      .then(books=>{BOOKS=books;libraryLoaded=true;libraryLoading=false;renderLibrary()})
+    Promise.all([window.getCataloguePage('books',true),window.getLibraryCounts()])
+      .then(([page,counts])=>{BOOKS=page.items;libraryMore=page.more;libraryCounts=counts;libraryLoaded=true;libraryLoading=false;renderLibrary()})
       .catch(error=>{console.error('Library load failed:',error);libraryLoading=false;grid.innerHTML='<div class="empty">ಪುಸ್ತಕಗಳನ್ನು ತರಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ.</div>'});
     return;
   }
   if(libraryLoading){grid.innerHTML='<div class="empty">ಪುಸ್ತಕಗಳನ್ನು ತರಲಾಗುತ್ತಿದೆ...</div>';if(count)count.textContent='';return}
   const totalStat=document.getElementById('lib-stat-total'),availableStat=document.getElementById('lib-stat-available'),borrowedStat=document.getElementById('lib-stat-borrowed');
-  if(totalStat)totalStat.textContent=BOOKS.length;
-  if(availableStat)availableStat.textContent=BOOKS.filter(book=>libraryBookState(book).key==='available').length;
-  if(borrowedStat)borrowedStat.textContent=BOOKS.filter(book=>libraryBookState(book).key==='borrowed').length;
+  if(totalStat)totalStat.textContent=libraryCounts?.[0]??BOOKS.length;
+  if(availableStat)availableStat.textContent=libraryCounts?.[1]??BOOKS.filter(book=>libraryBookState(book).key==='available').length;
+  if(borrowedStat)borrowedStat.textContent=libraryCounts?.[2]??BOOKS.filter(book=>libraryBookState(book).key==='borrowed').length;
   let books=[...BOOKS];
   if(librarySearchQ)books=books.filter(book=>[book.title,book.author,book.language,book.category,book.isbn,book.publisher].some(value=>String(value||'').toLowerCase().includes(librarySearchQ)));
   if(libraryAvailability==='available')books=books.filter(book=>libraryBookState(book).key==='available');
@@ -562,7 +575,7 @@ function renderLibrary(){
     return compareLibraryBookIds(a,b);
   });
   if(count)count.textContent=`${books.length} ಪುಸ್ತಕ${books.length===1?'':'ಗಳು'}`;
-  if(!books.length){grid.innerHTML='<div class="empty">ಹೊಂದಿಕೆಯಾಗುವ ಪುಸ್ತಕಗಳು ಸಿಗಲಿಲ್ಲ.</div>';return}
+  if(!books.length){grid.innerHTML='<div class="empty">ಹೊಂದಿಕೆಯಾಗುವ ಪುಸ್ತಕಗಳು ಸಿಗಲಿಲ್ಲ.</div>'+(libraryMore?'<button class="sbtn" onclick="loadMoreLibraryBooks()">ಇನ್ನಷ್ಟು ಪುಸ್ತಕಗಳನ್ನು ತೋರಿಸಿ</button>':'');return}
   grid.innerHTML=books.map(book=>{
     const cover=safeContentUrl(book.coverImage),state=libraryBookState(book),argument=jsArg(book.id);
     return`<article class="library-card" onclick="go('book',${argument})">
@@ -571,7 +584,7 @@ function renderLibrary(){
       <p class="library-meta">${[book.language,book.category,book.year].filter(Boolean).map(esc).join(' · ')}</p>${book.description?`<p class="library-description">${esc(autoExc(book.description))}</p>`:''}
       <span class="library-card__action">${state.key==='available'?'ಎರವಲು ಕೇಳಿ':'ವಿವರ ನೋಡಿ'} →</span></div>
     </article>`;
-  }).join('');
+  }).join('')+(libraryMore?'<button class="sbtn" onclick="loadMoreLibraryBooks()">ಇನ್ನಷ್ಟು ಪುಸ್ತಕಗಳನ್ನು ತೋರಿಸಿ</button>':'');
 }
 async function renderLibraryBook(id){
   const el=document.getElementById('book-view');if(!el)return;
@@ -877,16 +890,18 @@ function genCert(){
 }
 function renderQArcList(){
   const el=document.getElementById('qarc');
+  if(!QA.length&&archiveMore){el.innerHTML='<div class="empty">ಕ್ವಿಜ಼್‌ಗಳನ್ನು ತರಲಾಗುತ್ತಿದೆ...</div>';if(!archiveBusy)loadMoreArchivedQuizzes();return}
   if(!QA.length){el.innerHTML='<div class="empty">ಇನ್ನೂ ಯಾವುದೇ ಹಳೆಯ ಕ್ವಿಜ಼್‌ಗಳಿಲ್ಲ. ಮುಗಿದ ಕ್ವಿಜ಼್‌ಗಳು ಇಲ್ಲಿ ಕಾಣಿಸುತ್ತವೆ.</div>';return}
   el.innerHTML='<h3 style="font-family:\'Playfair Display\',serif;color:var(--ac);margin-bottom:16px">ಹಳೆಯ ಕ್ವಿಜ಼್‌ಗಳು</h3>'+
   QA.map(q=>`<div class="aqcard" onclick="go('qdetail',${q.id})">
     <div><div class="aqcard-title">${esc(q.title)}</div>
     <div class="aqcard-meta">${q.date} · ${q.statisticsAvailable===false?'ಭಾಗವಹಿಸುವಿಕೆಯ ಮಾಹಿತಿ ಲಭ್ಯವಿಲ್ಲ':q.total+' ಭಾಗವಹಿಸಿದವರು'} · ${(q.questions||[]).length} ಪ್ರಶ್ನೆಗಳು</div></div>
     <span class="tsub" style="font-size:.74rem">${q.quizTypeUnconfirmed?'':q.type==='prize'?'🎁 ಬಹುಮಾನ':'📜 ಪ್ರಮಾಣಪತ್ರ'}</span>
-  </div>`).join('')
+  </div>`).join('')+(archiveMore?'<button class="sbtn" onclick="loadMoreArchivedQuizzes()">ಇನ್ನಷ್ಟು ಕ್ವಿಜ಼್‌ಗಳನ್ನು ತೋರಿಸಿ</button>':'')
 }
-function renderQDetail(id){
-  const q=findQuiz(id),el=document.getElementById('qdc');
+async function renderQDetail(id){
+  let q=findQuiz(id);const el=document.getElementById('qdc');
+  if(!q&&!contentLoading){try{q=await window.getArchivedQuizById(id);if(q)QA.push(q)}catch(e){console.error(e)}}
   if(!q){
     el.innerHTML=contentLoading
       ?'<div class="empty">ಕ್ವಿಜ಼್ಅ‌ನ್ನು ತರಲಾಗುತ್ತಿದೆ...</div>'
@@ -961,6 +976,7 @@ async function aTab(btn,tab){
   else if(tab==='library')loadAdminLibrary();
   else if(tab==='cats')renderAdCats();
   else if(tab==='quiz'){
+    try{QA=await window.getFirestoreQuizzes()}catch(e){console.error('Archive administration load failed:',e)}
     try{Q=await window.getFirestoreAdminQuiz();renderAdQuiz()}
     catch(error){console.error('Private quiz load failed:',error);document.getElementById('atab-quiz').innerHTML='<div class="empty">Private quiz data could not be loaded. Refresh and try again.</div>'}
   }
@@ -1927,7 +1943,7 @@ async function saveQForm(){
     await loadAll();
   }catch(e){
     console.error('Firebase refresh failed:',e);
-    POSTS=[...DP];COLLECTIONS=[];BOOKS=[];postsLoading=false;collectionsLoading=false;libraryLoading=false;contentLoading=false;
+    POSTS=[];QA=[];COLLECTIONS=[];BOOKS=[];postsLoading=false;collectionsLoading=false;libraryLoading=false;contentLoading=false;
     openCurrentRoute();
   }
 })();
