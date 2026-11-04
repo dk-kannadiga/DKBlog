@@ -282,7 +282,8 @@ function routePath(page,id){
 function routeFromLocation(){
   const legacy=location.hash.match(/^#(post|quiz)-(.+)$/);
   if(legacy)return {page:legacy[1]==='post'?'post':'qdetail',id:decodeURIComponent(legacy[2])};
-  const parts=location.pathname.split('/').filter(Boolean).map(part=>decodeURIComponent(part));
+  let parts;try{parts=location.pathname.split('/').filter(Boolean).map(part=>decodeURIComponent(part))}catch{return {page:'notfound'}}
+  if(parts.length>3||(parts.length===3&&!(parts[0]==='library'&&parts[1]==='book'))||(parts.length===2&&!['post','quiz','collection'].includes(parts[0])))return {page:'notfound'};
   if(parts[0]==='post'&&parts[1])return {page:'post',id:parts[1]};
   if(parts[0]==='library'&&parts[1]==='book'&&parts[2])return {page:'book',id:parts[2]};
   if(parts[0]==='quiz'&&parts[1])return {page:'qdetail',id:parts[1]};
@@ -293,7 +294,7 @@ function routeFromLocation(){
   if(parts[0]==='index')return {page:'index'};
   if(parts[0]==='about')return {page:'about'};
   if(parts[0]==='admin')return {page:'adminlogin'};
-  return {page:'home'};
+  return {page:parts.length?'notfound':'home'};
 }
 function syncRoute(page,id,replace=false){
   const path=routePath(page,id);
@@ -313,6 +314,10 @@ function collectionPosts(id){
   return POSTS.filter(post=>String(post.collectionId||'')===String(id)).sort((a,b)=>position(a)-position(b)||Number(a.id)-Number(b.id));
 }
 function go(page,id,{sync=true,replace=false}={}){
+  if(page==='notfound'){
+    document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
+    let missing=document.getElementById('pnotfound');if(!missing){missing=document.createElement('div');missing.id='pnotfound';missing.className='page';missing.innerHTML='<div class="pc"><h1 class="stitle">ಈ ಪುಟ ಸಿಗಲಿಲ್ಲ</h1><p>ಕೊಂಡಿ ತಪ್ಪಾಗಿರಬಹುದು ಅಥವಾ ಈ ಪುಟವನ್ನು ತೆಗೆದುಹಾಕಿರಬಹುದು.</p><a href="/">ಮುಖಪುಟಕ್ಕೆ ಹಿಂತಿರುಗಿ</a></div>';document.body.appendChild(missing)}missing.classList.add('on');return;
+  }
   if(page==='admin'&&!adminAuth){go('adminlogin',null,{sync,replace});return}
   if(page==='qdetail'&&Q&&String(Q.id)===String(id))page='qplay';
   if(page!=='qplay')qQuizStartedId=null;

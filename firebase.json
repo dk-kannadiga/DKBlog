@@ -75,7 +75,15 @@
     ],
     "rewrites": [
       {
-        "source": "**",
+        "source": "/{index,collections,library,about,quiz,admin}",
+        "destination": "/index.html"
+      },
+      {
+        "source": "/{post,quiz,collection}/*",
+        "destination": "/index.html"
+      },
+      {
+        "source": "/library/book/*",
         "destination": "/index.html"
       }
     ]
