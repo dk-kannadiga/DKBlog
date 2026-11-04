@@ -912,7 +912,7 @@ async function renderQDetail(id){
   const cor=q.questions.reduce((s,qu)=>s+(qu.stats?.c||0),0);
   el.innerHTML=`
     <h1 class="stitle">${esc(q.title)}</h1>
-    <button class="sbtn" onclick="downloadArchivedQuizPdf(${q.id})">↓ PDF ಉಳಿಸಿ / ಮುದ್ರಿಸಿ</button>
+    <button class="sbtn" onclick="downloadArchivedQuizPdf(${q.id})">↓ PDF ಡೌನ್‌ಲೋಡ್ ಮಾಡಿ</button>
     <p class="ssub">${q.date}${q.quizTypeUnconfirmed?'':' · '+(q.type==='certificate'?'ಪ್ರಮಾಣಪತ್ರದ ಕ್ವಿಜ಼್':'ಬಹುಮಾನದ ಕ್ವಿಜ಼್')}</p>
     <div class="aqstats">
       <div class="aqstat"><div class="aqstat-n">${q.statisticsAvailable===false?'—':q.total}</div><div class="aqstat-l">ಭಾಗವಹಿಸಿದವರು</div></div>
@@ -932,12 +932,18 @@ async function renderQDetail(id){
 }
 async function downloadArchivedQuizPdf(id){
   const q=QA.find(quiz=>String(quiz.id)===String(id));if(!q)return;
-  const popup=window.open('','_blank');
-  if(!popup){alert('PDF ತೆರೆಯಲು ಪಾಪ್‌ಅಪ್‌ಗೆ ಅನುಮತಿ ನೀಡಿ.');return}
-  popup.document.write(`<!doctype html><html lang="kn"><head><meta charset="utf-8"><title>${esc(q.title)}</title><style>body{font-family:'Noto Sans Kannada',sans-serif;line-height:1.8;color:#111;max-width:780px;margin:32px auto;padding:0 24px}h1{font-size:24px}section{break-inside:avoid;margin:24px 0}h2{font-size:17px;white-space:pre-wrap}.option{padding:4px 12px;white-space:pre-wrap}.correct{font-weight:bold;border:1px solid #555} @page{size:A4;margin:18mm}@media print{body{margin:0;padding:0}.print-help{display:none}}</style></head><body><p class="print-help">ಮುದ್ರಣ ಆಯ್ಕೆಗಳಲ್ಲಿ “Save as PDF” ಆಯ್ಕೆಮಾಡಿ.</p><h1>${esc(q.title)}</h1>${(q.questions||[]).map((question,i)=>`<section><h2>${i+1}. ${esc(question.q)}</h2>${(question.opts||[]).map((option,j)=>`<div class="option${j===question.ans?' correct':''}">${String.fromCharCode(65+j)}. ${esc(option)}${j===question.ans?' — ✓ ಸರಿಯಾದ ಉತ್ತರ':''}</div>`).join('')}</section>`).join('')}</body></html>`);
-  popup.document.close();
-  await popup.document.fonts.ready;
-  popup.focus();popup.print();
+  if(window.quizPdfBusy)return;window.quizPdfBusy=true;
+  const button=document.querySelector('[onclick="downloadArchivedQuizPdf('+id+')"]'),label=button?.textContent;
+  let content;
+  try{
+    if(button){button.disabled=true;button.textContent='PDF ಸಿದ್ಧವಾಗುತ್ತಿದೆ...'}
+    if(!window.html2pdf)await new Promise((resolve,reject)=>{const script=document.createElement('script');script.src='/js/vendor/html2pdf.bundle.min.js';script.onload=resolve;script.onerror=()=>{script.remove();reject(new Error('PDF ಸಾಧನವನ್ನು ತರಲಾಗಲಿಲ್ಲ.'))};document.head.appendChild(script)});
+    await document.fonts.load('16px "Noto Sans Kannada"');await document.fonts.ready;
+    content=document.createElement('div');content.lang='kn';content.style.cssText='width:680px;padding:12px;background:white;color:#111;font-family:"Noto Sans Kannada",sans-serif;line-height:1.8;font-size:15px;box-sizing:border-box';
+    content.innerHTML=`<h1 style="font-size:24px;color:#111">${esc(q.title)}</h1>${(q.questions||[]).map((question,i)=>`<section style="margin:22px 0;break-inside:avoid"><h2 style="font-size:17px;color:#111;white-space:pre-wrap">${i+1}. ${esc(question.q)}</h2>${(question.opts||[]).map((option,j)=>`<div style="padding:5px 10px;white-space:pre-wrap;${j===question.ans?'font-weight:bold;border:1px solid #555;':''}">${String.fromCharCode(65+j)}. ${esc(option)}${j===question.ans?' — ✓ ಸರಿಯಾದ ಉತ್ತರ':''}</div>`).join('')}</section>`).join('')}`;
+    await window.html2pdf().set({margin:12,filename:String(q.title).replace(/[\\/:*?"<>|]/g,'-')+'.pdf',image:{type:'jpeg',quality:0.95},html2canvas:{scale:1.5,useCORS:true,backgroundColor:'#ffffff'},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},pagebreak:{mode:['css','legacy'],avoid:'section'}}).from(content).save();
+  }catch(error){console.error('Quiz PDF failed:',error);alert('PDF ಉಳಿಸಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ. ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.')}
+  finally{window.quizPdfBusy=false;if(button){button.disabled=false;button.textContent=label}}
 }
 function shrQ(id){
   const q=findQuiz(id),t=document.getElementById('qst'+id),url=new URL(routePath('qdetail',id),location.origin).href;
