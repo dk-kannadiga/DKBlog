@@ -918,6 +918,7 @@ async function renderQDetail(id){
   el.innerHTML=`
     <h1 class="stitle">${esc(q.title)}</h1>
     <button class="sbtn" onclick="downloadArchivedQuizPdf(${q.id})">↓ PDF ಡೌನ್‌ಲೋಡ್ ಮಾಡಿ</button>
+    ${adminAuth?`<div class="apost-acts" style="margin:16px 0;flex-wrap:wrap"><button class="editbtn" onclick="go('admin');aTab(document.querySelector('.adtab:last-child'),'quiz')">← Admin Quiz List</button><button class="editbtn" onclick="openAdminQuizShare(${q.id})">↗ Share</button><button class="editbtn" onclick="viewQuizSubmissions(${q.id})">👥 Participation</button>${q.type==='prize'?`<button class="editbtn" onclick="viewPrizeEntries(${q.id})">📋 Prize Entries</button>`:''}<button class="editbtn" onclick="adminArchiveAction(${q.id},'repeat')">↻ Repeat</button><button class="delbtn" onclick="adminArchiveAction(${q.id},'delete')">Delete</button></div><div id="archive-admin-tools"></div>`:''}
     <p class="ssub">${q.date}${q.quizTypeUnconfirmed?'':' · '+(q.type==='certificate'?'ಪ್ರಮಾಣಪತ್ರದ ಕ್ವಿಜ಼್':'ಬಹುಮಾನದ ಕ್ವಿಜ಼್')}</p>
     <div class="aqstats">
       <div class="aqstat"><div class="aqstat-n">${q.statisticsAvailable===false?'—':q.total}</div><div class="aqstat-l">ಭಾಗವಹಿಸಿದವರು</div></div>
@@ -934,6 +935,15 @@ async function renderQDetail(id){
       </div>`}).join('')}
     <div class="div" style="margin-top:32px">✦</div>
     <div class="pnav"><button class="back" onclick="go('quiz')">← ಕ್ವಿಜ಼್‌ಗೆ ಹಿಂತಿರುಗಿ</button><button class="sbtn" onclick="shrQ(${q.id})">↗ ಕ್ವಿಜ಼್ ಹಂಚಿಕೊಳ್ಳಿ</button><span class="stoast" id="qst${q.id}">ಕೊಂಡಿಯನ್ನು ನಕಲಿಸಲಾಗಿದೆ!</span></div>`
+}
+async function openAdminArchive(id){
+  go('qdetail',id);
+  const host=document.getElementById('archive-admin-tools');
+  if(host)for(const key of ['qshare','qsv','qsubs']){const panel=document.getElementById(key);if(panel){panel.innerHTML='';host.appendChild(panel)}}
+}
+function adminArchiveAction(id,action){
+  go('admin');const tab=document.querySelector('.adtab:last-child');
+  aTab(tab,'quiz').then(()=>{if(action==='repeat')repeatArchivedQuiz(id);else delArcQ(id)});
 }
 async function downloadArchivedQuizPdf(id){
   const q=QA.find(quiz=>String(quiz.id)===String(id));if(!q)return;
@@ -1542,9 +1552,8 @@ function renderAdQuiz(){
   </div>`;
   el.innerHTML=statusHtml+'<div id="qshare"></div><div id="qfw"></div><div id="qsv"></div><div id="qsubs"></div>'+
     `<div style="margin-top:28px"><h4 style="font-family:'Playfair Display',serif;color:var(--ac);margin-bottom:14px;font-size:1rem">Archive (${QA.length})</h4>
-    ${QA.length?QA.map(q=>`<div class="apost">
+    ${QA.length?QA.map(q=>`<div class="apost" role="button" tabindex="0" style="cursor:pointer" onclick="openAdminArchive(${q.id})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openAdminArchive(${q.id})}">
       <div class="apost-info"><div class="apost-title">${esc(q.title)}</div><div class="apost-meta">${q.date} · ${q.total} participants</div></div>
-      <div class="apost-acts"><button type="button" class="editbtn" onclick="go('qdetail',${q.id})">↗ Open Quiz</button><button type="button" class="editbtn" onclick="downloadArchivedQuizPdf(${q.id})">↓ Download PDF</button><button type="button" class="editbtn" onclick="openAdminQuizShare(${q.id})">↗ Share</button><button class="editbtn" onclick="viewQuizSubmissions(${q.id})">👥 Participation</button>${q.type==='prize'?`<button class="editbtn" onclick="viewPrizeEntries(${q.id})">📋 Prize Entries</button>`:''}<button class="editbtn" onclick="repeatArchivedQuiz(${q.id})">↻ Repeat</button><button class="delbtn" onclick="delArcQ(${q.id})">Delete</button></div>
     </div>`).join(''):'<div class="empty" style="padding:14px">No archived quizzes yet.</div>'}
     </div>`;
   if(Q?.state==='live')loadLiveQuizCount(Q.id)
