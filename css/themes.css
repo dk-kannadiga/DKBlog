@@ -1,0 +1,14 @@
+.theme-picker{display:inline-flex;align-items:center;gap:6px;color:#fff;font-size:.8rem;max-width:100%}
+.theme-picker-label{position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.theme-picker select{font:inherit;max-width:220px;min-height:36px;border:1px solid #aaa;border-radius:18px;padding:5px 10px;background:var(--cb);color:var(--ink)}
+html[data-theme] header{background:var(--theme-header)}
+html[data-theme]:not([data-theme="brown"]) body,html[data-theme]:not([data-theme="brown"]) :is(nav a,.bt,.bt span,.stitle,.ssub,.hero-name,.hero-kn,.hero-q,.card h2,.post-title,.richbody,.fb,.tsub,.tcat,.tlabel,.sbtn,.back,.qsn,.aqq-t,.qopt,.qsubmit,.library-filter,.library-book-info h1,.library-card h2,input,textarea,select,button){font-family:var(--theme-font)!important}
+html[data-theme]:not([data-theme="brown"]) :is(h1,h2,h3,h4){font-family:var(--theme-font)}
+html[data-theme="crimson"] :is(.hero-name,.stitle,.card h2,.post-title){font-family:'Noto Serif Kannada',serif!important}
+html[data-theme]:not([data-theme="brown"]) header :is(.bt,.bt span,nav a,nav .admin-door){color:#f6f2e9}
+html[data-theme]:not([data-theme="brown"]) nav a:is(:hover,.on){background:var(--cb);color:var(--ink)}
+html[data-theme="midnight"] :is(.qopt.sel,.bup,.qa-arc){background:var(--pd);color:var(--ink)}
+html[data-theme]:not([data-theme="brown"]) .hero{background:var(--pd);color:var(--ink)}
+html[data-theme]:not([data-theme="brown"]) .hero-name{color:var(--ac)}
+html[data-theme]:not([data-theme="brown"]) :is(.hero-kn,.hero-q,.hlang){color:var(--il);opacity:1}
+@media(max-width:600px){.theme-picker select{max-width:200px;font-size:16px}}
