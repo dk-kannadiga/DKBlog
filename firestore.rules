@@ -75,7 +75,13 @@ service cloud.firestore {
         && requestId.matches('^.+_' + request.auth.uid + '$')
       );
       allow list: if isAdmin();
-      allow create: if validLibraryRequest(requestId);
+      allow create: if validLibraryRequest(requestId) || (
+        signedIn()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.status in ['returned', 'rejected']
+        && requestId == request.resource.data.bookId + '_history_' + string(request.resource.data.requestedAt.seconds()) + '_' + string(request.resource.data.requestedAt.nanos()) + '_' + request.auth.uid
+        && request.resource.data == get(/databases/$(database)/documents/libraryRequests/$(request.resource.data.bookId + '_' + request.auth.uid)).data
+      );
       allow update: if isAdmin() || (
         signedIn()
         && resource.data.userId == request.auth.uid

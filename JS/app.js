@@ -1373,7 +1373,7 @@ async function adminLibraryRequestAction(requestId,nextStatus){
   try{
     await window.setFirestoreLibraryRequestStatus(request.firestoreId,request.bookId,nextStatus,bookStatus,details);
     Object.assign(request,{status:nextStatus,...details});if(bookStatus)book.status=bookStatus;renderAdLibraryRequests();renderAdLibraryBooks();renderLibrary();
-  }catch(error){console.error('Library request update failed:',error);alert('The request could not be updated. Please try again.')}
+  }catch(error){console.error('Library request update failed:',error);alert(error.message||'The request could not be updated. Please try again.');await loadAdminLibrary()}
 }
 async function setLibraryDueDate(requestId){
   const request=libraryRequests.find(item=>String(item.firestoreId)===String(requestId));if(!request)return;

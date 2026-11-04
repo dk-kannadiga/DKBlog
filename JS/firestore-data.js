@@ -223,7 +223,16 @@ window.getMyFirestoreLibraryRequest = async function (bookId) {
 window.saveFirestoreLibraryRequest = async function (book, request) {
   const user = await requireUser();
   const bookId = String(book.id);
-  await setDoc(doc(db, "libraryRequests", libraryRequestId(bookId, user.uid)), {
+  const currentRef=doc(db, "libraryRequests", libraryRequestId(bookId, user.uid));
+  await runTransaction(db,async transaction=>{
+    const previous=await transaction.get(currentRef);
+    if(previous.exists()){
+      const old=previous.data();
+      if(!['returned','rejected'].includes(old.status))throw new Error('A request is already in progress.');
+      const historyRef=doc(db,'libraryRequests',`${bookId}_history_${old.requestedAt.seconds}_${old.requestedAt.nanoseconds}_${user.uid}`);
+      transaction.set(historyRef,old);
+    }
+    transaction.set(currentRef, {
     bookId,
     bookTitle: String(book.title || "").trim().slice(0, 160),
     userId: user.uid,
@@ -232,6 +241,7 @@ window.saveFirestoreLibraryRequest = async function (book, request) {
     message: String(request.message || "").trim().slice(0, 500),
     status: "requested",
     requestedAt: serverTimestamp(),
+    });
   });
 };
 window.getFirestoreLibraryRequests = async function () {
@@ -239,7 +249,17 @@ window.getFirestoreLibraryRequests = async function () {
   return snapshot.docs.map((item) => ({ ...item.data(), firestoreId: item.id }));
 };
 window.setFirestoreLibraryRequestStatus = async function (requestId, bookId, status, bookStatus, details = {}) {
-  const batch = writeBatch(db);
+  await runTransaction(db,async batch=>{
+  const requestRef=doc(db,'libraryRequests',String(requestId)),bookRef=doc(db,'libraryBooks',String(bookId));
+  const requestSnapshot=await batch.get(requestRef),bookSnapshot=await batch.get(bookRef);
+  if(!requestSnapshot.exists()||!bookSnapshot.exists())throw new Error('The request or book no longer exists. Refresh the library.');
+  const request=requestSnapshot.data(),book=bookSnapshot.data();
+  if(String(request.bookId)!==String(bookId))throw new Error('Book mismatch.');
+  const allowed={approved:['requested'],borrowed:['approved'],returned:['borrowed'],rejected:['requested','approved']};
+  if(status!==request.status&&!(allowed[status]||[]).includes(request.status))throw new Error('This request changed in another tab. Refresh the library.');
+  if(bookStatus&&status===request.status)throw new Error('This action was already completed. Refresh the library.');
+  if(status==='approved'&&(book.status!=='available'||book.lendingPolicy!=='lendable'))throw new Error('This book is no longer available. Refresh the library.');
+  if(bookStatus&&['borrowed','returned'].includes(status)&&book.activeRequestId&&book.activeRequestId!==String(requestId))throw new Error('This book belongs to another loan. Refresh the library.');
   batch.set(
     doc(db, "libraryRequests", String(requestId)),
     { status, ...details, updatedAt: serverTimestamp() },
@@ -248,11 +268,11 @@ window.setFirestoreLibraryRequestStatus = async function (requestId, bookId, sta
   if (bookStatus) {
     batch.set(
       doc(db, "libraryBooks", String(bookId)),
-      { status: bookStatus, updatedAt: serverTimestamp() },
+      { status: bookStatus, activeRequestId:['reserved','borrowed'].includes(bookStatus)?String(requestId):null, updatedAt: serverTimestamp() },
       { merge: true },
     );
   }
-  await batch.commit();
+  });
 };
 window.deleteFirestoreLibraryRequest = async function (requestId) {
   await deleteDoc(doc(db, "libraryRequests", String(requestId)));
