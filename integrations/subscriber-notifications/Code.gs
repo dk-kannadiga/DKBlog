@@ -27,7 +27,30 @@ function checkSubscriberConnection(){
   PropertiesService.getScriptProperties().setProperty('BREVO_SENDER_ID',String(sender.id));noticeItems_();console.log('Sender, list 3, and Firestore connection verified. No emails sent.');
 }
 function noticeEscape_(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-function noticeHtml_(items){return '<html lang="kn"><body><h1>ಡೀಕೆಯ ಬರಹಗಳು</h1>'+items.map(i=>'<p>'+noticeEscape_(i.kind)+'</p><h2>'+noticeEscape_(i.title)+'</h2><p><a href="'+noticeEscape_(i.url)+'">ಓದಿ / ವಿವರ ನೋಡಿ →</a></p>').join('')+'<hr><p>ನೀವು ಡೀಕೆಯ ಬರಹಗಳಿಗೆ ಚಂದಾದಾರರಾಗಿರುವುದರಿಂದ ಈ ಇಮೇಲ್ ಬಂದಿದೆ.</p><p><a href="{{ unsubscribe }}">ಚಂದಾದಾರಿಕೆಯನ್ನು ನಿಲ್ಲಿಸಿ</a></p></body></html>'}
+function noticeHtml_(items){
+  const escape=noticeEscape_;
+  const heading=items.length===1?'ನಿಮಗಾಗಿ ಹೊಸ ಪ್ರಕಟಣೆ!':'ನಿಮಗಾಗಿ ಹೊಸ ಪ್ರಕಟಣೆಗಳು!';
+  const preview=escape(items.map(item=>item.title).join(' · ').slice(0,200));
+  const entries=items.map(item=>{
+    const action=item.kind==='ಹೊಸ ಕ್ವಿಜ಼್'?'ಕ್ವಿಜ಼್ ವಿವರ ನೋಡಿ →':item.kind==='ಹೊಸ ಸಂಕಲನ'?'ಸಂಕಲನ ನೋಡಿ →':'ಬರಹ ಓದಿ →';
+    return `<tr><td style="padding:24px 28px;border-top:1px solid #e8d5b0;">
+      <p style="margin:0 0 10px;color:#7a3b1e;font-size:14px;line-height:1.8;">${escape(item.kind)}</p>
+      <h2 style="margin:0 0 20px;color:#2c1a0e;font-size:23px;line-height:1.7;overflow-wrap:anywhere;">${escape(item.title)}</h2>
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr><td bgcolor="#7a3b1e" style="border-radius:24px;"><a href="${escape(item.url)}" style="display:inline-block;padding:12px 24px;color:#ffffff;text-decoration:none;font-size:17px;line-height:1.7;font-weight:700;">${action}</a></td></tr></table>
+    </td></tr>`;
+  }).join('');
+  return `<!DOCTYPE html><html lang="kn"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="format-detection" content="telephone=no"><title>${heading}</title><link href="https://fonts.googleapis.com/css2?family=Anek+Kannada:wght@400;500;700&display=swap" rel="stylesheet"></head>
+  <body style="margin:0;padding:0;background-color:#f7f2e7;font-family:'Anek Kannada','Noto Sans Kannada',Arial,sans-serif;color:#2c1a0e;">
+  <div style="display:none;font-size:1px;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;mso-hide:all;">${preview}</div>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f7f2e7;"><tr><td align="center" style="padding:32px 16px;">
+  <table role="presentation" width="570" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:570px;background-color:#fffdf5;border:1px solid #e8d5b0;">
+  <tr><td align="center" style="padding:30px 24px;background-color:#3d1f0a;"><a href="${BLOG_NOTICE.site}/" style="color:#e8d5b0;text-decoration:none;font-size:28px;line-height:1.6;font-weight:700;">ಡೀಕೆಯ ಬರಹಗಳು</a><p style="margin:8px 0 0;color:#e8d5b0;font-size:15px;line-height:1.8;">ಬರಹಗಳ ಜಗತ್ತು</p></td></tr>
+  <tr><td style="padding:30px 28px;"><h1 style="margin:0 0 16px;font-size:24px;line-height:1.7;color:#7a3b1e;">${heading}</h1><p style="margin:0;font-size:17px;line-height:1.9;color:#5a3e2b;">ಆತ್ಮೀಯ ಓದುಗರೇ,<br>ಡೀಕೆಯ ಬರಹಗಳ ಲೋಕದಲ್ಲಿ ಹೊಸ ಪ್ರಕಟಣೆ ಬಂದಿದೆ. ಕೆಳಗಿನ ಕೊಂಡಿಯ ಮೂಲಕ ಓದಿ, ನಿಮ್ಮ ಅನಿಸಿಕೆಗಳನ್ನು ಹಂಚಿಕೊಳ್ಳಿ.</p></td></tr>
+  ${entries}
+  <tr><td style="padding:12px 28px 30px;"><p style="margin:0;padding:18px 0;border-top:1px solid #e8d5b0;border-bottom:1px solid #e8d5b0;text-align:center;font-size:17px;line-height:1.9;color:#7a3b1e;">ಕೆಲವು ಭಾವಗಳನ್ನು ಕನ್ನಡದಲ್ಲಿ ಮಾತ್ರ ಹೇಳಬಹುದು.</p><p style="margin:24px 0 0;font-size:16px;line-height:1.9;">ಪ್ರೀತಿಯಿಂದ,<br><strong>ದರ್ಶನ (ಡೀಕೆ)</strong></p></td></tr>
+  <tr><td align="center" style="padding:22px 24px;background-color:#ede5d0;color:#5a3e2b;font-size:13px;line-height:1.9;"><p style="margin:0 0 12px;">ನೀವು ಡೀಕೆಯ ಬರಹಗಳಿಗೆ ಚಂದಾದಾರರಾಗಿರುವುದರಿಂದ ಈ ಇಮೇಲ್ ಬಂದಿದೆ.</p><p style="margin:0;"><a href="{{ unsubscribe }}" style="color:#7a3b1e;text-decoration:underline;">ಚಂದಾದಾರಿಕೆಯನ್ನು ನಿಲ್ಲಿಸಿ</a></p></td></tr>
+  </table></td></tr></table></body></html>`;
+}
 function createSubscriberTestDraft(){
   checkSubscriberConnection();const p=PropertiesService.getScriptProperties();
   const result=noticeApi_('emailCampaigns','post',{name:'DK Blog connection test',sender:{id:Number(p.getProperty('BREVO_SENDER_ID'))},subject:'ಡೀಕೆಯ ಬರಹಗಳು — ಪರೀಕ್ಷಾ ಸಂದೇಶ',htmlContent:noticeHtml_([{kind:'ಪರೀಕ್ಷೆ',title:'ಚಂದಾದಾರಿಕೆ ಸಂಪರ್ಕ ಪರೀಕ್ಷೆ',url:BLOG_NOTICE.site}]),recipients:{listIds:[BLOG_NOTICE.list]}});
