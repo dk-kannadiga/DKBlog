@@ -13,7 +13,7 @@ assert.equal('stats' in published,false);
 assert.equal('exp' in published.questions[0],false);
 assert.throws(()=>publicQuiz({...quiz,questions:[{q:'x',opts:['a','b'],ans:2}]},'v'));
 const key={questions:quiz.questions,version:'version',locked:true};
-const request={quizId:'123',participantName:'Name',answers:[1,0],score:999,userId:'forged'};
+const request={quizId:'123',participantName:'Name',contact:'test@example.invalid',answers:[1,0],score:999,userId:'forged'};
 const grade=(r=request,q=published,k=key)=>ctx.validateQuizAnswers_(r,q,k);
 assert.equal(grade(),2); // forged score and identity are never used
 assert.equal(grade({...request,answers:[0,-1]}),0);
@@ -26,6 +26,7 @@ assert.throws(()=>grade(request,published,{...key,locked:false}),/QUIZ_CHANGED/)
 assert.throws(()=>grade(request,{...published,questions:[{q:'Altered',opts:['A','B']},published.questions[1]]}),/QUIZ_CHANGED/);
 assert.throws(()=>grade({...request,participantName:''}),/INVALID_NAME/);
 assert.throws(()=>grade({...request,contact:''},{...published,type:'prize'}),/INVALID_CONTACT/);
+for(const type of ['prize','certificate'])for(const contact of ['', '9876543210', 'invalid@'])assert.throws(()=>grade({...request,contact},{...published,type}),/INVALID_CONTACT/);
 assert.equal(grade({...request,contact:'test@example.invalid'},{...published,type:'prize'}),2);
 // Authentication: forged JWT claims never bypass the Firebase lookup.
 const claims={aud:'dkblog-6c5e5',iss:'https://securetoken.google.com/dkblog-6c5e5',sub:'visitor',exp:Date.now()/1000+300,iat:Date.now()/1000};
