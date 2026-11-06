@@ -758,7 +758,8 @@ function renderLiveQuiz(el){
       <h3>ನಿಮ್ಮ ವಿವರಗಳು</h3>
       <input type="text" id="q-name" placeholder="ನಿಮ್ಮ ಹೆಸರು (ಪ್ರಮಾಣಪತ್ರದಲ್ಲಿ ಕಾಣಿಸುತ್ತದೆ)" maxlength="80">
       <p class="qname-note">ಭಾಗವಹಿಸಿದವರ ವಿವರಗಳಿಗಾಗಿ ನಿಮ್ಮ ಹೆಸರು ತಾಣದ ನಿರ್ವಾಹಕರಿಗೆ ಮಾತ್ರ ಕಾಣಿಸುತ್ತದೆ.</p>
-      ${Q.type==='prize'?`<input type="text" id="q-con" placeholder="ಮಿಂಚಂಚೆ ಅಥವಾ ವಾಟ್ಸಾಪ್ ಸಂಖ್ಯೆ (ಬಹುಮಾನದ ಕುರಿತು ಸಂಪರ್ಕಿಸಲು ಮಾತ್ರ ಸುರಕ್ಷಿತವಾಗಿ ಉಳಿಸಲಾಗುತ್ತದೆ)" maxlength="100">`:''}
+      <input type="email" id="q-con" placeholder="ನಿಮ್ಮ ಮಿಂಚಂಚೆ ವಿಳಾಸ" maxlength="100" autocomplete="email" inputmode="email" required>
+      <p class="qname-note">ಪ್ರಮಾಣಪತ್ರ ಮತ್ತು ಕ್ವಿಜ಼್ ಕುರಿತು ಸಂಪರ್ಕಿಸಲು ಮಾತ್ರ ಮಿಂಚಂಚೆಯನ್ನು ಬಳಸಲಾಗುತ್ತದೆ. ಅದು ಇತರರಿಗೆ ಕಾಣಿಸುವುದಿಲ್ಲ.</p>
     </div>
     ${Q.questions.map((qu,i)=>`<div class="qcard" id="qc-${i}">
       <div class="qnum">ಒಟ್ಟು ${Q.questions.length} ಪ್ರಶ್ನೆಗಳಲ್ಲಿ ${i+1}ನೇ ಪ್ರಶ್ನೆ</div>
@@ -790,8 +791,8 @@ async function submitQuiz(){
   if(ua>0&&!confirm(`${ua} ಪ್ರಶ್ನೆಗಳಿಗೆ ಉತ್ತರಿಸಿಲ್ಲ. ಆದರೂ ಸಲ್ಲಿಸಬೇಕೇ?`))return;
   const submittedQuiz=Q;
   let saved;
-  const con=Q.type==='prize'?document.getElementById('q-con')?.value.trim()||'':'';
-  if(Q.type==='prize'&&con.length<3){alert('ಬಹುಮಾನದ ಕುರಿತು ಸಂಪರ್ಕಿಸಲು ದಯವಿಟ್ಟು ಮಿಂಚಂಚೆ ವಿಳಾಸ ಅಥವಾ ವಾಟ್ಸಾಪ್ ಸಂಖ್ಯೆಯನ್ನು ನಮೂದಿಸಿ.');return}
+  const con=document.getElementById('q-con')?.value.trim()||'';
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(con)||!document.getElementById('q-con').checkValidity()){alert('ದಯವಿಟ್ಟು ಸರಿಯಾದ ಮಿಂಚಂಚೆ ವಿಳಾಸವನ್ನು ನಮೂದಿಸಿ.');return}
   if(!window.saveFirestoreQuizSubmission){
     alert('ಕ್ವಿಜ಼್ ಉತ್ತರ ಸಲ್ಲಿಸುವ ಸೇವೆ ಇನ್ನೂ ಸಿದ್ಧವಾಗಿಲ್ಲ. ದಯವಿಟ್ಟು ಸ್ವಲ್ಪ ಹೊತ್ತಿನ ಬಳಿಕ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.');
     return;
@@ -800,7 +801,7 @@ async function submitQuiz(){
   const submitButton=document.querySelector('.qsubmit');
   if(submitButton){submitButton.disabled=true;submitButton.textContent='ಉತ್ತರಗಳನ್ನು ಉಳಿಸಲಾಗುತ್ತಿದೆ…'}
   try{
-    saved=await window.saveFirestoreQuizSubmission(submittedQuiz.id,answers,name,submittedQuiz.type==='prize'?{name,contact:con}:null);
+    saved=await window.saveFirestoreQuizSubmission(submittedQuiz.id,answers,name,{name,contact:con});
   }catch(error){
     console.error('Quiz submission save failed:',error);
     alert('ನಿಮ್ಮ ಉತ್ತರಗಳನ್ನು ಉಳಿಸಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ. ಈ ಬ್ರೌಸರ್‌ನಿಂದ ಈಗಾಗಲೇ ಸಲ್ಲಿಸಿರಬಹುದು. ಪರಿಶೀಲಿಸಲು ಪುಟವನ್ನು ಮರುಲೋಡ್ ಮಾಡಿ.');

@@ -59,7 +59,7 @@ function validateQuizAnswers_(request, quiz, key) {
   var questions = key.questions;
   if (!Array.isArray(questions) || questions.length < 1 || questions.length > 100 || !Array.isArray(quiz.questions) || questions.length !== quiz.questions.length) throw new Error('QUIZ_CHANGED');
   if (typeof request.participantName !== 'string' || !request.participantName.trim() || request.participantName.length > 80) throw new Error('INVALID_NAME');
-  if (quiz.type === 'prize' && (typeof request.contact !== 'string' || request.contact.trim().length < 3 || request.contact.length > 100)) throw new Error('INVALID_CONTACT');
+  if (typeof request.contact !== 'string' || request.contact.length > 100 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(request.contact.trim())) throw new Error('INVALID_CONTACT');
   if (!Array.isArray(request.answers) || request.answers.length !== questions.length) throw new Error('INVALID_ANSWERS');
   var score = 0;
   questions.forEach(function(q, i) {
@@ -87,7 +87,7 @@ function gradeQuizRequest_(request, uid, receiptId) {
     var quiz = active.quiz, now = new Date().toISOString();
     var writes = [quizCreate_('quizSubmissions/' + submissionId, {
       quizId: request.quizId, userId: uid, answers: request.answers, participantName: request.participantName.trim(),
-      score: score, total: key.questions.length, gradingVersion: 2, quizVersion: quiz.version,
+      score: score, total: key.questions.length, gradingVersion: 2, quizVersion: quiz.version, email: request.contact.trim(),
       submittedAt: { __timestamp: now },
     }), quizCreate_('quizReceipts/' + receiptId, { status: 'ok', createdAt: now })];
     if (quiz.type === 'prize') writes.push(quizCreate_('prizeQuizEntries/' + submissionId, { quizId: request.quizId, userId: uid, name: request.participantName.trim(), contact: request.contact.trim(), submittedAt: { __timestamp: now } }));
