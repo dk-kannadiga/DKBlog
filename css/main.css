@@ -1,4 +1,5 @@
 :root{--p:#f7f2e7;--pd:#ede5d0;--ink:#2c1a0e;--il:#5a3e2b;--ac:#7a3b1e;--gd:#c8a87a;--gl:#e8d5b0;--cb:#fffdf5}
+.collection-cover{display:block;width:110px;max-width:100%;aspect-ratio:2/3;object-fit:contain;background:var(--pd);border:1px solid var(--gl);border-radius:4px;flex-shrink:0}.collection-cover--text{display:flex;flex-direction:column;justify-content:center;align-items:center;gap:12px;padding:12px;text-align:center;color:var(--ac);overflow-wrap:anywhere;font-size:.85rem}.collection-view__head .collection-cover{width:180px}.collection-card{align-items:center}
 *{box-sizing:border-box;margin:0;padding:0}
 html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 body{font-family:'Lora','Noto Sans Kannada',Georgia,serif;background:var(--p);color:var(--ink);min-height:100vh;line-height:1.75;overflow-x:hidden}

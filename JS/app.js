@@ -490,6 +490,11 @@ function collectionReadingNav(post){
     </div>
   </nav>`;
 }
+const COLLECTION_CATEGORIES=['ಕವನ ಸಂಕಲನ','ಕಥಾ ಸಂಕಲನ','ಕಾದಂಬರಿ'];
+let collectionCategoryFilter='all',adminCollectionCategoryFilter='all';
+function collectionCategoryTabs(admin=false){const selected=admin?adminCollectionCategoryFilter:collectionCategoryFilter;return `<div class="filters">${['all',...COLLECTION_CATEGORIES].map(category=>`<button class="fb${selected===category?' on':''}" onclick="setCollectionCategory(${jsArg(category)},${admin})">${category==='all'?'ಎಲ್ಲವೂ':esc(category)}</button>`).join('')}</div>`}
+function setCollectionCategory(category,admin){if(admin){adminCollectionCategoryFilter=category;renderAdCollections()}else{collectionCategoryFilter=category;renderCollections()}}
+function collectionCover(collection){const cover=safeContentUrl(collection.coverImage);return cover?`<img class="collection-cover" src="${esc(cover)}" alt="${esc(collection.title)} — ಮುಖಪುಟ" loading="lazy" onerror="this.hidden=true">`:`<div class="collection-cover collection-cover--text"><span>${esc(collection.icon||'✦')}</span><strong>${esc(collection.title)}</strong></div>`}
 async function renderCollections(){
   const el=document.getElementById('colc');
   if(collectionsLoading){el.innerHTML='<div class="empty">ಸಂಕಲನಗಳನ್ನು ತರಲಾಗುತ್ತಿದೆ...</div>';return}
@@ -498,10 +503,10 @@ async function renderCollections(){
     el.innerHTML='<div class="empty">ಸಂಕಲನಗಳನ್ನು ತರಲಾಗುತ್ತಿದೆ...</div>';
     try{await ensureAllPosts()}catch(e){console.error('Collections load failed:',e);el.innerHTML='<div class="empty">ಸಂಕಲನಗಳನ್ನು ತರಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ.</div>';return}
   }
-  el.innerHTML=`<div class="collection-grid">${COLLECTIONS.map(collection=>{
+  el.innerHTML=collectionCategoryTabs()+`<div class="collection-grid">${COLLECTIONS.filter(c=>collectionCategoryFilter==='all'||c.category===collectionCategoryFilter).map(collection=>{
     const posts=collectionPosts(collection.id);
     return`<article class="collection-card" onclick="go('collection',${collection.id})">
-      <div class="collection-card__icon">${esc(collection.icon||'✦')}</div>
+      ${collectionCover(collection)}
       <div><h2>${esc(collection.title)}</h2><p>${esc(collection.description||'ಡೀಕೆಯ ಬರಹಗಳ ಒಂದು ಸಂಕಲನ.')}</p><span>${posts.length} ${posts.length===1?'ಬರಹ':'ಬರಹಗಳು'} →</span></div>
     </article>`
   }).join('')}</div>`;
@@ -518,7 +523,7 @@ async function renderCollection(id){
   }
   const posts=collectionPosts(collection.id);
   el.innerHTML=`<section class="collection-view">
-    <div class="collection-view__head"><div class="collection-card__icon">${esc(collection.icon||'✦')}</div><div><h1>${esc(collection.title)}</h1><p>${esc(collection.description||'ಡೀಕೆಯ ಬರಹಗಳ ಒಂದು ಸಂಕಲನ.')}</p></div></div>
+    <div class="collection-view__head">${collectionCover(collection)}<div>${collection.category?`<span class="tsub">${esc(collection.category)}</span>`:''}<h1>${esc(collection.title)}</h1><p>${esc(collection.description||'ಡೀಕೆಯ ಬರಹಗಳ ಒಂದು ಸಂಕಲನ.')}</p></div></div>
     <div class="pactions"><button class="sbtn" onclick="shrCollection(${collection.id})">↗ ಸಂಕಲನ ಹಂಚಿಕೊಳ್ಳಿ</button><span class="stoast" id="cst${collection.id}">ಕೊಂಡಿಯನ್ನು ನಕಲಿಸಲಾಗಿದೆ!</span></div>
     ${posts.length?`<div class="collection-post-list">${posts.map((post,index)=>`<article class="collection-post" onclick="go('post',${post.id})"><span class="collection-post__number">${index+1}</span><div><h2>${esc(post.title)}</h2><p>${esc(post.exc||autoExc(post.body))}</p><small>${esc(post.date)} · ${esc(post.cat)}</small></div><span aria-hidden="true">→</span></article>`).join('')}</div>`:'<div class="empty">ಈ ಸಂಕಲನಕ್ಕೆ ಇನ್ನೂ ಯಾವುದೇ ಬರಹ ಸೇರಿಸಿಲ್ಲ.</div>'}
   </section>`;
@@ -1203,10 +1208,10 @@ function sortCollections(){COLLECTIONS.sort((a,b)=>String(a.title||'').localeCom
 function renderAdCollections(){
   const el=document.getElementById('cpl');
   if(!COLLECTIONS.length){el.innerHTML='<div class="empty">No collections yet. Create one, then assign writings to it from the post editor.</div>';return}
-  el.innerHTML=COLLECTIONS.map(collection=>{
+  el.innerHTML=collectionCategoryTabs(true)+COLLECTIONS.filter(c=>adminCollectionCategoryFilter==='all'||c.category===adminCollectionCategoryFilter).map(collection=>{
     const count=collectionPosts(collection.id).length;
     return`<div class="apost">
-      <div class="apost-info"><div class="apost-title">${esc(collection.icon||'✦')} ${esc(collection.title)}</div><div class="apost-meta">${count} ${count===1?'writing':'writings'}${collection.description?' · '+esc(collection.description):''}</div></div>
+      <div class="apost-info"><div class="apost-title">${esc(collection.icon||'✦')} ${esc(collection.title)}</div><div class="apost-meta">${esc(collection.category||'Category not set')} · ${count} ${count===1?'writing':'writings'}${collection.description?' · '+esc(collection.description):''}</div></div>
       <div class="apost-acts" id="cda${collection.id}"><button class="editbtn" onclick="startEditCollection(${collection.id})">Edit</button><button class="delbtn" onclick="askDelCollection(${collection.id})">Delete</button></div>
     </div>`
   }).join('');
@@ -1214,6 +1219,8 @@ function renderAdCollections(){
 function collectionFormHtml(){
   const collection=collectionEditId?findCollection(collectionEditId):null;
   return`<div class="aform"><h3>${collection?'Edit Collection':'New Collection'}</h3>
+    <div class="frow"><label for="cf-category">Category</label><select id="cf-category"><option value="">Select category</option>${COLLECTION_CATEGORIES.map(category=>`<option value="${esc(category)}"${collection?.category===category?' selected':''}>${esc(category)}</option>`).join('')}</select></div>
+    <div class="frow"><label for="cf-cover">Cover image URL</label><input type="url" id="cf-cover" value="${esc(collection?.coverImage||'')}" placeholder="https://..."><p class="import-note">Use a portrait book cover. Leave empty for a cover showing the collection title.</p></div>
     <div class="frow2"><div class="frow"><label>Collection name</label><input type="text" id="cf-t" maxlength="100" placeholder="e.g. ನನ್ನ ಕವನಗಳು"></div><div class="frow"><label>Icon</label><input type="text" id="cf-i" maxlength="12" placeholder="e.g. 🌸"></div></div>
     <div class="frow"><label>Description <span style="font-weight:400;color:var(--gd)">(optional)</span></label><textarea id="cf-d" rows="3" maxlength="400" placeholder="A short introduction to this collection..."></textarea></div>
     <p class="import-note">Assign writings and their reading order from each post’s editor. The first item leads to the next automatically.</p>
@@ -1231,8 +1238,11 @@ function cancelCollectionForm(){document.getElementById('cfw').innerHTML='';coll
 async function saveCollection(){
   const title=document.getElementById('cf-t')?.value.trim(),icon=document.getElementById('cf-i')?.value.trim(),description=document.getElementById('cf-d')?.value.trim()||'';
   if(!title){alert('Please enter a collection name.');return}
+  const category=document.getElementById('cf-category').value,coverImage=document.getElementById('cf-cover').value.trim();
+  if(!COLLECTION_CATEGORIES.includes(category)){alert('Please select a collection category.');return}
+  if(coverImage&&!safeContentUrl(coverImage)){alert('Please enter a valid cover image URL.');return}
   const existing=collectionEditId?findCollection(collectionEditId):null;
-  const collection={...(existing||{}),id:existing?.id||Date.now(),title,icon:(icon||'✦').slice(0,12),description};
+  const collection={...(existing||{}),id:existing?.id||Date.now(),title,icon:(icon||'✦').slice(0,12),description,category,coverImage};
   try{
     await svCol(collection);
     if(existing){const index=COLLECTIONS.findIndex(item=>String(item.id)===String(existing.id));if(index>=0)COLLECTIONS[index]=collection}else COLLECTIONS.push(collection);
