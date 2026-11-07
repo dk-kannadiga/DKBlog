@@ -39,6 +39,7 @@ function clearSearch(){
 }
 
 async function loadAll(){
+  try{const saved=await window.getCollectionCategories?.();if(saved&&typeof saved==='object'&&!Array.isArray(saved)){collectionCategoryTree=saved;COLLECTION_CATEGORIES=Object.keys(saved)}}catch(e){console.error('Collection categories load failed:',e)}
   const [posts,categories,activeQuiz,archive,collections] = await Promise.allSettled([
     window.getFirestorePostsPage?window.getFirestorePostsPage(true):window.getFirestorePosts?window.getFirestorePosts():Promise.reject(new Error('Posts service unavailable')),
     window.getFirestoreCategories?window.getFirestoreCategories():Promise.resolve(JSON.parse(JSON.stringify(DC))),
@@ -490,7 +491,25 @@ function collectionReadingNav(post){
     </div>
   </nav>`;
 }
-const COLLECTION_CATEGORIES=['ಕವನ ಸಂಕಲನ','ಕಥಾ ಸಂಕಲನ','ಕಾದಂಬರಿ'];
+let COLLECTION_CATEGORIES=['ಕವನ ಸಂಕಲನ','ಕಥಾ ಸಂಕಲನ','ಕಾದಂಬರಿ'];
+let collectionCategoryTree=Object.fromEntries(COLLECTION_CATEGORIES.map(name=>[name,[]]));
+function collectionSubcategoryOptions(selected=''){
+  const category=document.getElementById('cf-category')?.value,select=document.getElementById('cf-subcategory');if(!select)return;
+  select.innerHTML='<option value="">None</option>'+(collectionCategoryTree[category]||[]).map(name=>`<option value="${esc(name)}"${selected===name?' selected':''}>${esc(name)}</option>`).join('');
+}
+async function manageCollectionCategory(action,category,subcategory){
+  const name=prompt(action==='addCategory'?'New collection category:':action==='addSubcategory'?'New subcategory:':'New name:',subcategory||category||'');if(name===null||!name.trim())return;
+  const value=name.trim().slice(0,80),tree=JSON.parse(JSON.stringify(collectionCategoryTree));let changed=[];
+  if(action==='addCategory'){if(Object.hasOwn(tree,value)){alert('Category already exists.');return}tree[value]=[]}
+  else if(action==='renameCategory'){
+    if(value===category)return;if(Object.hasOwn(tree,value)){alert('Category already exists.');return}
+    tree[value]=tree[category];delete tree[category];changed=COLLECTIONS.filter(c=>c.category===category).map(c=>({...c,category:value}));
+  }else if(action==='addSubcategory'){if(tree[category].includes(value)){alert('Subcategory already exists.');return}tree[category].push(value)}
+  else {if(value===subcategory)return;if(tree[category].includes(value)){alert('Subcategory already exists.');return}tree[category]=tree[category].map(s=>s===subcategory?value:s);changed=COLLECTIONS.filter(c=>c.category===category&&c.subcategory===subcategory).map(c=>({...c,subcategory:value}))}
+  try{await window.saveCollectionCategories(tree,changed);collectionCategoryTree=tree;COLLECTION_CATEGORIES=Object.keys(tree);for(const c of changed){const index=COLLECTIONS.findIndex(item=>String(item.id)===String(c.id));COLLECTIONS[index]=c}collectionCategoryFilter='all';adminCollectionCategoryFilter='all';cancelCollectionForm();renderAdCollections()}
+  catch(e){console.error(e);alert('Category changes could not be saved.')}
+}
+function collectionCategoryManager(){return `<details style="margin-bottom:20px"><summary>Manage collection categories &amp; subcategories</summary><button class="editbtn" onclick="manageCollectionCategory('addCategory')">＋ Category</button>${COLLECTION_CATEGORIES.map(category=>`<div style="margin:14px 0"><strong>${esc(category)}</strong> <button class="editbtn" onclick="manageCollectionCategory('renameCategory',${jsArg(category)})">Rename</button> <button class="editbtn" onclick="manageCollectionCategory('addSubcategory',${jsArg(category)})">＋ Subcategory</button>${(collectionCategoryTree[category]||[]).map(sub=>`<div style="padding:6px 18px">${esc(sub)} <button class="editbtn" onclick="manageCollectionCategory('renameSubcategory',${jsArg(category)},${jsArg(sub)})">Rename</button></div>`).join('')}</div>`).join('')}</details>`}
 let collectionCategoryFilter='all',adminCollectionCategoryFilter='all';
 function collectionCategoryTabs(admin=false){const selected=admin?adminCollectionCategoryFilter:collectionCategoryFilter;return `<div class="filters">${['all',...COLLECTION_CATEGORIES].map(category=>`<button class="fb${selected===category?' on':''}" onclick="setCollectionCategory(${jsArg(category)},${admin})">${category==='all'?'ಎಲ್ಲವೂ':esc(category)}</button>`).join('')}</div>`}
 function setCollectionCategory(category,admin){if(admin){adminCollectionCategoryFilter=category;renderAdCollections()}else{collectionCategoryFilter=category;renderCollections()}}
@@ -1207,8 +1226,8 @@ async function savePost(){
 function sortCollections(){COLLECTIONS.sort((a,b)=>String(a.title||'').localeCompare(String(b.title||''),'kn'))}
 function renderAdCollections(){
   const el=document.getElementById('cpl');
-  if(!COLLECTIONS.length){el.innerHTML='<div class="empty">No collections yet. Create one, then assign writings to it from the post editor.</div>';return}
-  el.innerHTML=collectionCategoryTabs(true)+COLLECTIONS.filter(c=>adminCollectionCategoryFilter==='all'||c.category===adminCollectionCategoryFilter).map(collection=>{
+  if(!COLLECTIONS.length){el.innerHTML=collectionCategoryManager()+'<div class="empty">No collections yet. Create one, then assign writings to it from the post editor.</div>';return}
+  el.innerHTML=collectionCategoryManager()+collectionCategoryTabs(true)+COLLECTIONS.filter(c=>adminCollectionCategoryFilter==='all'||c.category===adminCollectionCategoryFilter).map(collection=>{
     const count=collectionPosts(collection.id).length;
     return`<div class="apost">
       <div class="apost-info"><div class="apost-title">${esc(collection.icon||'✦')} ${esc(collection.title)}</div><div class="apost-meta">${esc(collection.category||'Category not set')} · ${count} ${count===1?'writing':'writings'}${collection.description?' · '+esc(collection.description):''}</div></div>
@@ -1219,7 +1238,8 @@ function renderAdCollections(){
 function collectionFormHtml(){
   const collection=collectionEditId?findCollection(collectionEditId):null;
   return`<div class="aform"><h3>${collection?'Edit Collection':'New Collection'}</h3>
-    <div class="frow"><label for="cf-category">Category</label><select id="cf-category"><option value="">Select category</option>${COLLECTION_CATEGORIES.map(category=>`<option value="${esc(category)}"${collection?.category===category?' selected':''}>${esc(category)}</option>`).join('')}</select></div>
+    <div class="frow"><label for="cf-category">Category</label><select id="cf-category" onchange="collectionSubcategoryOptions()"><option value="">Select category</option>${COLLECTION_CATEGORIES.map(category=>`<option value="${esc(category)}"${collection?.category===category?' selected':''}>${esc(category)}</option>`).join('')}</select></div>
+    <div class="frow"><label for="cf-subcategory">Subcategory</label><select id="cf-subcategory"><option value="">None</option>${(collectionCategoryTree[collection?.category]||[]).map(name=>`<option value="${esc(name)}"${collection?.subcategory===name?' selected':''}>${esc(name)}</option>`).join('')}</select></div>
     <div class="frow"><label for="cf-cover">Cover image URL</label><input type="url" id="cf-cover" value="${esc(collection?.coverImage||'')}" placeholder="https://..."><p class="import-note">Use a portrait book cover. Leave empty for a cover showing the collection title.</p></div>
     <div class="frow2"><div class="frow"><label>Collection name</label><input type="text" id="cf-t" maxlength="100" placeholder="e.g. ನನ್ನ ಕವನಗಳು"></div><div class="frow"><label>Icon</label><input type="text" id="cf-i" maxlength="12" placeholder="e.g. 🌸"></div></div>
     <div class="frow"><label>Description <span style="font-weight:400;color:var(--gd)">(optional)</span></label><textarea id="cf-d" rows="3" maxlength="400" placeholder="A short introduction to this collection..."></textarea></div>
@@ -1242,7 +1262,9 @@ async function saveCollection(){
   if(!COLLECTION_CATEGORIES.includes(category)){alert('Please select a collection category.');return}
   if(coverImage&&!safeContentUrl(coverImage)){alert('Please enter a valid cover image URL.');return}
   const existing=collectionEditId?findCollection(collectionEditId):null;
-  const collection={...(existing||{}),id:existing?.id||Date.now(),title,icon:(icon||'✦').slice(0,12),description,category,coverImage};
+  const subcategory=document.getElementById('cf-subcategory').value;
+  if(subcategory&&!(collectionCategoryTree[category]||[]).includes(subcategory)){alert('Please select a valid subcategory.');return}
+  const collection={...(existing||{}),id:existing?.id||Date.now(),title,icon:(icon||'✦').slice(0,12),description,category,subcategory,coverImage};
   try{
     await svCol(collection);
     if(existing){const index=COLLECTIONS.findIndex(item=>String(item.id)===String(existing.id));if(index>=0)COLLECTIONS[index]=collection}else COLLECTIONS.push(collection);

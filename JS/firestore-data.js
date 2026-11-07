@@ -178,6 +178,12 @@ window.getFirestoreCollections = async function () {
     .map((item) => ({ ...item.data(), firestoreId: item.id }))
     .sort((a, b) => String(a.title || "").localeCompare(String(b.title || ""), "kn"));
 };
+window.getCollectionCategories=async function(){const snapshot=await getDoc(doc(db,'siteSettings','collectionCategories'));return snapshot.exists()?snapshot.data().categories:null};
+window.saveCollectionCategories=async function(categories,renames=[]){
+  const batch=writeBatch(db);batch.set(doc(db,'siteSettings','collectionCategories'),{categories,updatedAt:serverTimestamp()});
+  for(const collection of renames){const {firestoreId,...data}=collection;batch.set(doc(db,'collections',firestoreId||String(data.id)),{...data,updatedAt:serverTimestamp()},{merge:true})}
+  await batch.commit();
+};
 window.saveFirestoreCollection = async function (item) {
   const { firestoreId, ...collectionData } = item;
   await setDoc(
