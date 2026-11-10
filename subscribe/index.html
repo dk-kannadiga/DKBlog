@@ -1,2 +1,88 @@
-<!doctype html>
-<html lang="kn"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>ಚಂದಾದಾರರಾಗಿ · ಡೀಕೆಯ ಬರಹಗಳು</title><meta http-equiv="refresh" content="0;url=https://96b8f8cc.sibforms.com/serve/MUIFAA_lVhEUdsPMG6C0gN11Mfbj33RSbFmgmn4gfkBEB-TLaoSweIp-DQ7Vej0xM9kqqIaIY08wOMWuniN8Omu6Xmyzh3MuAWLj8XGMjiQOa_qSYdqPTWui40ulBs3-7fCXKqyUNlgIa7N_jM3WcAxPL5xPnU7K-Uu6pDunqK6Q10lpyr-V6dMTQm_ylTs8j3OtnVPPEeodKypPow=="></head><body><p>ಚಂದಾದಾರಿಕೆಯ ಪುಟವನ್ನು ತೆರೆಯಲಾಗುತ್ತಿದೆ…</p><a href="https://96b8f8cc.sibforms.com/serve/MUIFAA_lVhEUdsPMG6C0gN11Mfbj33RSbFmgmn4gfkBEB-TLaoSweIp-DQ7Vej0xM9kqqIaIY08wOMWuniN8Omu6Xmyzh3MuAWLj8XGMjiQOa_qSYdqPTWui40ulBs3-7fCXKqyUNlgIa7N_jM3WcAxPL5xPnU7K-Uu6pDunqK6Q10lpyr-V6dMTQm_ylTs8j3OtnVPPEeodKypPow==">ಚಂದಾದಾರರಾಗಿ</a></body></html>
+<!DOCTYPE html>
+<html lang="kn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#3d1f0a">
+<title>ಚಂದಾದಾರರಾಗಿ — ಡೀಕೆಯ ಬರಹಗಳು</title>
+<!-- Same theme script as index.html: applies the visitor's chosen site theme (localStorage "dk-theme") -->
+<script src="/js/themes.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Anek+Kannada:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+/* Colours come from the site theme variables set by themes.js; the fallbacks are the original brown theme. */
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--p,#f7f2e7);color:var(--ink,#2c1a0e);font-family:var(--theme-font,'Anek Kannada'),'Noto Sans Kannada',sans-serif;line-height:1.9}
+.card{width:100%;max-width:460px;margin:24px;background:var(--cb,#fffdf5);border:1px solid var(--gl,#e8d5b0);overflow:hidden}
+.head{background:var(--theme-header,#3d1f0a);padding:26px 24px;text-align:center}
+.head a{color:#f6f2e9;text-decoration:none;font-size:26px;font-weight:700}
+.head p{margin:6px 0 0;color:#f6f2e9;font-size:15px}
+.body{padding:28px}
+h1{margin:0 0 10px;font-size:22px;color:var(--ac,#7a3b1e)}
+p{margin:0 0 18px;color:var(--il,#5a3e2b)}
+input[type=email]{width:100%;padding:12px 14px;font:inherit;color:var(--ink,#2c1a0e);background:var(--p,#f7f2e7);border:1px solid var(--gl,#e8d5b0);border-radius:8px;margin-bottom:14px}
+button{width:100%;padding:12px;font:inherit;font-weight:700;color:var(--cb,#fffdf5);background:var(--ac,#7a3b1e);border:0;border-radius:24px;cursor:pointer}
+button:disabled{opacity:.6;cursor:default}
+.hp{position:absolute;left:-9999px;opacity:0}
+#msg{margin:16px 0 0;font-size:16px}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="head"><a href="/">ಡೀಕೆಯ ಬರಹಗಳು</a><p>ಬರಹಗಳ ಜಗತ್ತು</p></div>
+  <div class="body">
+    <h1>ಚಂದಾದಾರರಾಗಿ</h1>
+    <p>ಹೊಸ ಬರಹ, ಸಂಕಲನ ಅಥವಾ ಕ್ವಿಜ್ ಪ್ರಕಟವಾದಾಗ ನಿಮ್ಮ ಇಮೇಲ್‌ಗೆ ಮಾಹಿತಿ ಬರುತ್ತದೆ.</p>
+    <form id="f" novalidate>
+      <input class="hp" type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
+      <input type="email" name="email" id="email" placeholder="ನಿಮ್ಮ ಇಮೇಲ್" autocomplete="email" required>
+      <button type="submit" id="btn">ಚಂದಾದಾರರಾಗಿ</button>
+    </form>
+    <p id="msg" role="status"></p>
+  </div>
+</div>
+<script>
+// Paste the deployed Apps Script Web app URL (ends with /exec):
+const ENDPOINT = 'https://script.google.com/macros/s/AKfycbxr6W_KrFTNOQX0Pb8geHFWtxXmbusdfvQAvcUpwjullLgdnto6G62xCQNMe809tQ5T/exec';
+const T = {
+  invalid: 'ಸರಿಯಾದ ಇಮೇಲ್ ನಮೂದಿಸಿ.',
+  ok: 'ಕೋರಿಕೆ ಸ್ವೀಕರಿಸಲಾಗಿದೆ. ದೃಢೀಕರಣ ಇಮೇಲ್ ಕೆಲವೇ ನಿಮಿಷಗಳಲ್ಲಿ ಬರುತ್ತದೆ (ಸ್ಪ್ಯಾಮ್ ಫೋಲ್ಡರ್ ಸಹ ನೋಡಿ). ಈಗಾಗಲೇ ಚಂದಾದಾರರಾಗಿದ್ದರೆ ಹೊಸ ಇಮೇಲ್ ಬರುವುದಿಲ್ಲ.',
+  busy: 'ಈಗ ಇಮೇಲ್ ಕಳುಹಿಸಲು ಸಾಧ್ಯವಾಗುತ್ತಿಲ್ಲ. ಸ್ವಲ್ಪ ಸಮಯದ ನಂತರ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.',
+  unknown: 'ಕೋರಿಕೆ ಕಳುಹಿಸಲಾಗಿದೆ, ಆದರೆ ಫಲಿತಾಂಶ ಖಚಿತವಾಗಿಲ್ಲ. ಕೆಲವು ನಿಮಿಷಗಳಲ್ಲಿ ಇಮೇಲ್ ಬರದಿದ್ದರೆ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.'
+};
+const f = document.getElementById('f'), btn = document.getElementById('btn'), msg = document.getElementById('msg');
+// The e-mail address travels in a POST body (never in a URL). The form posts into a hidden iframe;
+// the server's reply page sends the result back with postMessage, matched by a one-time random code.
+function askServer(email, website) {
+  return new Promise(resolve => {
+    const nonce = Array.from(crypto.getRandomValues(new Uint8Array(12)), b => b.toString(16).padStart(2, '0')).join('');
+    const frame = document.createElement('iframe'), form = document.createElement('form');
+    frame.name = 'dkf' + nonce; frame.style.display = 'none'; frame.setAttribute('aria-hidden', 'true');
+    form.method = 'POST'; form.action = ENDPOINT; form.target = frame.name; form.style.display = 'none';
+    [['email', email], ['website', website], ['n', nonce]].forEach(([k, v]) => { const i = document.createElement('input'); i.type = 'hidden'; i.name = k; i.value = v; form.appendChild(i); });
+    const done = r => { clearTimeout(timer); removeEventListener('message', on); frame.remove(); form.remove(); resolve(r); };
+    const on = ev => {
+      if(!/^https:\/\/(?:script\.google\.com|(?:[a-z0-9-]+\.)?googleusercontent\.com)$/.test(ev.origin))return;
+      const d=ev.data;
+      if(d&&d.dkMailer===1&&d.nonce===nonce&&d.res&&typeof d.res.ok==='boolean')done(d.res);
+    };
+    addEventListener('message', on);
+    const timer = setTimeout(() => done(null), 25000);   // null = no reply (blocked, offline or timed out)
+    document.body.append(frame, form); form.submit();
+  });
+}
+f.addEventListener('submit', async e => {
+  e.preventDefault();
+  if(!/^https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_-]+\/exec$/.test(ENDPOINT)){msg.textContent='ಪರೀಕ್ಷಾ ಸಂಪರ್ಕ ಇನ್ನೂ ಸಿದ್ಧವಾಗಿಲ್ಲ.';return;}
+  const email = f.email.value.trim();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) { msg.textContent = T.invalid; return; }
+  btn.disabled = true; msg.textContent = '';
+  const res = await askServer(email, f.website.value);   // null = no reply (network problem or timeout)
+  if (!res) msg.textContent = T.unknown;
+  else if (res.ok) { msg.textContent = T.ok; f.reset(); }
+  else msg.textContent = T[res.error] || T.busy;
+  btn.disabled = false;
+});
+</script>
+</body>
+</html>
