@@ -6,7 +6,7 @@
 const CFG = {
   site: 'https://dkblog-6c5e5.web.app',
   project: 'dkblog-6c5e5',
-  webAppUrl: '',            // paste the deployed Web app URL (ends with /exec) after first deploy
+  webAppUrl: 'https://script.google.com/macros/s/AKfycbxr6W_KrFTNOQX0Pb8geHFWtxXmbusdfvQAvcUpwjullLgdnto6G62xCQNMe809tQ5T/exec',
   brand: 'ಡೀಕೆಯ ಬರಹಗಳು',
   tagline: 'ಬರಹಗಳ ಜಗತ್ತು',
   signoff: 'ದರ್ಶನ (ಡೀಕೆ)',
