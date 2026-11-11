@@ -45,20 +45,24 @@
 </head>
 <body>
 <header>
-  <div class="hi">
-    <div class="bt" onclick="go('home')">ಡೀಕೆಯ ಬರಹಗಳು <span>ಬರಹಗಳ ಜಗತ್ತು</span></div>
-    <nav>
-      <label class="theme-picker">🎨 <span class="theme-picker-label">ತಾಣದ ವಿನ್ಯಾಸ</span><select id="visitor-theme" aria-label="ತಾಣದ ಬಣ್ಣ ಮತ್ತು ಅಕ್ಷರ ವಿನ್ಯಾಸವನ್ನು ಆರಿಸಿ"></select></label>
-      <span class="admin-door admin-door--decorative" aria-hidden="true">⚙</span>
-      <a href="#" id="nh" onclick="go('home');return false">ಮುಖಪುಟ</a>
-      <a href="#" id="ni" onclick="go('index');return false">ಬರಹಗಳ ಪಟ್ಟಿ</a>
-      <a href="#" id="nc" onclick="go('collections');return false">ಸಂಕಲನಗಳು</a>
-      <a href="#" id="nl" onclick="go('library');return false">📚 ಸ್ವಾನಂದ ಗ್ರಂಥನಿಧಿ</a>
-      <a href="/about" id="na" onclick="go('about');return false">ನನ್ನ ಬಗ್ಗೆ</a>
+  <div class="hi site-header">
+    <a class="bt site-brand" href="/" onclick="go('home');return false">ಡೀಕೆಯ ಬರಹಗಳು <span>ಬರಹಗಳ ಜಗತ್ತು</span></a>
+    <nav class="site-nav" aria-label="ಮುಖ್ಯ ಸಂಚರಣೆ">
+      <a href="/" id="nh" onclick="go('home');return false">ಮುಖಪುಟ</a>
+      <a href="/index" id="ni" onclick="go('index');return false">ಬರಹಗಳ ಪಟ್ಟಿ</a>
+      <a href="/collections" id="nc" onclick="go('collections');return false">ಸಂಕಲನಗಳು</a>
       <button class="ask-dk-launch" type="button" onclick="document.getElementById('ask-dk').showModal()">ಡೀಕೆಯನ್ನು ಕೇಳಿ</button>
-      <a href="#" id="nq" class="quiz-link" onclick="go('quiz');return false">🏆 ಕ್ವಿಜ಼್</a>
-      <a class="subscribe-link" href="/subscribe" target="_blank" rel="noopener noreferrer">✉ ಚಂದಾದಾರರಾಗಿ</a>
-      <a href="#" class="admin-door" onclick="go('adminlogin');return false" aria-label="Admin" title="Admin">⚙</a>
+      <details id="site-menu" class="site-menu">
+        <summary>☰ ಮೆನು</summary>
+        <div class="site-menu-panel">
+          <a href="/library" id="nl" onclick="go('library');return false">ಸ್ವಾನಂದ ಗ್ರಂಥನಿಧಿ</a>
+          <a href="/quiz" id="nq" onclick="go('quiz');return false">ಕ್ವಿಜ಼್</a>
+          <a href="/about" id="na" onclick="go('about');return false">ನನ್ನ ಬಗ್ಗೆ</a>
+          <a class="subscribe-link" href="/subscribe" target="_blank" rel="noopener noreferrer">ಚಂದಾದಾರರಾಗಿ</a>
+          <label class="theme-picker" for="visitor-theme"><span class="theme-picker-label">ತಾಣದ ವಿನ್ಯಾಸ</span><select id="visitor-theme" aria-label="ತಾಣದ ಬಣ್ಣ ಮತ್ತು ಅಕ್ಷರ ವಿನ್ಯಾಸವನ್ನು ಆರಿಸಿ"></select></label>
+          <a href="/admin" class="site-menu-admin" onclick="go('adminlogin');return false">ನಿರ್ವಾಹಕ</a>
+        </div>
+      </details>
     </nav>
   </div>
 </header>

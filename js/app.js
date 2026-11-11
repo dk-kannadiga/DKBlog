@@ -344,6 +344,22 @@ function go(page,id,{sync=true,replace=false}={}){
 window.addEventListener('popstate',openCurrentRoute);
 window.addEventListener('hashchange',openCurrentRoute);
 
+const siteMenu = document.getElementById('site-menu');
+if (siteMenu) {
+  siteMenu.addEventListener('click', event => {
+    if (event.target.closest('a')) siteMenu.open = false;
+  });
+  document.addEventListener('click', event => {
+    if (siteMenu.open && !siteMenu.contains(event.target)) siteMenu.open = false;
+  });
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && siteMenu.open) {
+      siteMenu.open = false;
+      siteMenu.querySelector('summary').focus();
+    }
+  });
+}
+
 // ── BLOG FILTERS ──────────────────────────────────────
 function cf(btn,v){catF=v;document.querySelectorAll('.fb.cat').forEach(b=>b.classList.remove('on'));btn.classList.add('on');renderHome()}
 function renderCatFilters(){
