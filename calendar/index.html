@@ -25,14 +25,18 @@
     .calendar-form input { max-width:100%; width:18ch; padding:8px 10px; border:1px solid var(--gd); border-radius:7px; background:var(--cb); color:var(--ink); font:inherit; }
     .calendar-form button { font-family:inherit; }
     #calendar-result { min-height:2em; font-weight:700; color:var(--ac); }
+    .calendar-zoom { display:flex; align-items:center; flex-wrap:wrap; gap:8px; margin-top:12px; }
+    .calendar-zoom button { min-width:44px; min-height:44px; border:1px solid var(--gd); border-radius:7px; background:var(--cb); color:var(--ink); font:inherit; cursor:pointer; }
+    .calendar-zoom button:disabled { opacity:.5; cursor:default; }
+    .calendar-skip { display:inline-block; margin-top:8px; color:var(--ac); }
     .calendar-chart-scroll { overflow:auto; border:1px solid var(--gl); margin-top:12px; }
-    .calendar-grid { width:100%; min-width:1370px; table-layout:fixed; border-collapse:collapse; background:var(--cb); color:var(--ink); text-align:center; font-variant-numeric:tabular-nums; font-size:.86rem; }
-    .calendar-grid col { width:24px; }
-    .calendar-grid col.weekday-column { width:28px; }
-    .calendar-grid :is(td,th) { border:1px solid var(--gl); height:28px; padding:0; }
+    .calendar-grid { width:100%; min-width:calc(1370px * var(--calendar-scale, 1)); table-layout:fixed; border-collapse:collapse; background:var(--cb); color:var(--ink); text-align:center; font-variant-numeric:tabular-nums; font-size:calc(.86rem * var(--calendar-scale, 1)); }
+    .calendar-grid col { width:calc(24px * var(--calendar-scale, 1)); }
+    .calendar-grid col.weekday-column { width:calc(28px * var(--calendar-scale, 1)); }
+    .calendar-grid :is(td,th) { border:1px solid var(--gl); height:calc(28px * var(--calendar-scale, 1)); padding:0; }
     .calendar-grid th { background:var(--pd); font-weight:700; }
     .calendar-grid .calendar-notes { padding:8px; text-align:left; vertical-align:top; color:var(--il); }
-    .calendar-grid button { display:block; width:100%; min-height:27px; padding:0; border:0; background:transparent; color:inherit; font:inherit; cursor:pointer; }
+    .calendar-grid button { display:block; width:100%; min-height:calc(27px * var(--calendar-scale, 1)); padding:0; border:0; background:transparent; color:inherit; font:inherit; cursor:pointer; }
     .calendar-grid button:disabled { opacity:.52; cursor:default; }
     .calendar-grid button:focus-visible { outline:2px solid var(--ac); outline-offset:-2px; }
     .calendar-grid :is(.year-band,.date-row,.year-column,.date-available) { background:var(--pd); }
@@ -59,15 +63,24 @@
     </div>
     <form id="calendar-date-form" class="calendar-form">
       <label for="calendar-date">ದಿನಾಂಕ</label>
-      <input id="calendar-date" type="text" placeholder="DD-MM-YYYY" maxlength="10" required>
+      <input id="calendar-date" type="text" placeholder="DD-MM-YYYY" maxlength="10" aria-describedby="calendar-date-hint">
       <button class="sbtn" type="submit">ವಾರ ಹುಡುಕಿ</button>
     </form>
+    <p id="calendar-date-hint">ದಿನಾಂಕವನ್ನು DD-MM-YYYY ರೂಪದಲ್ಲಿ ಕನ್ನಡ ಅಥವಾ ಇಂಗ್ಲಿಷ್ ಅಂಕಿಗಳಲ್ಲಿ ಬರೆಯಿರಿ.</p>
     <p id="calendar-result" role="status"></p>
     <p id="calendar-hint">ಎಡ ಮೇಲ್ಭಾಗದಲ್ಲಿ ಮೊದಲ ಎರಡು ಅಂಕಿ, ಬಲ ಮೇಲ್ಭಾಗದಲ್ಲಿ ಕೊನೆಯ ಎರಡು ಅಂಕಿ, ನಂತರ ಎಡ ಕೆಳಭಾಗದಲ್ಲಿ ತಿಂಗಳು ಮತ್ತು ದಿನವನ್ನು ಆರಿಸಿ. ಮೊಬೈಲ್‌ನಲ್ಲಿ ಪಟ್ಟಿಯನ್ನು ಬದಿಗೆ ಸರಿಸಬಹುದು.</p>
+    <div class="calendar-zoom" role="group" aria-label="ಪಟ್ಟಿಯ ಗಾತ್ರ">
+      <span>ಪಟ್ಟಿಯ ಗಾತ್ರ</span>
+      <button type="button" id="calendar-zoom-out" aria-label="ಪಟ್ಟಿಯನ್ನು ಚಿಕ್ಕದಾಗಿಸಿ">−</button>
+      <output id="calendar-zoom-level" aria-live="polite">100%</output>
+      <button type="button" id="calendar-zoom-in" aria-label="ಪಟ್ಟಿಯನ್ನು ದೊಡ್ಡದಾಗಿಸಿ">+</button>
+    </div>
+    <a class="calendar-skip" href="#calendar-end">ಪಟ್ಟಿಯನ್ನು ದಾಟಿ</a>
     <div class="calendar-chart-scroll" tabindex="0" role="region" aria-label="ಕ್ಯಾಲೆಂಡರ್ ಪಟ್ಟಿ" aria-describedby="calendar-hint">
       <table id="calendar-grid" class="calendar-grid" aria-label="೧೦,೦೦೦ ವರ್ಷಗಳ ಕ್ಯಾಲೆಂಡರ್"></table>
       <noscript><p>ಸಂವಾದಾತ್ಮಕ ಪಟ್ಟಿಗೆ ಜಾವಾಸ್ಕ್ರಿಪ್ಟ್ ಬೇಕು. ಮೂಲ PDF ಅನ್ನು ಮೇಲಿನ ಕೊಂಡಿಯಿಂದ ತೆರೆಯಬಹುದು.</p></noscript>
     </div>
+    <p id="calendar-end" tabindex="-1">ಕ್ಯಾಲೆಂಡರ್ ಪಟ್ಟಿಯ ಅಂತ್ಯ</p>
   </main>
 </body>
 </html>

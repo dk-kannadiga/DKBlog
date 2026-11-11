@@ -110,6 +110,7 @@
   grid.addEventListener('click', event => {
     const button = event.target.closest('button');
     if (!button || button.disabled) return;
+    input.removeAttribute('aria-invalid');
     if (button.dataset.century !== undefined) {
       Object.assign(state, {century: Number(button.dataset.century), year: null, month: null, day: null});
     } else if (button.dataset.year !== undefined) {
@@ -119,6 +120,12 @@
       Object.assign(state, {month, day});
     }
     showSelection(button.dataset.date !== undefined);
+    if (event.detail > 0 && button.dataset.date === undefined) {
+      const next = button.dataset.century !== undefined
+        ? grid.querySelector('[data-year]:not(:disabled)')
+        : grid.querySelector('[data-date]:not(:disabled)');
+      next?.scrollIntoView({block: 'nearest', inline: 'nearest'});
+    }
   });
 
   document.getElementById('calendar-date-form').addEventListener('submit', event => {
@@ -128,11 +135,31 @@
     const iso = /^(\d{4})-(\d{2})-(\d{2})$/.exec(text);
     const [day, month, year] = match ? match.slice(1).map(Number) : iso ? iso.slice(1).reverse().map(Number) : [];
     if (!match && !iso || findDate(year, month - 1, day) === null) {
+      const enteredDate = input.value;
+      Object.assign(state, {century: null, year: null, month: null, day: null});
+      showSelection();
+      input.value = enteredDate;
+      input.setAttribute('aria-invalid', 'true');
       result.textContent = 'ಸರಿಯಾದ ದಿನಾಂಕವನ್ನು DD-MM-YYYY ರೂಪದಲ್ಲಿ ನಮೂದಿಸಿ.';
       return;
     }
+    input.removeAttribute('aria-invalid');
     Object.assign(state, {century: Math.floor(year / 100), year: year % 100, month: month - 1, day});
     showSelection(true);
   });
+
+  const zoomOut = document.getElementById('calendar-zoom-out');
+  const zoomIn = document.getElementById('calendar-zoom-in');
+  const zoomLevel = document.getElementById('calendar-zoom-level');
+  let scale = 1;
+  function updateZoom() {
+    grid.style.setProperty('--calendar-scale', scale);
+    zoomLevel.textContent = `${Math.round(scale * 100)}%`;
+    zoomOut.disabled = scale === 1;
+    zoomIn.disabled = scale === 2;
+  }
+  zoomOut.addEventListener('click', () => { scale = Math.max(1, scale - 0.25); updateZoom(); });
+  zoomIn.addEventListener('click', () => { scale = Math.min(2, scale + 0.25); updateZoom(); });
+  updateZoom();
   showSelection();
 })();
