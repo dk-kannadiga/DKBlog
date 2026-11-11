@@ -69,7 +69,7 @@
     return /^https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_-]+\/exec$/.test(endpoint) ? endpoint : '';
   }
 
-  function requestAnswer(endpoint, question, language) {
+  function requestAnswer(endpoint, question, language, mode = 'answer') {
     return new Promise(resolve => {
       const nonce = crypto.randomUUID().replace(/-/g, '');
       const frame = document.createElement('iframe');
@@ -81,7 +81,7 @@
       request.action = endpoint;
       request.target = frame.name;
       request.hidden = true;
-      for (const [name, value] of Object.entries({nonce, question, language})) {
+      for (const [name, value] of Object.entries({nonce, question, language, mode})) {
         const field = document.createElement('input');
         field.type = 'hidden';
         field.name = name;
@@ -105,6 +105,25 @@
       request.submit();
     });
   }
+
+  window.refreshAskDkUsage = async () => {
+    const count = document.getElementById('ask-dk-usage');
+    const button = document.getElementById('ask-dk-usage-refresh');
+    if (button.disabled) return;
+    button.disabled = true;
+    count.textContent = 'Checking AI usage…';
+    try {
+      const endpoint = await answerEndpoint();
+      if (!endpoint) throw Error('Assistant unavailable');
+      const data = await requestAnswer(endpoint, '', '', 'usage');
+      if (data?.status !== 'ok' || !Number.isInteger(data.remaining) || !Number.isInteger(data.limit)) throw Error('Usage unavailable');
+      count.textContent = `${data.remaining} of ${data.limit} AI requests remaining today`;
+    } catch {
+      count.textContent = 'AI usage unavailable';
+    } finally {
+      button.disabled = false;
+    }
+  };
 
   function showAnswer(data, english) {
     const status = {

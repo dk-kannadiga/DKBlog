@@ -13,9 +13,16 @@ function doPost(event) {
   if (!/^[a-f0-9]{32}$/.test(nonce)) return HtmlService.createHtmlOutput('Invalid request');
   let result;
   try {
-    const question = String(parameters.question || '').trim();
-    if (!question || question.length > 300) throw Error('invalid');
-    result = askAnswer_(question, parameters.language === 'en' ? 'English' : 'Kannada');
+    if (parameters.mode === 'usage') {
+      const saved = JSON.parse(PropertiesService.getScriptProperties().getProperty('ASK_CALL_BUDGET') || '{}');
+      const day = Utilities.formatDate(new Date(), 'Asia/Kolkata', 'yyyy-MM-dd');
+      const used = saved.day === day ? Number(saved.count) || 0 : 0;
+      result = {status: 'ok', limit: ASK_DAILY_LIMIT, remaining: Math.max(0, ASK_DAILY_LIMIT - used)};
+    } else {
+      const question = String(parameters.question || '').trim();
+      if (!question || question.length > 300) throw Error('invalid');
+      result = askAnswer_(question, parameters.language === 'en' ? 'English' : 'Kannada');
+    }
   } catch (error) {
     result = {status: ['invalid', 'limit', 'unconfigured'].includes(error.message) ? error.message : 'unavailable'};
   }

@@ -225,6 +225,11 @@
 <!-- ADMIN PANEL -->
 <div id="pad" class="page"><div class="pc">
   <div class="adh"><h2>Admin Panel</h2><button class="logoutbtn" onclick="aLogout()">← Exit Admin</button></div>
+  <div class="pactions" style="margin:0 0 16px">
+    <strong id="ask-dk-usage" role="status">AI usage</strong>
+    <span>Resets at midnight IST</span>
+    <button id="ask-dk-usage-refresh" class="sbtn" type="button" onclick="refreshAskDkUsage()">Refresh</button>
+  </div>
   <div class="adtabs">
     <div class="adtab on" onclick="aTab(this,'posts')">Posts</div>
     <div class="adtab" onclick="aTab(this,'collections')">Collections</div>
