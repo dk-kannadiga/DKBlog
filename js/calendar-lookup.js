@@ -42,12 +42,12 @@
         return `<td data-row="${row}"><button type="button" data-date="${dateCells.length - 1}" aria-label="${block.months[column / 5 | 0]} ${label}">${label}</button></td>`;
       }).join('');
       const right = [...block.weekdays[offset]].map((weekday, column) => `<td data-row="${row}" data-column="${column}" title="${weekdays[weekday]}">${abbreviations[weekday]}</td>`).join('');
-      return `<tr>${left}${right}</tr>`;
+      return `<tr class="month-days">${left}${right}</tr>`;
     }).join('');
-    return `<tr>${notes}${headings}<th colspan="28">ವಾರ</th></tr>${rows}`;
+    return `<tr class="month-headings">${notes}${headings}<th colspan="28">ವಾರ</th></tr>${rows}`;
   }).join('');
 
-  grid.innerHTML = `<colgroup><col span="25"><col span="28" class="weekday-column"></colgroup><thead><tr><th colspan="25">ವರ್ಷದ ಮೊದಲ ಎರಡು ಅಂಕಿಗಳು</th><th colspan="28">ವರ್ಷದ ಕೊನೆಯ ಎರಡು ಅಂಕಿಗಳು</th></tr></thead><tbody>${years}${body}</tbody>`;
+  grid.innerHTML = `<colgroup><col span="25"></colgroup><colgroup><col span="28" class="weekday-column"></colgroup><thead><tr><th colspan="25">ವರ್ಷದ ಮೊದಲ ಎರಡು ಅಂಕಿಗಳು</th><th colspan="28">ವರ್ಷದ ಕೊನೆಯ ಎರಡು ಅಂಕಿಗಳು</th></tr></thead><tbody>${years}${body}</tbody>`;
 
   function findDate(year, month, day) {
     const date = new Date(0);

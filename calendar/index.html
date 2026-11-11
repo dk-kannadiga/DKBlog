@@ -44,6 +44,10 @@
     .calendar-grid :is(.selected,.intersection) { background:var(--ac); color:var(--cb); font-weight:700; }
     .calendar-grid .intersection { outline:2px solid var(--ink); outline-offset:-2px; }
     .calendar-grid .block-top td { border-top:2px solid var(--gd); }
+    .calendar-grid colgroup + colgroup { border-inline-start:3px solid var(--ac); }
+    .calendar-grid .month-headings th + th,
+    .calendar-grid .month-days td:is(:nth-child(6), :nth-child(11), :nth-child(16)) { border-inline-start:2px solid var(--gd); }
+    .calendar-grid .month-headings th { border-top:2px solid var(--gd); }
   </style>
 </head>
 <body>
