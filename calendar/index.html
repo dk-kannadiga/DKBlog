@@ -10,28 +10,49 @@
   <link rel="stylesheet" href="/css/themes.css?v=menu-contrast-2">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anek+Kannada:wght@400;500;700&family=Noto+Sans+Kannada:wght@400;500;700&display=swap">
   <script src="/js/themes.js"></script>
+  <script src="/js/calendar.js" defer></script>
   <title>೧೦,೦೦೦ ವರ್ಷಗಳ ಕ್ಯಾಲೆಂಡರ್ · ಡೀಕೆಯ ಬರಹಗಳು</title>
   <style>
-    .calendar-page { max-width: 1200px; margin: auto; padding: 24px 16px 48px; }
+    .calendar-page { max-width: 1200px; margin: auto; padding: 24px 16px 48px; font-family: var(--theme-font, 'Anek Kannada'), sans-serif; }
+    .calendar-page .stitle, .calendar-page .back { font-family: inherit; }
     .calendar-actions { display: flex; flex-wrap: wrap; gap: 12px; margin: 14px 0; }
     .calendar-actions a { text-decoration: underline; color: var(--ac); }
-    .calendar-preview { overflow: auto; background: #fff; border: 1px solid var(--gl); }
-    .calendar-preview img { display: block; width: 100%; min-width: 940px; height: auto; }
+    .calendar-year-form { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 24px 0 12px; }
+    .calendar-year-form input { width: 8ch; }
+    .calendar-year-form :is(input,button) { font: inherit; background: var(--cb); color: var(--ink); border: 1px solid var(--gd); border-radius: 8px; padding: 7px 12px; }
+    .calendar-year-form button { cursor: pointer; }
+    .calendar-year-form button:hover { background: var(--pd); }
+    .calendar-year-form button:disabled { opacity: .5; cursor: default; }
+    .calendar-year-label { color: var(--ac); margin: 10px 0; }
+    .calendar-months { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,235px),1fr)); gap: 14px; }
+    .calendar-month { padding: 12px; border: 1px solid var(--gl); border-radius: 10px; background: var(--cb); }
+    .calendar-month table { width: 100%; table-layout: fixed; border-collapse: collapse; text-align: center; font-variant-numeric: tabular-nums; }
+    .calendar-month caption { color: var(--ac); font-size: 1.12rem; font-weight: 700; margin-bottom: 8px; }
+    .calendar-month th { color: var(--il); background: var(--pd); }
+    .calendar-month th, .calendar-month td { padding: 4px 0; }
+    .calendar-month td[aria-current="date"] { box-shadow: inset 0 0 0 2px var(--ac); border-radius: 6px; font-weight: 700; }
   </style>
 </head>
 <body>
   <main class="calendar-page">
     <a class="back" href="/about">← ಡೀಕೆಯ ಬಗ್ಗೆ</a>
     <h1 class="stitle">೧೦,೦೦೦ ವರ್ಷಗಳ ಕ್ಯಾಲೆಂಡರ್</h1>
-    <p>ದರ್ಶನ (ಡೀಕೆ) ರಚಿಸಿದ ಒಂದೇ ಪುಟದ ಗ್ರೆಗೋರಿಯನ್ ಕ್ಯಾಲೆಂಡರ್.</p>
+    <p>ದರ್ಶನ (ಡೀಕೆ) ರಚಿಸಿದ ಒಂದೇ ಪುಟದ ಗ್ರೆಗೋರಿಯನ್ ಕ್ಯಾಲೆಂಡರ್‌ನ ಜಾಲ ಆವೃತ್ತಿ. ೦೦೦೦ರಿಂದ ೯೯೯೯ರವರೆಗೆ ಯಾವುದೇ ವರ್ಷವನ್ನು ನೋಡಿ.</p>
     <div class="calendar-actions">
       <a href="/assets/10000-year-calendar.pdf" target="_blank" rel="noopener">PDF ತೆರೆಯಿರಿ</a>
       <a href="/assets/10000-year-calendar.pdf" download>PDF ಡೌನ್‌ಲೋಡ್ ಮಾಡಿ</a>
     </div>
-    <p id="calendar-hint">ಮೊಬೈಲ್‌ನಲ್ಲಿ ಪೂರ್ಣ ಪಟ್ಟಿಯನ್ನು ನೋಡಲು ಬದಿಗೆ ಸರಿಸಿ ಅಥವಾ PDF ತೆರೆಯಿರಿ.</p>
-    <div class="calendar-preview" tabindex="0" role="region" aria-label="ಕ್ಯಾಲೆಂಡರ್ ಪಟ್ಟಿ" aria-describedby="calendar-hint">
-      <img src="/assets/10000-year-calendar.png" width="2420" height="1870" alt="ದರ್ಶನ (ಡೀಕೆ) ಅವರ ೧೦,೦೦೦ ವರ್ಷಗಳ ಕ್ಯಾಲೆಂಡರ್ ಪಟ್ಟಿ">
-    </div>
+    <form id="calendar-year-form" class="calendar-year-form">
+      <label for="calendar-year">ವರ್ಷ</label>
+      <input id="calendar-year" inputmode="numeric" maxlength="4" required>
+      <button type="submit">ವರ್ಷ ನೋಡಿ</button>
+      <button id="calendar-previous" type="button" aria-label="ಹಿಂದಿನ ವರ್ಷ">←</button>
+      <button id="calendar-next" type="button" aria-label="ಮುಂದಿನ ವರ್ಷ">→</button>
+    </form>
+    <p id="calendar-error" role="status"></p>
+    <h2 id="calendar-year-label" class="calendar-year-label" aria-live="polite"></h2>
+    <div id="calendar-months" class="calendar-months"></div>
+    <noscript><p>ವರ್ಷವನ್ನು ಆಯ್ಕೆ ಮಾಡಲು ಜಾವಾಸ್ಕ್ರಿಪ್ಟ್ ಬೇಕು. ಮೇಲಿನ ಕೊಂಡಿಯಿಂದ ಮೂಲ PDF ತೆರೆಯಬಹುದು.</p></noscript>
   </main>
 </body>
 </html>
