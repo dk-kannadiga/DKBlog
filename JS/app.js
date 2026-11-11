@@ -413,8 +413,10 @@ async function renderPost(id){
     <div class="pactions">
       <button class="lbtn${il?' liked':''}" id="lb${p.id}" onclick="tlike(${p.id})">${il?'♥':'♡'} <span id="lc${p.id}">${lc}</span> ${lc===1?'ಮೆಚ್ಚುಗೆ':'ಮೆಚ್ಚುಗೆಗಳು'}</button>
       <button class="sbtn" onclick="shr(${p.id})">↗ ಹಂಚಿಕೊಳ್ಳಿ</button>
-      <span class="stoast" id="st${p.id}">ಕೊಂಡಿಯನ್ನು ನಕಲಿಸಲಾಗಿದೆ!</span>
+      <button class="sbtn" onclick="copyArticleLink(${p.id})">ಕೊಂಡಿ ನಕಲಿಸಿ</button>
+      <span class="stoast" id="st${p.id}" role="status"></span>
     </div>
+    <div id="article-reading-${esc(p.id)}">${collectionNavigation}</div>
     <div class="cs"><h3>ಅಭಿಪ್ರಾಯಗಳು ಮತ್ತು ಪ್ರತಿಕ್ರಿಯೆಗಳು</h3>
       <div class="cform">
         <input type="text" id="cn${p.id}" placeholder="ನಿಮ್ಮ ಹೆಸರು (ಅನಾಮಧೇಯವಾಗಿರಲು ಖಾಲಿ ಬಿಡಿ)" maxlength="60">
@@ -424,12 +426,23 @@ async function renderPost(id){
       <div class="clist" id="cl${p.id}">${ch}</div>
     </div>
     <div class="div" style="margin-top:36px">✦ ✦ ✦</div>
-    ${collectionNavigation}
     <div class="pnav">
       <button class="back" onclick="go('home')">← ಎಲ್ಲ ಬರಹಗಳು</button>
       <button class="back" onclick="go('index')">☰ ಪಟ್ಟಿ</button>
       <button class="back" onclick="go('about')">✍ ನನ್ನ ಬಗ್ಗೆ</button>
-    </div>`
+    </div>`;
+  loadArticleReading(p);
+}
+async function loadArticleReading(post){
+  try{await ensureAllPosts()}catch(error){console.error('Related writings load failed:',error);return}
+  const host=document.getElementById('article-reading-'+post.id);if(!host)return;
+  const ordered=[...POSTS].sort((a,b)=>Number(b.id)-Number(a.id));
+  const index=ordered.findIndex(item=>String(item.id)===String(post.id));
+  const neighbors=index<0?[]:[[ordered[index+1],'← ಹಿಂದಿನ ಬರಹ'],[ordered[index-1],'ಮುಂದಿನ ಬರಹ →']];
+  const tags=new Set(post.labels||[]);
+  const related=ordered.filter(item=>String(item.id)!==String(post.id)).map(item=>({item,score:(post.collectionId&&String(item.collectionId)===String(post.collectionId)?8:0)+(post.cc&&post.cc===item.cc?2:0)+(post.subcat&&post.subcat===item.subcat?3:0)+(item.labels||[]).filter(tag=>tags.has(tag)).length*4})).filter(row=>row.score>0).sort((a,b)=>b.score-a.score).slice(0,3);
+  const link=(item,label)=>`<a href="${routePath('post',item.id)}" onclick="if(event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return;event.preventDefault();go('post',${jsArg(item.id)})"><small>${esc(label)}</small><strong>${esc(item.title)}</strong></a>`;
+  host.innerHTML=collectionReadingNav(post)+`<nav class="article-neighbors" aria-label="ಹಿಂದಿನ ಮತ್ತು ಮುಂದಿನ ಬರಹಗಳು">${neighbors.filter(([item])=>item).map(([item,label])=>link(item,label)).join('')}</nav>`+(related.length?`<section class="article-related"><h2>ಇದಕ್ಕೆ ಸಂಬಂಧಿಸಿದ ಬರಹಗಳು</h2><div class="article-neighbors">${related.map(({item})=>link(item,item.cat||'ಬರಹ')).join('')}</div></section>`:'');
 }
 async function tlike(id){
   const next=!likedMe.has(id);
@@ -446,10 +459,16 @@ async function tlike(id){
     btn.innerHTML=`${il?'♥':'♡'} <span id="lc${id}">${lc}</span> ${lc===1?'ಮೆಚ್ಚುಗೆ':'ಮೆಚ್ಚುಗೆಗಳು'}`;
   }
 }
-function shr(id){
-  const p=findPost(id),t=document.getElementById('st'+id),url=new URL(routePath('post',id),location.origin).href;
-  if(navigator.share)navigator.share({title:p?.title||'',text:'ಡೀಕೆಯ ಒಂದು ಬರಹ',url}).catch(()=>{});
-  else{try{navigator.clipboard.writeText(url)}catch(e){}if(t){t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500)}}
+async function shr(id){
+  const post=findPost(id),url=new URL(routePath('post',id),location.origin).href;
+  if(navigator.share){try{await navigator.share({title:post?.title||'ಡೀಕೆಯ ಬರಹಗಳು',url});return}catch(error){if(error.name==='AbortError')return}}
+  await copyArticleLink(id);
+}
+async function copyArticleLink(id){
+  const url=new URL(routePath('post',id),location.origin).href;
+  try{await navigator.clipboard.writeText(url)}catch{window.prompt('ಈ ಕೊಂಡಿಯನ್ನು ನಕಲಿಸಿ',url);return}
+  const status=document.getElementById('st'+id);
+  if(status){status.textContent='ಕೊಂಡಿಯನ್ನು ನಕಲಿಸಲಾಗಿದೆ!';status.classList.add('show');setTimeout(()=>status.classList.remove('show'),2500)}
 }
 async function addCmt(id){
   const n=document.getElementById('cn'+id),t=document.getElementById('ct'+id);

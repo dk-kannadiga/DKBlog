@@ -30,6 +30,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Anek+Kannada:wght@400;500;700&family=Noto+Sans+Kannada:wght@400;500;700&family=Lora:ital,wght@0,400;0,600;1,400&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/main.css?v=20260928-4">
   <link rel="stylesheet" href="/css/themes.css">
+  <link rel="stylesheet" href="/css/reading.css">
   <title>DK Blog | ಡೀಕೆಯ ಬರಹಗಳು | ದರ್ಶನ (ಡೀಕೆ)</title>
   <script type="application/ld+json">
     {
@@ -53,7 +54,8 @@
       <a href="#" id="ni" onclick="go('index');return false">ಬರಹಗಳ ಪಟ್ಟಿ</a>
       <a href="#" id="nc" onclick="go('collections');return false">ಸಂಕಲನಗಳು</a>
       <a href="#" id="nl" onclick="go('library');return false">📚 ಸ್ವಾನಂದ ಗ್ರಂಥನಿಧಿ</a>
-      <a href="#" id="na" onclick="go('about');return false">ನನ್ನ ಬಗ್ಗೆ</a>
+      <a href="/about" id="na" onclick="go('about');return false">ನನ್ನ ಬಗ್ಗೆ</a>
+      <button class="ask-dk-launch" type="button" onclick="document.getElementById('ask-dk').showModal()">ಡೀಕೆಯನ್ನು ಕೇಳಿ</button>
       <a href="#" id="nq" class="quiz-link" onclick="go('quiz');return false">🏆 ಕ್ವಿಜ಼್</a>
       <a class="subscribe-link" href="/subscribe" target="_blank" rel="noopener noreferrer">✉ ಚಂದಾದಾರರಾಗಿ</a>
       <a href="#" class="admin-door" onclick="go('adminlogin');return false" aria-label="Admin" title="Admin">⚙</a>
@@ -155,7 +157,12 @@
   <div class="aw">
     <div class="av">✍️</div>
     <p class="abio" style="font-size:1.08rem;color:var(--ac);font-weight:600">ಕನ್ನಡ, ಗಣಿತ, ವಿಜ್ಞಾನ ಅಂದ್ರೆ ಪ್ರಾಣ.</p>
-    <div class="div">✦ ✦ ✦</div>
+    <div class="author-projects">
+      <section><h2>ಬರಹ ಮತ್ತು ಕನ್ನಡ</h2><p>ಕವನ, ಕಥೆ, ಲೇಖನಗಳ ಮೂಲಕ ನನ್ನ ಆಲೋಚನೆಗಳನ್ನು ಹಂಚಿಕೊಳ್ಳುತ್ತೇನೆ. ಹಳಗನ್ನಡದ ಶಾಸನಗಳು, ಓಲೆಗರಿಗಳು, ನುಡಿ ಮತ್ತು ಲಿಪಿಗಳ ಅಧ್ಯಯನ ನನ್ನ ಆಸಕ್ತಿಯ ಕ್ಷೇತ್ರಗಳು. ಕೆಲವು ಕವನಗಳು ಪತ್ರಿಕೆಗಳಲ್ಲಿ ಪ್ರಕಟವಾಗಿವೆ. ೧,೫೦೦ಕ್ಕೂ ಹೆಚ್ಚು ಪರಭಾಷಿಕರಿಗೆ ಕನ್ನಡ ಕಲಿಸಿದ್ದೇನೆ.</p><a href="/collections">ಬರಹಗಳ ಸಂಕಲನಗಳು →</a></section>
+      <section><h2>ಗಣಿತ ಮತ್ತು ವಿಜ್ಞಾನದ ಪ್ರಯೋಗಗಳು</h2><p>ಒಂದೇ ಪುಟದಲ್ಲಿ ೧೦,೦೦೦ ವರ್ಷಗಳನ್ನು ಒಳಗೊಂಡ ಕ್ಯಾಲೆಂಡರ್ ರೂಪಿಸಿದ್ದೇನೆ. ಗಣಿತದ ಆಟಗಳನ್ನು ರಚಿಸುವುದು, ಎಲೆಕ್ಟ್ರಾನಿಕ್ಸ್ ಪ್ರಯೋಗಗಳು, ನಕ್ಷತ್ರ ವೀಕ್ಷಣೆ ಮತ್ತು ರೂಬಿಕ್ಸ್ ಕ್ಯೂಬ್ ನನ್ನ ಕುತೂಹಲದ ಕೆಲವು ದಾರಿಗಳು.</p></section>
+      <section><h2>ಕ್ವಿಜ್ ಮತ್ತು ಗ್ರಂಥನಿಧಿ</h2><p>ವಿವಿಧ ವಿಷಯಗಳ ಮೇಲೆ ಆನ್‌ಲೈನ್ ಕ್ವಿಜ್‌ಗಳನ್ನು ನಡೆಸುತ್ತೇನೆ. ಸ್ವಾನಂದ ಗ್ರಂಥನಿಧಿಯಲ್ಲಿ ನನ್ನ ಪುಸ್ತಕಗಳನ್ನು ಓದುಗರೊಂದಿಗೆ ಹಂಚಿಕೊಳ್ಳುತ್ತೇನೆ.</p><a href="/quiz">ಕ್ವಿಜ್‌ಗಳು →</a> · <a href="/library">ಸ್ವಾನಂದ ಗ್ರಂಥನಿಧಿ →</a></section>
+      <section><h2>ರಂಗಭೂಮಿ ಮತ್ತು ಕಿರುಚಿತ್ರ</h2><p>ರಂಗಭೂಮಿ ನಟನೆಯಲ್ಲಿ ಆಸಕ್ತಿ ಇದೆ. ಒಂದೆರಡು ಕಿರುಚಿತ್ರಗಳನ್ನು ನಿರ್ದೇಶಿಸಿದ ಅನುಭವವೂ ಇದೆ.</p></section>
+    </div>
     <div class="aint"><h4>ಜಾತಕ</h4>
       <dl class="biofacts">
         <div><dt>ಹೆಸರು</dt><dd>ದರ್ಶನ (ಅಭಿಮಾನಿಗಳು ಪ್ರೀತಿಯಿಂದ ಡೀಕೆ ಅಂತ ಕರೀತಾರೆ)</dd></div>
@@ -254,6 +261,19 @@
   <div id="atab-quiz" class="adtabc"></div>
 </div></div>
 
+<dialog id="ask-dk" aria-labelledby="ask-dk-title">
+  <form method="dialog" class="ask-dk-close"><button class="back" aria-label="ಮುಚ್ಚಿ">×</button></form>
+  <h2 id="ask-dk-title">ಡೀಕೆಯನ್ನು ಕೇಳಿ</h2>
+  <p>ಡೀಕೆಯ ಪ್ರಕಟಿತ ಬರಹಗಳ ಕುರಿತು ಕನ್ನಡ ಅಥವಾ ಇಂಗ್ಲಿಷ್‌ನಲ್ಲಿ ಕೇಳಿ.</p>
+  <form id="ask-dk-form">
+    <label for="ask-dk-question">ನಿಮ್ಮ ಪ್ರಶ್ನೆ / Your question</label>
+    <textarea id="ask-dk-question" rows="3" maxlength="300" required autofocus></textarea>
+    <label for="ask-dk-language">ಉತ್ತರದ ಭಾಷೆ / Answer language</label>
+    <select id="ask-dk-language"><option value="kn">ಕನ್ನಡ</option><option value="en">English</option></select>
+    <button class="sbtn" type="submit">ಕೇಳಿ / Ask</button>
+  </form>
+  <div id="ask-dk-result" aria-live="polite"></div>
+</dialog>
 <footer>✦ &nbsp; ಡೀಕೆಯ ಬರಹಗಳು &nbsp;·&nbsp; ಬರಹಗಳ ಜಗತ್ತು &nbsp; ✦ <a href="/rss.xml" title="ಆರ್‌ಎಸ್‌ಎಸ್ ಸುದ್ದಿ ಹರಿವಿಗೆ ಚಂದಾದಾರರಾಗಿ">ಆರ್‌ಎಸ್‌ಎಸ್</a><a href="/sitemap.xml" title="ತಾಣದ ನಕ್ಷೆ ನೋಡಿ">ತಾಣದ ನಕ್ಷೆ</a></footer>
 
 <script src="/js/data.js?v=20260905-1"></script>
@@ -266,6 +286,7 @@
 <script src="/js/xlsx-export.js?v=20261024-1"></script>
 <script type="module" src="/js/firestore-loader.js?v=20261001-1"></script>
 <script src="/js/app.js?v=20261024-1"></script>
+<script src="/js/ask-dk.js"></script>
 <script>
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js"));
