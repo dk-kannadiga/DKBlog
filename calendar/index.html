@@ -16,6 +16,9 @@
   <style>
     .calendar-page { max-width: 1200px; margin: auto; padding: 24px 16px 48px; font-family: var(--theme-font, 'Anek Kannada'), sans-serif; }
     .calendar-page .stitle, .calendar-page .back { font-family: inherit; }
+    .calendar-top { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px 12px; }
+    .calendar-top .theme-picker { margin-inline-start:auto; color:var(--ink); }
+    .calendar-top .theme-picker select { border-color:var(--gd); }
     .calendar-actions { display: flex; flex-wrap: wrap; gap: 12px; margin: 14px 0; }
     .calendar-actions a { text-decoration: underline; color: var(--ac); }
     .calendar-form { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin:18px 0 8px; }
@@ -41,7 +44,13 @@
 </head>
 <body>
   <main class="calendar-page">
-    <a class="back" href="/about">← ಡೀಕೆಯ ಬಗ್ಗೆ</a>
+    <div class="calendar-top">
+      <a class="back" href="/about">← ಡೀಕೆಯ ಬಗ್ಗೆ</a>
+      <label class="theme-picker" for="visitor-theme">
+        <span class="theme-picker-label">ತಾಣದ ವಿನ್ಯಾಸ</span>
+        <select id="visitor-theme"></select>
+      </label>
+    </div>
     <h1 class="stitle">೧೦,೦೦೦ ವರ್ಷಗಳ ಕ್ಯಾಲೆಂಡರ್</h1>
     <p>ದರ್ಶನ (ಡೀಕೆ) ರಚಿಸಿದ ಒಂದೇ ಪುಟದ ಗ್ರೆಗೋರಿಯನ್ ಕ್ಯಾಲೆಂಡರ್.</p>
     <div class="calendar-actions">
