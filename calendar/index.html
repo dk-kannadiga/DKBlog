@@ -10,20 +10,33 @@
   <link rel="stylesheet" href="/css/themes.css?v=menu-contrast-2">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anek+Kannada:wght@400;500;700&family=Noto+Sans+Kannada:wght@400;500;700&display=swap">
   <script src="/js/themes.js"></script>
-  <script src="/js/calendar-chart.js" defer></script>
+  <script src="/js/calendar-data.js" defer></script>
+  <script src="/js/calendar-lookup.js" defer></script>
   <title>೧೦,೦೦೦ ವರ್ಷಗಳ ಕ್ಯಾಲೆಂಡರ್ · ಡೀಕೆಯ ಬರಹಗಳು</title>
   <style>
     .calendar-page { max-width: 1200px; margin: auto; padding: 24px 16px 48px; font-family: var(--theme-font, 'Anek Kannada'), sans-serif; }
     .calendar-page .stitle, .calendar-page .back { font-family: inherit; }
     .calendar-actions { display: flex; flex-wrap: wrap; gap: 12px; margin: 14px 0; }
     .calendar-actions a { text-decoration: underline; color: var(--ac); }
-    .calendar-chart-scroll { overflow: auto; border: 1px solid var(--gl); margin-top: 12px; }
-    .calendar-chart { position: relative; min-width: 960px; background: var(--cb); }
-    .calendar-chart :is(img,canvas) { display: block; width: 100%; height: auto; }
-    .calendar-chart [hidden] { display: none; }
-    .calendar-chart canvas { cursor: crosshair; }
-    .calendar-highlight { position: absolute; pointer-events: none; background: var(--ac); opacity: .24; }
-    .calendar-highlight-cell { background: transparent; outline: 2px solid var(--ac); opacity: 1; }
+    .calendar-form { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin:18px 0 8px; }
+    .calendar-form input { max-width:100%; width:18ch; padding:8px 10px; border:1px solid var(--gd); border-radius:7px; background:var(--cb); color:var(--ink); font:inherit; }
+    .calendar-form button { font-family:inherit; }
+    #calendar-result { min-height:2em; font-weight:700; color:var(--ac); }
+    .calendar-chart-scroll { overflow:auto; border:1px solid var(--gl); margin-top:12px; }
+    .calendar-grid { width:100%; min-width:1370px; table-layout:fixed; border-collapse:collapse; background:var(--cb); color:var(--ink); text-align:center; font-variant-numeric:tabular-nums; font-size:.86rem; }
+    .calendar-grid col { width:24px; }
+    .calendar-grid col.weekday-column { width:28px; }
+    .calendar-grid :is(td,th) { border:1px solid var(--gl); height:28px; padding:0; }
+    .calendar-grid th { background:var(--pd); font-weight:700; }
+    .calendar-grid .calendar-notes { padding:8px; text-align:left; vertical-align:top; color:var(--il); }
+    .calendar-grid button { display:block; width:100%; min-height:27px; padding:0; border:0; background:transparent; color:inherit; font:inherit; cursor:pointer; }
+    .calendar-grid button:disabled { opacity:.52; cursor:default; }
+    .calendar-grid button:focus-visible { outline:2px solid var(--ac); outline-offset:-2px; }
+    .calendar-grid :is(.year-band,.date-row,.year-column,.date-available) { background:var(--pd); }
+    .calendar-grid .year-band button { font-weight:700; }
+    .calendar-grid :is(.selected,.intersection) { background:var(--ac); color:var(--cb); font-weight:700; }
+    .calendar-grid .intersection { outline:2px solid var(--ink); outline-offset:-2px; }
+    .calendar-grid .block-top td { border-top:2px solid var(--gd); }
   </style>
 </head>
 <body>
@@ -35,15 +48,16 @@
       <a href="/assets/10000-year-calendar.pdf" target="_blank" rel="noopener">PDF ತೆರೆಯಿರಿ</a>
       <a href="/assets/10000-year-calendar.pdf" download>PDF ಡೌನ್‌ಲೋಡ್ ಮಾಡಿ</a>
     </div>
-    <p id="calendar-hint">ಕೋಶವನ್ನು ಒತ್ತಿದಾಗ ಅದರ ಸಾಲು ಮತ್ತು ಅಂಕಣ ಎದ್ದು ಕಾಣುತ್ತವೆ. ಮೊಬೈಲ್‌ನಲ್ಲಿ ಪಟ್ಟಿಯನ್ನು ಬದಿಗೆ ಸರಿಸಬಹುದು.</p>
-    <div class="calendar-chart-scroll">
-      <div class="calendar-chart">
-        <img id="calendar-source" src="/assets/10000-year-calendar.png" width="2420" height="1870" alt="ಮೂಲ ೧೦,೦೦೦ ವರ್ಷಗಳ ಕ್ಯಾಲೆಂಡರ್ ಪಟ್ಟಿ">
-        <canvas id="calendar-chart" width="2420" height="1870" tabindex="0" aria-label="೧೦,೦೦೦ ವರ್ಷಗಳ ಕ್ಯಾಲೆಂಡರ್ ಪಟ್ಟಿ" aria-describedby="calendar-hint" hidden></canvas>
-        <div id="calendar-highlight-row" class="calendar-highlight" hidden></div>
-        <div id="calendar-highlight-column" class="calendar-highlight" hidden></div>
-        <div id="calendar-highlight-cell" class="calendar-highlight calendar-highlight-cell" hidden></div>
-      </div>
+    <form id="calendar-date-form" class="calendar-form">
+      <label for="calendar-date">ದಿನಾಂಕ</label>
+      <input id="calendar-date" type="text" placeholder="DD-MM-YYYY" maxlength="10" required>
+      <button class="sbtn" type="submit">ವಾರ ಹುಡುಕಿ</button>
+    </form>
+    <p id="calendar-result" role="status"></p>
+    <p id="calendar-hint">ಎಡ ಮೇಲ್ಭಾಗದಲ್ಲಿ ಮೊದಲ ಎರಡು ಅಂಕಿ, ಬಲ ಮೇಲ್ಭಾಗದಲ್ಲಿ ಕೊನೆಯ ಎರಡು ಅಂಕಿ, ನಂತರ ಎಡ ಕೆಳಭಾಗದಲ್ಲಿ ತಿಂಗಳು ಮತ್ತು ದಿನವನ್ನು ಆರಿಸಿ. ಮೊಬೈಲ್‌ನಲ್ಲಿ ಪಟ್ಟಿಯನ್ನು ಬದಿಗೆ ಸರಿಸಬಹುದು.</p>
+    <div class="calendar-chart-scroll" tabindex="0" role="region" aria-label="ಕ್ಯಾಲೆಂಡರ್ ಪಟ್ಟಿ" aria-describedby="calendar-hint">
+      <table id="calendar-grid" class="calendar-grid" aria-label="೧೦,೦೦೦ ವರ್ಷಗಳ ಕ್ಯಾಲೆಂಡರ್"></table>
+      <noscript><p>ಸಂವಾದಾತ್ಮಕ ಪಟ್ಟಿಗೆ ಜಾವಾಸ್ಕ್ರಿಪ್ಟ್ ಬೇಕು. ಮೂಲ PDF ಅನ್ನು ಮೇಲಿನ ಕೊಂಡಿಯಿಂದ ತೆರೆಯಬಹುದು.</p></noscript>
     </div>
   </main>
 </body>
