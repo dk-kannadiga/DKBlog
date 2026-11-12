@@ -1,14 +1,11 @@
 .article-neighbors,.author-projects{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:12px;margin:16px 0}
 .article-neighbors a,.author-projects section{display:block;background:var(--cb);border:1px solid var(--gl);border-radius:8px;padding:16px;color:var(--ink);text-decoration:none;overflow-wrap:anywhere}
 .article-neighbors a:hover{border-color:var(--ac)}.article-neighbors small,.article-neighbors strong{display:block}.article-neighbors small{color:var(--il)}
-.article-related h2,.author-projects h2{font-size:1.1rem;color:var(--ac)}.author-projects a,#ask-dk a{color:var(--ac)}
-.ask-dk-launch{color:var(--gl);background:transparent;border:1px solid var(--gd);border-radius:20px;padding:5px 13px;font:inherit;font-size:.82rem;cursor:pointer}
-#ask-dk{margin:auto;width:min(92vw,650px);max-height:85vh;padding:24px;background:var(--cb);color:var(--ink);border:1px solid var(--gl);border-radius:12px;font-family:var(--theme-font,inherit)}
-#ask-dk::backdrop{background:#0008}.ask-dk-close{float:right}#ask-dk-form label{display:block;margin-top:12px}#ask-dk-form textarea,#ask-dk-form select{padding:8px;color:var(--ink);background:var(--p);border:1px solid var(--gd);border-radius:6px;font:inherit}#ask-dk-form textarea{width:100%;resize:vertical}#ask-dk-result{margin-top:16px}#ask-dk-result article{border-top:1px solid var(--gl);padding:12px 0;white-space:pre-line}
+.article-related h2,.author-projects h2{font-size:1.1rem;color:var(--ac)}.author-projects a{color:var(--ac)}
 .site-header{--header-text:#fff8ec;position:relative;gap:8px 20px}.site-brand{text-decoration:none}.site-nav{align-items:center;gap:4px}
-.site-header .site-nav>a,.site-header .site-nav>.ask-dk-launch,.site-header .site-menu summary{border:0;border-radius:7px;padding:8px 10px;background:transparent;color:var(--header-text);font-family:inherit;white-space:nowrap;line-height:1.5;font-size:.86rem}
+.site-header .site-nav>a,.site-header .site-menu summary{border:0;border-radius:7px;padding:8px 10px;background:transparent;color:var(--header-text);font-family:inherit;white-space:nowrap;line-height:1.5;font-size:.86rem}
 html[data-theme] header .site-header .site-nav>a{color:var(--header-text)}
-html[data-theme] header .site-header .site-nav>a:is(:hover,.on,:focus-visible),.site-header .site-nav>.ask-dk-launch:is(:hover,:focus-visible),.site-header .site-menu summary:is(:hover,:focus-visible),.site-header .site-menu[open] summary{background:var(--cb);color:var(--ink)}
+html[data-theme] header .site-header .site-nav>a:is(:hover,.on,:focus-visible),.site-header .site-menu summary:is(:hover,:focus-visible),.site-header .site-menu[open] summary{background:var(--cb);color:var(--ink)}
 .site-header .site-menu summary{border:1px solid #fff8ec80;font-weight:700}
 .site-menu{position:relative}.site-menu summary{list-style:none;cursor:pointer}.site-menu summary::-webkit-details-marker{display:none}
 .site-menu-panel{position:absolute;z-index:2;right:0;top:calc(100% + 8px);width:min(250px,calc(100vw - 28px));padding:8px;background:var(--cb);color:var(--ink);border:1px solid var(--gl);border-radius:10px;box-shadow:0 8px 25px #0004;text-align:left}
@@ -19,4 +16,4 @@ html[data-theme] .site-menu .site-menu-panel a{color:var(--ink)}
 .site-menu-panel .theme-picker-label{position:static;width:auto;height:auto;clip:auto;overflow:visible}
 .site-menu-panel select{width:100%;max-width:none;border-radius:6px}
 .site-menu .site-menu-admin{font-size:.8rem}
-@media(max-width:720px){.site-header{justify-content:flex-start;text-align:left;padding-right:14px;padding-left:14px}.site-header .site-brand{padding-right:74px}.site-nav{width:100%;justify-content:flex-start;gap:2px}.site-header .site-nav>a,.site-header .site-nav>.ask-dk-launch{padding:7px 6px;font-size:.76rem}.site-menu{position:absolute;right:14px;top:12px}.site-header .site-menu summary{padding:7px 9px}}
+@media(max-width:720px){.site-header{justify-content:flex-start;text-align:left;padding-right:14px;padding-left:14px}.site-header .site-brand{padding-right:74px}.site-nav{width:100%;justify-content:flex-start;gap:2px}.site-header .site-nav>a{padding:7px 6px;font-size:.76rem}.site-menu{position:absolute;right:14px;top:12px}.site-header .site-menu summary{padding:7px 9px}}

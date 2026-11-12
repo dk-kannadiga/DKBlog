@@ -1063,7 +1063,6 @@ async function aTab(btn,tab){
   }
 }
 async function renderAdmin(){
-  window.refreshAskDkUsage?.();
   document.querySelectorAll('.adtab').forEach((b,i)=>b.classList.toggle('on',i===0));
   document.querySelectorAll('.adtabc').forEach((c,i)=>c.classList.toggle('on',i===0));
   document.getElementById('afw').innerHTML='';document.getElementById('cfw').innerHTML='';document.getElementById('libfw').innerHTML='';editId=null;collectionEditId=null;bookEditId=null;

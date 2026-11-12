@@ -51,7 +51,6 @@
       <a href="/" id="nh" onclick="go('home');return false">ಮುಖಪುಟ</a>
       <a href="/index" id="ni" onclick="go('index');return false">ಬರಹಗಳ ಪಟ್ಟಿ</a>
       <a href="/collections" id="nc" onclick="go('collections');return false">ಸಂಕಲನಗಳು</a>
-      <button class="ask-dk-launch" type="button" onclick="document.getElementById('ask-dk').showModal()">ಡೀಕೆಯನ್ನು ಕೇಳಿ</button>
       <details id="site-menu" class="site-menu">
         <summary>☰ ಮೆನು</summary>
         <div class="site-menu-panel">
@@ -229,11 +228,6 @@
 <!-- ADMIN PANEL -->
 <div id="pad" class="page"><div class="pc">
   <div class="adh"><h2>Admin Panel</h2><button class="logoutbtn" onclick="aLogout()">← Exit Admin</button></div>
-  <div class="pactions" style="margin:0 0 16px">
-    <strong id="ask-dk-usage" role="status">AI usage</strong>
-    <span>Resets at midnight IST</span>
-    <button id="ask-dk-usage-refresh" class="sbtn" type="button" onclick="refreshAskDkUsage()">Refresh</button>
-  </div>
   <div class="adtabs">
     <div class="adtab on" onclick="aTab(this,'posts')">Posts</div>
     <div class="adtab" onclick="aTab(this,'collections')">Collections</div>
@@ -270,19 +264,6 @@
   <div id="atab-quiz" class="adtabc"></div>
 </div></div>
 
-<dialog id="ask-dk" aria-labelledby="ask-dk-title">
-  <form method="dialog" class="ask-dk-close"><button class="back" aria-label="ಮುಚ್ಚಿ">×</button></form>
-  <h2 id="ask-dk-title">ಡೀಕೆಯನ್ನು ಕೇಳಿ</h2>
-  <p>ಡೀಕೆಯ ಪ್ರಕಟಿತ ಬರಹಗಳ ಕುರಿತು ಕನ್ನಡ ಅಥವಾ ಇಂಗ್ಲಿಷ್‌ನಲ್ಲಿ ಕೇಳಿ. ವೈಯಕ್ತಿಕ ಮಾಹಿತಿಯನ್ನು ನಮೂದಿಸಬೇಡಿ.</p>
-  <form id="ask-dk-form">
-    <label for="ask-dk-question">ನಿಮ್ಮ ಪ್ರಶ್ನೆ / Your question</label>
-    <textarea id="ask-dk-question" rows="3" maxlength="300" required autofocus></textarea>
-    <label for="ask-dk-language">ಉತ್ತರದ ಭಾಷೆ / Answer language</label>
-    <select id="ask-dk-language"><option value="kn">ಕನ್ನಡ</option><option value="en">English</option></select>
-    <button class="sbtn" type="submit">ಕೇಳಿ / Ask</button>
-  </form>
-  <div id="ask-dk-result" aria-live="polite"></div>
-</dialog>
 <footer>✦ &nbsp; ಡೀಕೆಯ ಬರಹಗಳು &nbsp;·&nbsp; ಬರಹಗಳ ಜಗತ್ತು &nbsp; ✦ <a href="/rss.xml" title="ಆರ್‌ಎಸ್‌ಎಸ್ ಸುದ್ದಿ ಹರಿವಿಗೆ ಚಂದಾದಾರರಾಗಿ">ಆರ್‌ಎಸ್‌ಎಸ್</a><a href="/sitemap.xml" title="ತಾಣದ ನಕ್ಷೆ ನೋಡಿ">ತಾಣದ ನಕ್ಷೆ</a></footer>
 
 <script src="/js/data.js?v=20260905-1"></script>
@@ -295,7 +276,6 @@
 <script src="/js/xlsx-export.js?v=20261024-1"></script>
 <script type="module" src="/js/firestore-loader.js?v=20261001-1"></script>
 <script src="/js/app.js?v=20261024-1"></script>
-<script src="/js/ask-dk.js"></script>
 <script>
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js"));
