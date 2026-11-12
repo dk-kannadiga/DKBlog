@@ -25,6 +25,7 @@ button{width:100%;padding:12px;font:inherit;font-weight:700;color:var(--cb,#fffd
 button:disabled{opacity:.6;cursor:default}
 .hp{position:absolute;left:-9999px;opacity:0}
 #msg{margin:16px 0 0;font-size:16px}
+#msg strong{font-size:1.125em;font-weight:700}
 </style>
 </head>
 <body>
@@ -46,7 +47,9 @@ button:disabled{opacity:.6;cursor:default}
 const ENDPOINT = 'https://script.google.com/macros/s/AKfycbxr6W_KrFTNOQX0Pb8geHFWtxXmbusdfvQAvcUpwjullLgdnto6G62xCQNMe809tQ5T/exec';
 const T = {
   invalid: 'ಸರಿಯಾದ ಇಮೇಲ್ ನಮೂದಿಸಿ.',
-  ok: 'ಕೋರಿಕೆ ಸ್ವೀಕರಿಸಲಾಗಿದೆ. ದೃಢೀಕರಣ ಇಮೇಲ್ ಕೆಲವೇ ನಿಮಿಷಗಳಲ್ಲಿ ಬರುತ್ತದೆ (ಸ್ಪ್ಯಾಮ್ ಫೋಲ್ಡರ್ ಸಹ ನೋಡಿ). ಈಗಾಗಲೇ ಚಂದಾದಾರರಾಗಿದ್ದರೆ ಹೊಸ ಇಮೇಲ್ ಬರುವುದಿಲ್ಲ.',
+  okBefore: 'ಕೋರಿಕೆ ಸ್ವೀಕರಿಸಲಾಗಿದೆ. ದೃಢೀಕರಣ ಇಮೇಲ್ ಕೆಲವೇ ನಿಮಿಷಗಳಲ್ಲಿ ಬರುತ್ತದೆ ',
+  spamHint: '(ಸ್ಪ್ಯಾಮ್ ಫೋಲ್ಡರ್ ಸಹ ನೋಡಿ)',
+  okAfter: '. ಈಗಾಗಲೇ ಚಂದಾದಾರರಾಗಿದ್ದರೆ ಹೊಸ ಇಮೇಲ್ ಬರುವುದಿಲ್ಲ.',
   busy: 'ಈಗ ಇಮೇಲ್ ಕಳುಹಿಸಲು ಸಾಧ್ಯವಾಗುತ್ತಿಲ್ಲ. ಸ್ವಲ್ಪ ಸಮಯದ ನಂತರ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.',
   unknown: 'ಕೋರಿಕೆ ಕಳುಹಿಸಲಾಗಿದೆ, ಆದರೆ ಫಲಿತಾಂಶ ಖಚಿತವಾಗಿಲ್ಲ. ಕೆಲವು ನಿಮಿಷಗಳಲ್ಲಿ ಇಮೇಲ್ ಬರದಿದ್ದರೆ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.'
 };
@@ -79,7 +82,12 @@ f.addEventListener('submit', async e => {
   btn.disabled = true; msg.textContent = '';
   const res = await askServer(email, f.website.value);   // null = no reply (network problem or timeout)
   if (!res) msg.textContent = T.unknown;
-  else if (res.ok) { msg.textContent = T.ok; f.reset(); }
+  else if (res.ok) {
+    const hint = document.createElement('strong');
+    hint.textContent = T.spamHint;
+    msg.replaceChildren(T.okBefore, hint, T.okAfter);
+    f.reset();
+  }
   else msg.textContent = T[res.error] || T.busy;
   btn.disabled = false;
 });
