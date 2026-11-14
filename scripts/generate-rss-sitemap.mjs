@@ -203,7 +203,7 @@ await Promise.all([
 console.log(`Generated rss.xml with ${Math.min(posts.length, FEED_LIMIT)} posts and sitemap.xml with ${posts.length} post URLs.`);
 // Static route documents expose previews to crawlers without extra database records.
 const shell=await readFile(join(ROOT,'index.html'),'utf8');
-const previewItems=[...posts.map(p=>({path:`post/${p.id}`,title:p.title,description:p.exc||p.body||p.html,image:p.coverImage})),...books.map(b=>({path:`library/book/${b.id}`,title:b.title,description:b.author})),...collections.map(c=>({path:`collection/${c.id}`,title:c.title,description:c.description})),...quizzes.map(q=>({path:`quiz/${q.id}`,title:q.title,description:q.description})),...(activeQuiz?.id?[{path:`quiz/${activeQuiz.id}`,title:activeQuiz.title,description:activeQuiz.description}]:[])];
+const previewItems=[...posts.map(p=>({path:`post/${p.id}`,title:p.title,description:p.exc||p.body||p.html,image:p.coverImage})),...books.map(b=>({path:`library/book/${b.id}`,title:b.title,description:b.author})),...collections.map(c=>({path:`collection/${c.id}`,title:c.title,description:c.description,image:c.coverImage})),...quizzes.map(q=>({path:`quiz/${q.id}`,title:q.title,description:q.description})),...(activeQuiz?.id?[{path:`quiz/${activeQuiz.id}`,title:activeQuiz.title,description:activeQuiz.description}]:[])];
 for(const item of previewItems){
   if(!/^(post|library\/book|collection|quiz)\/[\w-]+$/.test(item.path))continue;
   const title=xmlEscape(item.title||SITE_TITLE),description=xmlEscape(String(item.description||'ಡೀಕೆಯ ಬರಹಗಳು').replace(/<[^>]*>/g,' ').slice(0,220)),url=`${SITE_URL}/${item.path}`;
