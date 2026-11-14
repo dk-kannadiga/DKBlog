@@ -210,8 +210,8 @@ for(const item of previewItems){
   const metadata={'og:title':title,'og:description':description,'og:url':url,'twitter:title':title,'twitter:description':description};
   if(item.path.startsWith('post/')){
     metadata['og:type']='article';
-    if(item.image){try{const image=new URL(item.image,SITE_URL);if(image.protocol==='https:'&&!image.username&&!image.password)metadata['og:image']=metadata['twitter:image']=xmlEscape(image.href)}catch{/* Keep the site preview image. */}}
   }
+  if(item.image){try{const image=new URL(item.image,SITE_URL);if(image.protocol==='https:'&&!image.username&&!image.password)metadata['og:image']=metadata['twitter:image']=xmlEscape(image.href)}catch{/* Keep the site preview image. */}}
   let html=shell.replace(/<title>[\s\S]*?<\/title>/,()=>`<title>${title}</title>`).replace(/(<meta (?:property|name)="([^"]+)" content=")[^"]*/g,(match,prefix,key)=>Object.hasOwn(metadata,key)?prefix+metadata[key]:match);
   if(metadata['og:image'])html=html.replace(/^\s*<meta property="og:image:(?:width|height|alt)"[^>]+>/gm,'');
   html=html.replace('</head>',`<link rel="canonical" href="${url}"></head>`);
