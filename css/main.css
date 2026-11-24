@@ -105,6 +105,12 @@ nav .admin-door{display:inline-flex;align-items:center;color:var(--gl);border:1p
 footer{text-align:center;padding:22px;color:var(--gd);font-size:.78rem;font-style:italic;border-top:1px solid var(--gl);margin-top:40px}
 footer a{color:var(--gd);opacity:.35;font-size:.8rem;text-decoration:none;margin-left:10px;cursor:pointer}
 footer a:hover{opacity:.9}
+.coffee-support{margin:34px auto 0;padding:24px 18px;text-align:center;border:1px solid var(--gl);border-radius:14px;background:var(--cb);max-width:520px}
+.coffee-support h2{margin:0 0 10px;color:var(--ac);font-size:1.25rem}
+.coffee-support p{margin:0 0 14px}
+.coffee-support img{display:block;width:min(260px,80vw);height:auto;margin:18px auto;border-radius:8px}
+.coffee-upi-link{display:inline-block;padding:9px 15px;border-radius:20px;background:var(--ac);color:var(--cb);font-weight:700;text-decoration:none}
+.coffee-upi-id{font-size:.88rem;color:var(--il)}
 /* ADMIN */
 .alog{max-width:360px;margin:60px auto 0;background:var(--cb);border:1px solid var(--gl);border-radius:10px;padding:36px 32px;text-align:center}
 .alog h2{font-family:'Playfair Display',serif;color:var(--ac);margin-bottom:8px}
