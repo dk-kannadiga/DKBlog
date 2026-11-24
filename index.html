@@ -51,7 +51,6 @@
       <a href="/" id="nh" onclick="go('home');return false">ಮುಖಪುಟ</a>
       <a href="/index" id="ni" onclick="go('index');return false">ಬರಹಗಳ ಪಟ್ಟಿ</a>
       <a href="/collections" id="nc" onclick="go('collections');return false">ಸಂಕಲನಗಳು</a>
-      <a href="/about#coffee-support" id="ncoffee">ಕಾಫಿ ☕</a>
       <details id="site-menu" class="site-menu">
         <summary>☰ ಮೆನು</summary>
         <div class="site-menu-panel">
@@ -63,6 +62,7 @@
           <a href="/admin" class="site-menu-admin" onclick="go('adminlogin');return false">ನಿರ್ವಾಹಕ</a>
         </div>
       </details>
+      <a class="coffee-nav" href="/about#coffee-support" id="ncoffee" onclick="go('about');setTimeout(()=>document.getElementById('coffee-support')?.scrollIntoView({behavior:'smooth',block:'start'}),0);return false">ಕಾಫಿ ☕</a>
     </nav>
   </div>
 </header>
