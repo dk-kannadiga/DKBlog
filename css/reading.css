@@ -7,7 +7,6 @@
 html[data-theme] header .site-header .site-nav>a{color:var(--header-text)}
 html[data-theme] header .site-header .site-nav>a:is(:hover,.on,:focus-visible),.site-header .site-menu summary:is(:hover,:focus-visible),.site-header .site-menu[open] summary{background:var(--cb);color:var(--ink)}
 .site-header .site-menu summary{border:1px solid #fff8ec80;font-weight:700}
-.site-header .coffee-nav{border:1px solid #fff8ec80!important}
 .site-menu{position:relative}.site-menu summary{list-style:none;cursor:pointer}.site-menu summary::-webkit-details-marker{display:none}
 .site-menu-panel{position:absolute;z-index:2;right:0;top:calc(100% + 8px);width:min(250px,calc(100vw - 28px));padding:8px;background:var(--cb);color:var(--ink);border:1px solid var(--gl);border-radius:10px;box-shadow:0 8px 25px #0004;text-align:left}
 .site-menu .site-menu-panel a{display:block;padding:9px 12px;border:0;border-radius:6px;color:var(--ink);font-family:inherit;font-size:.9rem}
@@ -17,4 +16,4 @@ html[data-theme] .site-menu .site-menu-panel a{color:var(--ink)}
 .site-menu-panel .theme-picker-label{position:static;width:auto;height:auto;clip:auto;overflow:visible}
 .site-menu-panel select{width:100%;max-width:none;border-radius:6px}
 .site-menu .site-menu-admin{font-size:.8rem}
-@media(max-width:720px){.site-header{justify-content:flex-start;text-align:left;padding-right:14px;padding-left:14px}.site-header .site-brand{padding-right:74px}.site-nav{width:100%;justify-content:flex-start;gap:2px}.site-header .site-nav>a{padding:7px 6px;font-size:.76rem}.site-menu{position:absolute;right:14px;top:12px}.site-header .site-menu summary{padding:7px 9px}.site-header .coffee-nav{position:absolute;right:14px;top:56px;padding:7px 9px!important;font-size:.76rem!important}}
+@media(max-width:720px){.site-header{justify-content:flex-start;text-align:left;padding-right:14px;padding-left:14px}.site-header .site-brand{padding-right:74px}.site-nav{width:100%;justify-content:flex-start;gap:2px}.site-header .site-nav>a{padding:7px 6px;font-size:.76rem}.site-menu{position:absolute;right:14px;top:12px}.site-header .site-menu summary{padding:7px 9px}.site-header .coffee-nav{position:static;padding:7px 6px!important;font-size:.76rem!important}}
